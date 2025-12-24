@@ -6,8 +6,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-poppins);
+  --font-serif: var(--font-playfair);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -115,11 +115,124 @@
   --sidebar-ring: oklch(0.551 0.027 264.364);
 }
 
+*::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+
+/* CUSTOM COLOR THEME */
+@theme {
+  /* Bg color */
+  --color-black-500: #000A0F;
+
+  /* Primary Colors */
+  --color-primary-50: #EAF2FD;
+  --color-primary-100: #BFD7F9;
+  --color-primary-200: #A0C3F7;
+  --color-primary-300: #74A8F3;
+  --color-primary-400: #5997F1;
+  --color-primary-500: #307DED;
+  --color-primary-600: #2C72D8;
+  --color-primary-700: #2259A8;
+  --color-primary-800: #1A4582;
+  --color-primary-900: #143564;
+
+  /* Secondary Colors */
+  --color-secondary-50: #E6E7E7;
+  --color-secondary-100: #B0B3B5;
+  --color-secondary-200: #8A8E91;
+  --color-secondary-300: #545B5E;
+  --color-secondary-400: #333B3F;
+  --color-secondary-500: #000A0F;
+  --color-secondary-600: #00090E;
+  --color-secondary-700: #00070B;
+  --color-secondary-800: #000608;
+  --color-secondary-900: #000406;
+
+  /* Error */
+  --color-error-500: #ED4337;
+
+  --color-gray-900: #050505;
+  --color-gray-800: #141414;
+  --color-gray-700: #212328;
+  --color-gray-600: #30333A;
+  --color-gray-500: #9095A1;
+  --color-gray-400: #CCDADC;
+}
+
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-black-500 text-foreground font-sans;
+  }
+}
+
+@layer utilities {
+
+  /* Gradients */
+  .main-button-gradient {
+    background: linear-gradient(90deg, #307DED 0%, #1B4787 100%);
+    @apply border border-white/35 h-10 text-white hover:brightness-125 transition-all duration-300 ease-in-out hover:-translate-y-0.5 cursor-pointer;
+  }
+
+  .stepper-gradient {
+    background: linear-gradient(133.264deg, #FFFFFF 0%, #7CF6FF 100%);
+  }
+
+  /* Auth */
+  .auth-layout {
+    @apply relative flex flex-col justify-between lg:flex-row h-screen bg-black-500 overflow-hidden;
+  }
+
+  .auth-container {
+    @apply relative flex flex-col items-center justify-between mt-12 p-4 w-full rounded-3xl backdrop-blur-3xl border border-white/20 shadow-sm shadow-white/10;
+  }
+
+  .auth-logo-container {
+    @apply absolute z-10 left-1/2 -translate-x-1/2 -top-12 h-[100px] w-[100px] rounded-3xl border border-white/30 bg-black-500 backdrop-blur-2xl shadow-sm shadow-white/20;
+  }
+
+  .auth-left-section {
+    @apply relative flex flex-col items-center justify-center w-full lg:w-[45%] h-full lg:h-screen px-6 xl:px-20 lg:border-r-2 bg-center bg-cover bg-no-repeat overflow-y-auto bg-[url(/images/AuthLeftBg.jpg)];
+  }
+
+  .auth-left-section::before {
+    content: "";
+    @apply absolute inset-0 bg-black/10;
+  }
+
+  .auth-children {
+    @apply mt-13 flex flex-col items-center justify-center w-full;
+  }
+
+  .auth-right-section {
+    @apply flex flex-col justify-start w-full max-lg:border-t max-lg:border-gray-600 lg:w-[55%] lg:h-screen px-6 py-4 md:p-6 lg:py-12 lg:px-18;
+  }
+
+  .auth-blockquote {
+    @apply text-sm md:text-lg lg:text-2xl font-medium text-gray-400 mb-1 md:mb-6 lg:mb-8;
+  }
+
+  .auth-testimonial-author {
+    @apply text-xs md:text-lg font-bold text-gray-400 not-italic;
+  }
+
+  .auth-dashboard-preview {
+    @apply absolute top-0 border-4 border-gray-800 left-0 hidden w-5xl max-w-none lg:block rounded-xl shadow-2xl;
   }
 }
