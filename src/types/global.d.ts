@@ -19,6 +19,17 @@ declare global {
     }
 
     // UI FORM TYPES
+    type NavLink = {
+        label: string;
+        href: string;
+        icon: string;
+    };
+
+    type NavSection = {
+        title: string;
+        links: NavLink[];
+    };
+
     type IFormInputProps = {
         name: string;
         label?: string;

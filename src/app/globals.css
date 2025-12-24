@@ -105,7 +105,8 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
+  /* --sidebar: oklch(0.208 0.042 265.755); */
+  --sidebar: oklch(0.129 0.042 264.695);
   --sidebar-foreground: oklch(0.984 0.003 247.858);
   --sidebar-primary: oklch(0.488 0.243 264.376);
   --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
@@ -129,7 +130,6 @@
     scroll-behavior: smooth;
   }
 }
-
 
 /* CUSTOM COLOR THEME */
 @theme {
@@ -171,7 +171,6 @@
   --color-gray-400: #CCDADC;
 }
 
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -193,6 +192,18 @@
   .stepper-gradient {
     background: linear-gradient(133.264deg, #FFFFFF 0%, #7CF6FF 100%);
   }
+
+  .button-gradient {
+    background: linear-gradient(79.906deg, rgba(48, 125, 237, 35%) 0%, rgba(0, 0, 0, 0%) 100%);
+  }
+
+  .gradient-01 {
+    background-image: radial-gradient(circle at top left,
+        #307DED 0%,
+        #010101 100%);
+    filter: blur(90px);
+  }
+
 
   /* Auth */
   .auth-layout {
@@ -234,5 +245,15 @@
 
   .auth-dashboard-preview {
     @apply absolute top-0 border-4 border-gray-800 left-0 hidden w-5xl max-w-none lg:block rounded-xl shadow-2xl;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
   }
 }
