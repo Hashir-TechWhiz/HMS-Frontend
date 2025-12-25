@@ -1,8 +1,16 @@
 import Image from "next/image";
 import { ReactNode } from "react";
+import { redirect } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
+import { isAuthenticated } from "@/lib/session";
 
-const AuthLayout = ({ children }: { children: ReactNode }) => {
+const AuthLayout = async ({ children }: { children: ReactNode }) => {
+    // Redirect authenticated users to dashboard
+    const authenticated = await isAuthenticated();
+    if (authenticated) {
+        redirect('/dashboard');
+    }
+
     const year = new Date().getFullYear();
 
     return (

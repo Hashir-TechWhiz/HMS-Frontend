@@ -2,12 +2,20 @@
 
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import InputField from '@/components/forms/InputField';
+import { registerGuest } from '@/services/authService';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 const SignUp = () => {
+    const router = useRouter();
+    const { refreshUser } = useAuth();
     const {
         register,
+        handleSubmit,
+        setError,
         formState: { errors, isSubmitting },
     } = useForm<ISignUpFormData>({
         defaultValues: {
@@ -17,6 +25,50 @@ const SignUp = () => {
         },
         mode: 'onBlur',
     });
+
+    const onSubmit = async (data: ISignUpFormData) => {
+        try {
+            const response = await registerGuest(data);
+
+            if (response.success) {
+                await refreshUser();
+                toast.success('Account created successfully!');
+                router.push('/dashboard');
+            } else {
+                // Parse backend error message and map to form fields
+                const errorMessage = response.message || 'Registration failed';
+                const lowerCaseError = errorMessage.toLowerCase();
+
+                // Check if error is related to name field
+                if (lowerCaseError.includes('name')) {
+                    setError('name', {
+                        type: 'manual',
+                        message: errorMessage,
+                    });
+                }
+                // Check if error is related to email field
+                else if (lowerCaseError.includes('email')) {
+                    setError('email', {
+                        type: 'manual',
+                        message: errorMessage,
+                    });
+                }
+                // Check if error is related to password field
+                else if (lowerCaseError.includes('password')) {
+                    setError('password', {
+                        type: 'manual',
+                        message: errorMessage,
+                    });
+                }
+                // For general errors, show toast notification
+                else {
+                    toast.error(errorMessage);
+                }
+            }
+        } catch {
+            toast.error('An unexpected error occurred. Please try again.');
+        }
+    };
 
     return (
         <>
@@ -30,7 +82,7 @@ const SignUp = () => {
                 </p>
             </div>
 
-            <form className="space-y-5 w-full">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 w-full">
                 {/* Name */}
                 <InputField
                     name="name"
@@ -82,11 +134,11 @@ const SignUp = () => {
 
                 {/* Button */}
                 <Button
-                    type="button"
+                    type="submit"
                     disabled={isSubmitting}
                     className="main-button-gradient w-full"
                 >
-                    Create Account
+                    {isSubmitting ? 'Creating Account...' : 'Create Account'}
                 </Button>
 
                 {/* Redirect to Sign In */}

@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -47,7 +48,14 @@ const NavLinks = ({ pathname, onClick }: NavLinksProps) => {
 
 const PublicHeader = () => {
     const pathname = usePathname();
+    const { isAuthenticated } = useAuth();
     const [open, setOpen] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        // eslint-disable-next-line
+        setMounted(true);
+    }, []);
 
     return (
         <header className="fixed inset-x-0 top-0 z-50 backdrop-blur-md py-2">
@@ -73,52 +81,78 @@ const PublicHeader = () => {
 
                 {/* Right Actions */}
                 <div className="flex items-center gap-3">
-                    <Link href="/login">
-                        <Button variant="outline" className="hidden lg:inline-flex w-[200px] rounded-full cursor-pointer">
-                            Login
-                        </Button>
-                    </Link>
-
+                    {/* Desktop CTA */}
+                    {isAuthenticated ? (
+                        <Link href="/dashboard">
+                            <Button variant="outline" className="hidden lg:inline-flex w-[200px] rounded-full cursor-pointer">
+                                Go to Dashboard
+                            </Button>
+                        </Link>
+                    ) : (
+                        <Link href="/login">
+                            <Button variant="outline" className="hidden lg:inline-flex w-[200px] rounded-full cursor-pointer">
+                                Login
+                            </Button>
+                        </Link>
+                    )}
 
                     {/* Mobile Menu */}
-                    <Drawer open={open} onOpenChange={setOpen} direction="left">
-                        <DrawerTrigger asChild>
-                            <button
-                                aria-label="Toggle menu"
-                                className="lg:hidden rounded-md p-2 transition hover:bg-white/10"
-                            >
-                                {open ? (
-                                    <X className="h-6 w-6 text-white" />
+                    {mounted ? (
+                        <Drawer open={open} onOpenChange={setOpen} direction="left">
+                            <DrawerTrigger asChild>
+                                <button
+                                    aria-label="Toggle menu"
+                                    className="lg:hidden rounded-md p-2 transition hover:bg-white/10"
+                                >
+                                    {open ? (
+                                        <X className="h-6 w-6 text-white" />
+                                    ) : (
+                                        <Menu className="h-6 w-6 text-white" />
+                                    )}
+                                </button>
+                            </DrawerTrigger>
+
+                            {/* Drawer */}
+                            <DrawerContent className="flex h-full flex-col px-6 pb-6">
+                                <DrawerHeader className="px-0">
+                                    <DrawerTitle className="text-lg font-semibold">
+                                        Menu
+                                    </DrawerTitle>
+                                </DrawerHeader>
+
+                                {/* Navigation */}
+                                <div className="mt-6 flex flex-col gap-4 text-base font-medium">
+                                    <NavLinks
+                                        pathname={pathname}
+                                        onClick={() => setOpen(false)}
+                                    />
+                                </div>
+
+                                {/* Footer Action */}
+                                {isAuthenticated ? (
+                                    <Link href="/dashboard" className="mt-auto" onClick={() => setOpen(false)}>
+                                        <Button variant="outline" className="w-full">
+                                            Go to Dashboard
+                                        </Button>
+                                    </Link>
                                 ) : (
-                                    <Menu className="h-6 w-6 text-white" />
+                                    <Link href="/login" className="mt-auto" onClick={() => setOpen(false)}>
+                                        <Button variant="outline" className="w-full">
+                                            Login
+                                        </Button>
+                                    </Link>
                                 )}
-                            </button>
-                        </DrawerTrigger>
-
-                        {/* Drawer */}
-                        <DrawerContent className="flex h-full flex-col px-6 pb-6">
-                            <DrawerHeader className="px-0">
-                                <DrawerTitle className="text-lg font-semibold">
-                                    Menu
-                                </DrawerTitle>
-                            </DrawerHeader>
-
-                            {/* Navigation */}
-                            <div className="mt-6 flex flex-col gap-4 text-base font-medium">
-                                <NavLinks
-                                    pathname={pathname}
-                                    onClick={() => setOpen(false)}
-                                />
-                            </div>
-
-                            {/* Footer Action */}
-                            <Link href="/login" className="mt-auto" onClick={() => setOpen(false)}>
-                                <Button variant="outline" className="w-full">
-                                    Login
-                                </Button>
-                            </Link>
-                        </DrawerContent>
-                    </Drawer>
+                            </DrawerContent>
+                        </Drawer>
+                    ) : (
+                        <button
+                            aria-label="Toggle menu"
+                            className="lg:hidden rounded-md p-2 transition hover:bg-white/10"
+                            disabled
+                        >
+                            <Menu className="h-6 w-6 text-white" />
+                        </button>
+                    )}
                 </div>
             </nav>
         </header>

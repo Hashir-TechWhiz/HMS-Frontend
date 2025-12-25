@@ -1,3 +1,15 @@
+import { getAllowedRoles } from "./auth/permissions";
+
+/**
+ * Dashboard Navigation Links
+ * 
+ * Aligned with backend API capabilities and role-based access control.
+ * Each link includes a `roles` array indicating which user roles can access it.
+ * 
+ * Role permissions are centralized in @/lib/auth/permissions
+ * Roles: guest, receptionist, housekeeping, admin
+ */
+
 export const DASHBOARD_LINKS = {
     navMain: [
         {
@@ -7,56 +19,59 @@ export const DASHBOARD_LINKS = {
                     label: "Overview",
                     href: "/dashboard",
                     icon: "/icons/Dashboard.svg",
+                    roles: getAllowedRoles("/dashboard")!,
                 },
             ],
         },
         {
-            title: "Hotel Operations",
+            title: "Management",
             links: [
                 {
-                    label: "Rooms",
-                    href: "/dashboard/rooms",
-                    icon: "/icons/Rooms.svg",
+                    label: "My Bookings",
+                    href: "/dashboard/my-bookings",
+                    icon: "/icons/Bookings.svg",
+                    roles: getAllowedRoles("/dashboard/my-bookings")!,
+                },
+                {
+                    label: "My Service Requests",
+                    href: "/dashboard/my-requests",
+                    icon: "/icons/Housekeeping.svg",
+                    roles: getAllowedRoles("/dashboard/my-requests")!,
                 },
                 {
                     label: "Bookings",
                     href: "/dashboard/bookings",
                     icon: "/icons/Bookings.svg",
+                    roles: getAllowedRoles("/dashboard/bookings")!,
+                },
+                {
+                    label: "Service Requests",
+                    href: "/dashboard/service-requests",
+                    icon: "/icons/Housekeeping.svg",
+                    roles: getAllowedRoles("/dashboard/service-requests")!,
+                },
+                {
+                    label: "Rooms",
+                    href: "/dashboard/rooms",
+                    icon: "/icons/Rooms.svg",
+                    roles: getAllowedRoles("/dashboard/rooms")!,
                 },
                 {
                     label: "Guests",
                     href: "/dashboard/guests",
                     icon: "/icons/Guests.svg",
-                },
-                {
-                    label: "Housekeeping",
-                    href: "/dashboard/housekeeping",
-                    icon: "/icons/Housekeeping.svg",
+                    roles: getAllowedRoles("/dashboard/guests")!,
                 },
             ],
         },
         {
-            title: "Finance",
+            title: "Reports",
             links: [
-                {
-                    label: "Invoices",
-                    href: "/dashboard/invoices",
-                    icon: "/icons/Invoices.svg",
-                },
-                {
-                    label: "Payments",
-                    href: "/dashboard/payments",
-                    icon: "/icons/Payments.svg",
-                },
-                {
-                    label: "Expenses",
-                    href: "/dashboard/expenses",
-                    icon: "/icons/Expenses.svg",
-                },
                 {
                     label: "Reports",
                     href: "/dashboard/reports",
                     icon: "/icons/Reports.svg",
+                    roles: getAllowedRoles("/dashboard/reports")!,
                 },
             ],
         },
@@ -64,14 +79,16 @@ export const DASHBOARD_LINKS = {
             title: "Administration",
             links: [
                 {
-                    label: "Staff Management",
-                    href: "/dashboard/staff",
+                    label: "User Management",
+                    href: "/dashboard/users",
                     icon: "/icons/Users.svg",
+                    roles: getAllowedRoles("/dashboard/users")!,
                 },
                 {
-                    label: "System Settings",
-                    href: "/dashboard/settings",
+                    label: "Profile Settings",
+                    href: "/dashboard/profile",
                     icon: "/icons/Settings.svg",
+                    roles: getAllowedRoles("/dashboard/profile")!,
                 },
             ],
         },

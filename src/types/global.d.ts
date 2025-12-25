@@ -23,6 +23,7 @@ declare global {
         label: string;
         href: string;
         icon: string;
+        roles: UserRole[];
     };
 
     type NavSection = {
@@ -78,6 +79,96 @@ declare global {
         value: string;
         label: string;
     };
+
+    // API Response Types (aligned with backend contract)
+    interface ApiSuccessResponse<T = any> {
+        success: true;
+        message?: string;
+        data: T;
+    }
+
+    interface ApiErrorResponse {
+        success: false;
+        message: string;
+    }
+
+    type ApiResponse<T = any> = ApiSuccessResponse<T> | ApiErrorResponse;
+
+    interface PaginationMeta {
+        currentPage: number;
+        totalPages: number;
+        totalItems: number;
+        itemsPerPage: number;
+    }
+
+    interface PaginatedResponse<T> {
+        items: T[];
+        pagination: PaginationMeta;
+    }
+
+    // User Types
+    type UserRole = 'guest' | 'receptionist' | 'housekeeping' | 'admin';
+
+    interface IUser {
+        _id: string;
+        name: string;
+        email: string;
+        role: UserRole;
+        isActive: boolean;
+        createdAt: string;
+        updatedAt: string;
+    }
+
+    // Room Types
+    type RoomType = 'standard' | 'deluxe' | 'suite' | 'presidential';
+    type RoomStatus = 'available' | 'occupied' | 'maintenance';
+
+    interface IRoom {
+        _id: string;
+        roomNumber: string;
+        roomType: RoomType;
+        price: number;
+        capacity: number;
+        status: RoomStatus;
+        amenities: string[];
+        description?: string;
+        imageUrl?: string;
+        createdAt: string;
+        updatedAt: string;
+    }
+
+    // Booking Types
+    type BookingStatus = 'confirmed' | 'checked-in' | 'checked-out' | 'cancelled';
+
+    interface IBooking {
+        _id: string;
+        guest: IUser | string;
+        room: IRoom | string;
+        checkInDate: string;
+        checkOutDate: string;
+        totalPrice: number;
+        status: BookingStatus;
+        createdBy: IUser | string;
+        createdAt: string;
+        updatedAt: string;
+    }
+
+    // Service Request Types
+    type ServiceType = 'housekeeping' | 'room-service' | 'maintenance' | 'concierge';
+    type ServiceStatus = 'pending' | 'in-progress' | 'completed';
+
+    interface IServiceRequest {
+        _id: string;
+        booking: IBooking | string;
+        guest: IUser | string;
+        room: IRoom | string;
+        serviceType: ServiceType;
+        status: ServiceStatus;
+        assignedRole?: string;
+        notes?: string;
+        createdAt: string;
+        updatedAt: string;
+    }
 }
 
 export { };
