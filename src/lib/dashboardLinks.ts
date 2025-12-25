@@ -33,22 +33,16 @@ export const DASHBOARD_LINKS = {
             title: "Management",
             links: [
                 {
-                    label: "My Bookings",
-                    href: "/dashboard/my-bookings",
+                    label: "Bookings",
+                    href: "/dashboard/bookings",
                     icon: "/icons/Bookings.svg",
-                    roles: getAllowedRoles("/dashboard/my-bookings")!,
+                    roles: getAllowedRoles("/dashboard/bookings")!,
                 },
                 {
                     label: "My Service Requests",
                     href: "/dashboard/my-requests",
                     icon: "/icons/Housekeeping.svg",
                     roles: getAllowedRoles("/dashboard/my-requests")!,
-                },
-                {
-                    label: "Bookings",
-                    href: "/dashboard/bookings",
-                    icon: "/icons/Bookings.svg",
-                    roles: getAllowedRoles("/dashboard/bookings")!,
                 },
                 {
                     label: "Service Requests",

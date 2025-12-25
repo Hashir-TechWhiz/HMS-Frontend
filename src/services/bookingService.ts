@@ -44,7 +44,13 @@ export const createBooking = async (data: CreateBookingData): Promise<ApiRespons
         if (error instanceof AxiosError && error.response?.data) {
             return error.response.data as ApiErrorResponse;
         }
-        throw error;
+        // Handle network errors, auth errors, or any other errors gracefully
+        return {
+            success: false,
+            message: error instanceof AxiosError
+                ? error.message || 'Network error occurred'
+                : 'An unexpected error occurred'
+        };
     }
 };
 
@@ -63,7 +69,119 @@ export const getBookingById = async (bookingId: string): Promise<ApiResponse<IBo
         if (error instanceof AxiosError && error.response?.data) {
             return error.response.data as ApiErrorResponse;
         }
-        throw error;
+        // Handle network errors, auth errors, or any other errors gracefully
+        return {
+            success: false,
+            message: error instanceof AxiosError
+                ? error.message || 'Network error occurred'
+                : 'An unexpected error occurred'
+        };
+    }
+};
+
+/**
+ * Get all bookings (for receptionist/admin)
+ * GET /api/bookings
+ * 
+ * @param page - Page number (default: 1)
+ * @param limit - Items per page (default: 10)
+ * @returns Promise with paginated bookings
+ */
+export const getAllBookings = async (page: number = 1, limit: number = 10): Promise<ApiResponse<PaginatedResponse<IBooking>>> => {
+    try {
+        const response = await api.get<ApiResponse<PaginatedResponse<IBooking>>>('/bookings', {
+            params: { page, limit }
+        });
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data) {
+            return error.response.data as ApiErrorResponse;
+        }
+        // Handle network errors, auth errors, or any other errors gracefully
+        return {
+            success: false,
+            message: error instanceof AxiosError
+                ? error.message || 'Network error occurred'
+                : 'An unexpected error occurred'
+        };
+    }
+};
+
+/**
+ * Get my bookings (for guest users)
+ * GET /api/bookings/my-bookings
+ * 
+ * @param page - Page number (default: 1)
+ * @param limit - Items per page (default: 10)
+ * @returns Promise with paginated user bookings
+ */
+export const getMyBookings = async (page: number = 1, limit: number = 10): Promise<ApiResponse<PaginatedResponse<IBooking>>> => {
+    try {
+        const response = await api.get<ApiResponse<PaginatedResponse<IBooking>>>('/bookings/my-bookings', {
+            params: { page, limit }
+        });
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data) {
+            return error.response.data as ApiErrorResponse;
+        }
+        // Handle network errors, auth errors, or any other errors gracefully
+        return {
+            success: false,
+            message: error instanceof AxiosError
+                ? error.message || 'Network error occurred'
+                : 'An unexpected error occurred'
+        };
+    }
+};
+
+/**
+ * Cancel a booking
+ * PATCH /api/bookings/:id/cancel
+ * 
+ * @param bookingId - The ID of the booking to cancel
+ * @returns Promise with updated booking data
+ */
+export const cancelBooking = async (bookingId: string): Promise<ApiResponse<IBooking>> => {
+    try {
+        const response = await api.patch<ApiResponse<IBooking>>(`/bookings/${bookingId}/cancel`);
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data) {
+            return error.response.data as ApiErrorResponse;
+        }
+        // Handle network errors, auth errors, or any other errors gracefully
+        return {
+            success: false,
+            message: error instanceof AxiosError
+                ? error.message || 'Network error occurred'
+                : 'An unexpected error occurred'
+        };
+    }
+};
+
+/**
+ * Confirm a booking
+ * PATCH /api/bookings/:id/confirm
+ * 
+ * @param bookingId - The ID of the booking to confirm
+ * @returns Promise with updated booking data
+ */
+export const confirmBooking = async (bookingId: string): Promise<ApiResponse<IBooking>> => {
+    try {
+        const response = await api.patch<ApiResponse<IBooking>>(`/bookings/${bookingId}/confirm`);
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data) {
+            return error.response.data as ApiErrorResponse;
+        }
+        // Handle network errors, auth errors, or any other errors gracefully
+        return {
+            success: false,
+            message: error instanceof AxiosError
+                ? error.message || 'Network error occurred'
+                : 'An unexpected error occurred'
+        };
     }
 };
 
