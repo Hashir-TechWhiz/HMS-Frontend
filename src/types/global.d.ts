@@ -137,17 +137,21 @@ declare global {
     }
 
     // Booking Types
-    type BookingStatus = 'confirmed' | 'checked-in' | 'checked-out' | 'cancelled';
+    type BookingStatus = 'pending' | 'confirmed' | 'cancelled';
 
     interface IBooking {
         _id: string;
-        guest: IUser | string;
+        guest?: IUser | string; // Optional - only for guest bookings
+        customerDetails?: {
+            name: string;
+            phone: string;
+            email?: string; // Optional
+        }; // Optional - only for walk-in bookings
+        createdBy?: IUser | string; // Optional - only for staff-created bookings
         room: IRoom | string;
         checkInDate: string;
         checkOutDate: string;
-        totalPrice: number;
         status: BookingStatus;
-        createdBy: IUser | string;
         createdAt: string;
         updatedAt: string;
     }

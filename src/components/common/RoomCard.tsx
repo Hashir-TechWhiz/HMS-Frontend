@@ -2,10 +2,12 @@
 
 import { FC } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, Bed} from "lucide-react";
+import { Users, Bed } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export type UserRole = "public" | "guest" | "receptionist" | "admin";
 
@@ -31,8 +33,10 @@ const RoomCard: FC<RoomCardProps> = ({
   beds,
   pricePerNight,
   userRole = "public",
-  onAction,
 }) => {
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
+
   const getActionButtonLabel = (): string => {
     switch (userRole) {
       case "receptionist":
@@ -43,6 +47,23 @@ const RoomCard: FC<RoomCardProps> = ({
       case "public":
       default:
         return "Book Now";
+    }
+  };
+
+  const handleBookingClick = () => {
+    // Admin users have view-only access (button is disabled)
+    if (userRole === "admin") {
+      return;
+    }
+
+    // Check authentication for booking actions
+    if (!isAuthenticated) {
+      // Redirect to login with roomId to preserve booking intent
+      router.push(`/login?roomId=${id}`);
+    } else {
+      // User is authenticated, always navigate to booking flow
+      // onAction is only used for non-booking actions (e.g., admin view-only)
+      router.push(`/book?roomId=${id}`);
     }
   };
 
@@ -90,7 +111,7 @@ const RoomCard: FC<RoomCardProps> = ({
       {/* Action Button */}
       <CardFooter className="p-5 pt-0">
         <Button
-          onClick={() => onAction?.(id)}
+          onClick={handleBookingClick}
           className="w-full main-button-gradient"
           disabled={userRole === "admin"}
         >

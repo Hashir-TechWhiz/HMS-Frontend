@@ -21,6 +21,12 @@ export const DASHBOARD_LINKS = {
                     icon: "/icons/Dashboard.svg",
                     roles: getAllowedRoles("/dashboard")!,
                 },
+                {
+                    label: "Browse Rooms",
+                    href: "/rooms",
+                    icon: "/icons/Rooms.svg",
+                    roles: getAllowedRoles("/rooms")!,
+                },
             ],
         },
         {

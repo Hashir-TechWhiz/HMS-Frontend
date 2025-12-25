@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const SignIn = () => {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { refreshUser } = useAuth();
     const {
         register,
@@ -32,7 +33,16 @@ const SignIn = () => {
                 // Refresh user context after successful login
                 await refreshUser();
                 toast.success('Login successful!');
-                router.push('/dashboard');
+
+                // Check if user was redirected from booking flow
+                const roomId = searchParams.get('roomId');
+                if (roomId) {
+                    // Redirect to booking flow with roomId
+                    router.push(`/book?roomId=${roomId}`);
+                } else {
+                    // Default redirect to dashboard
+                    router.push('/dashboard');
+                }
             } else {
                 // Parse backend error message and map to form fields
                 const errorMessage = response.message || 'Login failed';
