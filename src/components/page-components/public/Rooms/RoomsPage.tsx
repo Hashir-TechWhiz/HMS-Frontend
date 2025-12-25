@@ -1,6 +1,7 @@
 "use client";
 
-import { FC, useState } from "react";
+import { FC, useState, useEffect } from "react";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import SearchSummary from "./SearchSummary";
@@ -8,6 +9,7 @@ import RoomsFilters from "./RoomsFilters";
 import RoomsList from "./RoomsList";
 import RoomSearchForm from "@/components/common/RoomSearchForm";
 import { UserRole } from "@/components/common/RoomCard";
+import { getRooms, GetRoomsParams } from "@/services/roomService";
 
 interface RoomsPageProps {
     userRole?: UserRole;
@@ -16,23 +18,50 @@ interface RoomsPageProps {
 const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
     const searchParams = useSearchParams();
     const [showSearchForm, setShowSearchForm] = useState(false);
+    const [rooms, setRooms] = useState<IRoom[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    // Default to showing only available rooms on public page
+    const [filters, setFilters] = useState<GetRoomsParams>({ status: "available" });
+    const [clientRoomTypes, setClientRoomTypes] = useState<RoomType[] | undefined>();
+    const [filteredRoomsCount, setFilteredRoomsCount] = useState<number>(0);
 
-    // Read search parameters from URL
+    // Read search parameters from URL (UI display only - not sent to backend)
     const checkInParam = searchParams.get("checkIn");
     const checkOutParam = searchParams.get("checkOut");
     const guestsParam = searchParams.get("guests");
 
-    // Format dates for display
+    // Format dates for display (UI only)
     const checkInDate = checkInParam ? new Date(checkInParam) : null;
     const checkOutDate = checkOutParam ? new Date(checkOutParam) : null;
     const guests = guestsParam ? parseInt(guestsParam) : null;
 
-    const searchData = {
-        checkIn: checkInDate ? format(checkInDate, "MMM dd, yyyy") : null,
-        checkOut: checkOutDate ? format(checkOutDate, "MMM dd, yyyy") : null,
-        guests: guests,
-        resultsCount: 8,
-    };
+    // Fetch rooms from API
+    useEffect(() => {
+        const fetchRooms = async () => {
+            setLoading(true);
+            setError(null);
+
+            try {
+                const response = await getRooms(filters);
+
+                if (response.success && response.data) {
+                    setRooms(response.data);
+                } else {
+                    setError(response.message || "Failed to load rooms");
+                    setRooms([]);
+                }
+            } catch (err) {
+                console.error("Error fetching rooms:", err);
+                setError("An unexpected error occurred while loading rooms");
+                setRooms([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchRooms();
+    }, [filters]);
 
     const handleSearch = (data: {
         checkIn?: Date;
@@ -61,9 +90,11 @@ const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
         window.location.reload();
     };
 
-    const handleFilterChange = (filters: any) => {
-        // This will be implemented with actual filtering later
-        console.log("Filters:", filters);
+    const handleFilterChange = (newFilters: GetRoomsParams, selectedRoomTypes?: RoomType[]) => {
+        // Update filters which will trigger useEffect to fetch new data
+        setFilters(newFilters);
+        // Store room types for client-side filtering if multiple selected
+        setClientRoomTypes(selectedRoomTypes);
     };
 
     const handleRoomSelect = (roomId: string) => {
@@ -74,8 +105,21 @@ const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
     return (
         <div className="min-h-screen bg-background">
             {/* Page Header */}
-            <div className="bg-linear-to-r from-primary-600 to-primary-800 text-white py-12 pt-24">
-                <div className="container mx-auto px-4">
+            <div className="relative text-white py-12 pt-28">
+                {/* Background Image */}
+                <Image
+                    src="/images/LuxuryRoom.jpg"
+                    alt="Luxury room"
+                    fill
+                    priority
+                    className="object-cover"
+                />
+
+                {/* Dark overlay */}
+                <div className="absolute inset-0 bg-black/20" />
+
+                {/* Content */}
+                <div className="relative container mx-auto px-4">
                     <div className="max-w-7xl mx-auto">
                         <h1 className="text-3xl md:text-4xl font-bold mb-2">
                             Find Your Perfect Room
@@ -112,10 +156,10 @@ const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
 
                     {/* Search Summary */}
                     <SearchSummary
-                        checkIn={searchData.checkIn}
-                        checkOut={searchData.checkOut}
-                        guests={searchData.guests}
-                        resultsCount={searchData.resultsCount}
+                        checkIn={checkInDate ? format(checkInDate, "MMM dd, yyyy") : null}
+                        checkOut={checkOutDate ? format(checkOutDate, "MMM dd, yyyy") : null}
+                        guests={guests}
+                        resultsCount={filteredRoomsCount}
                     />
 
                     {/* Filters and Results Grid */}
@@ -130,7 +174,16 @@ const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
 
                         {/* Rooms List */}
                         <div className="lg:col-span-3">
-                            <RoomsList userRole={userRole} onRoomSelect={handleRoomSelect} />
+                            <RoomsList
+                                rooms={rooms}
+                                loading={loading}
+                                error={error}
+                                userRole={userRole}
+                                onRoomSelect={handleRoomSelect}
+                                clientRoomTypeFilter={clientRoomTypes}
+                                guestsFilter={guests}
+                                onFilteredCountChange={setFilteredRoomsCount}
+                            />
                         </div>
                     </div>
                 </div>

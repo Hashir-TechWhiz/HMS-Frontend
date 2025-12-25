@@ -59,7 +59,7 @@ const PublicHeader = () => {
 
     return (
         <header className="fixed inset-x-0 top-0 z-50 backdrop-blur-md py-2">
-            <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-2">
+            <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-2 xl:px-0">
 
                 {/* Logo */}
                 <Link href="/" className="flex items-center">
@@ -69,7 +69,7 @@ const PublicHeader = () => {
                             alt="HMS Logo"
                             fill
                             priority
-                            className="object-contain -ml-3 md:-ml-2"
+                            className="object-contain -ml-5 xl:-ml-7"
                         />
                     </div>
                 </Link>

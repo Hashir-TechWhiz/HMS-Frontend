@@ -44,7 +44,7 @@ const HomeHeroSection: FC = () => {
 
             <div className="absolute inset-0 bg-black/60" />
 
-            <div className="relative z-10 text-center text-white px-4 w-full max-w-7xl mx-auto">
+            <div className="relative z-10 text-center text-white px-4 w-full max-w-7xl mx-auto pt-16 md:pt-0">
                 <div className="mb-8">
                     <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
                         Find Your Perfect Stay

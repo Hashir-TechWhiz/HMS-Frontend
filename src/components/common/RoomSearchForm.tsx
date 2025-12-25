@@ -1,6 +1,7 @@
 "use client";
 
-import { FC, useState } from "react";
+import { FC, useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -22,9 +23,27 @@ const RoomSearchForm: FC<RoomSearchFormProps> = ({
     variant = "hero",
     onSearch,
 }) => {
-    const [checkIn, setCheckIn] = useState<Date>();
-    const [checkOut, setCheckOut] = useState<Date>();
-    const [guests, setGuests] = useState<number>(1);
+    const searchParams = useSearchParams();
+
+    // Initialize state from URL params
+    const initialCheckIn = useMemo(() => {
+        const param = searchParams.get("checkIn");
+        return param ? new Date(param) : undefined;
+    }, [searchParams]);
+
+    const initialCheckOut = useMemo(() => {
+        const param = searchParams.get("checkOut");
+        return param ? new Date(param) : undefined;
+    }, [searchParams]);
+
+    const initialGuests = useMemo(() => {
+        const param = searchParams.get("guests");
+        return param ? parseInt(param) || 1 : 1;
+    }, [searchParams]);
+
+    const [checkIn, setCheckIn] = useState<Date | undefined>(initialCheckIn);
+    const [checkOut, setCheckOut] = useState<Date | undefined>(initialCheckOut);
+    const [guests, setGuests] = useState<number>(initialGuests);
 
     const handleSearch = () => {
         if (onSearch) {
@@ -37,9 +56,9 @@ const RoomSearchForm: FC<RoomSearchFormProps> = ({
     return (
         <div
             className={`${isHero
-                ? "bg-black/30 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/20 p-6 md:p-8"
-                : "bg-card rounded-lg shadow-md border border-border p-4"
-                } w-full max-w-4xl`}
+                ? "bg-black/30 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/20 p-6 md:p-8 max-w-4xl"
+                : "bg-card rounded-lg shadow-md border border-border p-4 w-full"
+                } w-full`}
         >
             <div
                 className={`grid gap-4 ${isHero

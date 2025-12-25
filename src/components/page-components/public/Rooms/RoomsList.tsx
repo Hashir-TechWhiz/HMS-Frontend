@@ -1,104 +1,129 @@
 "use client";
 
-import { FC } from "react";
+import { FC, useEffect } from "react";
 import RoomCard, { RoomCardProps, UserRole } from "@/components/common/RoomCard";
+import { Skeleton } from "@/components/ui/skeleton";
+import { AlertCircle } from "lucide-react";
 
 interface RoomsListProps {
+  rooms: IRoom[];
+  loading?: boolean;
+  error?: string | null;
   userRole?: UserRole;
   onRoomSelect?: (roomId: string) => void;
+  clientRoomTypeFilter?: RoomType[];
+  guestsFilter?: number | null;
+  onFilteredCountChange?: (count: number) => void;
 }
 
-// Mock room data - will be replaced with API data later
-const mockRooms: Omit<RoomCardProps, "userRole" | "onAction">[] = [
-  {
-    id: "1",
-    name: "Deluxe Ocean View Suite",
-    image: "/images/SampleHotel.jpg",
-    description: "Experience luxury with breathtaking ocean views and premium amenities.",
-    features: ["Free WiFi", "Ocean View", "King Bed", "Mini Bar", "Air Conditioning", "Smart TV"],
-    capacity: 2,
-    beds: 1,
-    pricePerNight: 299,
-  },
-  {
-    id: "2",
-    name: "Standard Double Room",
-    image: "/images/SampleHotel.jpg",
-    description: "Comfortable and affordable accommodation perfect for couples or solo travelers.",
-    features: ["Free WiFi", "Twin Beds", "Air Conditioning", "Flat Screen TV"],
-    capacity: 2,
-    beds: 2,
-    pricePerNight: 149,
-  },
-  {
-    id: "3",
-    name: "Family Suite",
-    image: "/images/SampleHotel.jpg",
-    description: "Spacious suite ideal for families with children, featuring separate living area.",
-    features: ["Free WiFi", "2 Bedrooms", "Kitchen", "Living Room", "Air Conditioning", "Smart TV"],
-    capacity: 5,
-    beds: 3,
-    pricePerNight: 399,
-  },
-  {
-    id: "4",
-    name: "Executive Business Suite",
-    image: "/images/SampleHotel.jpg",
-    description: "Perfect for business travelers with work desk and high-speed internet.",
-    features: ["Free WiFi", "Work Desk", "Coffee Maker", "Air Conditioning", "Smart TV", "Mini Bar"],
-    capacity: 2,
-    beds: 1,
-    pricePerNight: 249,
-  },
-  {
-    id: "5",
-    name: "Luxury Penthouse",
-    image: "/images/SampleHotel.jpg",
-    description: "Ultimate luxury experience with panoramic city views and premium services.",
-    features: ["Free WiFi", "Panoramic View", "Jacuzzi", "King Bed", "Kitchen", "Smart TV", "Balcony"],
-    capacity: 4,
-    beds: 2,
-    pricePerNight: 599,
-  },
-  {
-    id: "6",
-    name: "Budget Single Room",
-    image: "/images/SampleHotel.jpg",
-    description: "Cozy and economical room perfect for solo travelers on a budget.",
-    features: ["Free WiFi", "Single Bed", "Air Conditioning", "TV"],
-    capacity: 1,
-    beds: 1,
-    pricePerNight: 89,
-  },
-  {
-    id: "7",
-    name: "Garden View Room",
-    image: "/images/SampleHotel.jpg",
-    description: "Peaceful room overlooking beautiful gardens with modern amenities.",
-    features: ["Free WiFi", "Garden View", "Queen Bed", "Air Conditioning", "Smart TV", "Coffee Maker"],
-    capacity: 2,
-    beds: 1,
-    pricePerNight: 179,
-  },
-  {
-    id: "8",
-    name: "Presidential Suite",
-    image: "/images/SampleHotel.jpg",
-    description: "The epitome of luxury with exclusive amenities and personalized service.",
-    features: ["Free WiFi", "City View", "Jacuzzi", "King Bed", "Kitchen", "Smart TV", "Butler Service", "Balcony"],
-    capacity: 4,
-    beds: 2,
-    pricePerNight: 899,
-  },
-];
+/**
+ * Map backend IRoom data to RoomCard props
+ */
+const mapRoomToCardProps = (room: IRoom): Omit<RoomCardProps, "userRole" | "onAction"> => {
+  // Generate a user-friendly name from room number and type
+  const name = `${room.roomType} Room ${room.roomNumber}`;
 
-const RoomsList: FC<RoomsListProps> = ({ userRole = "public", onRoomSelect }) => {
+  // Use first image from images array, fallback to default only if array is empty
+  const image = room.images && room.images.length > 0
+    ? room.images[0]
+    : "/images/SampleHotel.jpg";
+
+  return {
+    id: room._id,
+    name: name,
+    image: image,
+    description: room.description || `${room.roomType} room with comfortable accommodations`,
+    features: [], // Backend doesn't have amenities field, keep empty for now
+    capacity: room.capacity,
+    beds: Math.ceil(room.capacity / 2), // Estimate beds based on capacity
+    pricePerNight: room.pricePerNight,
+  };
+};
+
+const RoomsList: FC<RoomsListProps> = ({
+  rooms,
+  loading = false,
+  error = null,
+  userRole = "public",
+  onRoomSelect,
+  clientRoomTypeFilter,
+  guestsFilter,
+  onFilteredCountChange
+}) => {
+  // Apply client-side filtering
+  let filteredRooms = rooms;
+
+  // Filter by room type if multiple types selected
+  if (clientRoomTypeFilter && clientRoomTypeFilter.length > 0) {
+    filteredRooms = filteredRooms.filter(room =>
+      clientRoomTypeFilter.includes(room.roomType)
+    );
+  }
+
+  // Filter by guest capacity (only show rooms with capacity exactly matching guests)
+  if (guestsFilter && guestsFilter > 0) {
+    filteredRooms = filteredRooms.filter(room =>
+      room.capacity === guestsFilter
+    );
+  }
+
+  // Update filtered count whenever it changes
+  useEffect(() => {
+    onFilteredCountChange?.(filteredRooms.length);
+  }, [filteredRooms.length, onFilteredCountChange]);
+  // Loading state
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[...Array(6)].map((_, index) => (
+          <div key={index} className="space-y-4">
+            <Skeleton className="h-48 w-full rounded-lg" />
+            <Skeleton className="h-6 w-3/4" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-4">
+        <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+        <h3 className="text-xl font-semibold text-foreground mb-2">
+          Unable to Load Rooms
+        </h3>
+        <p className="text-muted-foreground text-center max-w-md">
+          {error}
+        </p>
+      </div>
+    );
+  }
+
+  // Empty state
+  if (filteredRooms.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-4">
+        <div className="text-6xl mb-4">🏨</div>
+        <h3 className="text-xl font-semibold text-foreground mb-2">
+          No Rooms Found
+        </h3>
+        <p className="text-muted-foreground text-center max-w-md">
+          We couldn&apos;t find any rooms matching your criteria. Try adjusting your filters or search parameters.
+        </p>
+      </div>
+    );
+  }
+
+  // Rooms list
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {mockRooms.map((room) => (
+      {filteredRooms.map((room) => (
         <RoomCard
-          key={room.id}
-          {...room}
+          key={room._id}
+          {...mapRoomToCardProps(room)}
           userRole={userRole}
           onAction={onRoomSelect}
         />

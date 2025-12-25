@@ -119,20 +119,19 @@ declare global {
         updatedAt: string;
     }
 
-    // Room Types
-    type RoomType = 'standard' | 'deluxe' | 'suite' | 'presidential';
-    type RoomStatus = 'available' | 'occupied' | 'maintenance';
+    // Room Types (matches backend schema exactly)
+    type RoomType = 'Single' | 'Double' | 'Suite' | 'Deluxe' | 'Presidential';
+    type RoomStatus = 'available' | 'unavailable' | 'maintenance';
 
     interface IRoom {
         _id: string;
         roomNumber: string;
         roomType: RoomType;
-        price: number;
+        pricePerNight: number;
         capacity: number;
         status: RoomStatus;
-        amenities: string[];
-        description?: string;
-        imageUrl?: string;
+        description: string;
+        images: string[]; // Array of image URLs (1-4 images required)
         createdAt: string;
         updatedAt: string;
     }

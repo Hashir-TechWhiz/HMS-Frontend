@@ -1,7 +1,9 @@
 "use client";
 
 import { FC } from "react";
-import { Calendar, Users } from "lucide-react";
+import { Calendar, Users, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 interface SearchSummaryProps {
   checkIn?: string | null;
@@ -16,8 +18,15 @@ const SearchSummary: FC<SearchSummaryProps> = ({
   guests,
   resultsCount = 0,
 }) => {
+  const router = useRouter();
+  
   // Check if we have any search criteria
   const hasSearchCriteria = checkIn || checkOut || guests;
+
+  const handleClearSearch = () => {
+    // Navigate to rooms page without query params
+    router.push("/rooms");
+  };
 
   return (
     <div className="bg-card rounded-lg shadow-md border border-border p-6 mb-6">
@@ -42,6 +51,17 @@ const SearchSummary: FC<SearchSummaryProps> = ({
                 </span>
               </div>
             )}
+            
+            {/* Clear Search Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearSearch}
+              className="text-muted-foreground hover:text-foreground h-auto py-1 px-2"
+            >
+              <X className="h-3 w-3 mr-1" />
+              Clear Search
+            </Button>
           </div>
         ) : (
           <div className="text-sm text-foreground">
