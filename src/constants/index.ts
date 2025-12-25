@@ -27,16 +27,21 @@ export const PUBLIC_HEADER_NAVIGATION = [
     },
     {
         id: 1,
+        name: "Rooms",
+        link: "/rooms",
+    },
+    {
+        id: 2,
         name: "About",
         link: "/about",
     },
     {
-        id: 2,
+        id: 3,
         name: "Services",
         link: "/services",
     },
     {
-        id: 3,
+        id: 4,
         name: "Contact",
         link: "/contact-us",
     },
