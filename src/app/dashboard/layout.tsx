@@ -1,7 +1,8 @@
 "use client"
 
 import { ReactNode } from "react"
-import { AppSidebar } from "@/components/common/sidebar/app-sidebar"
+
+import AppSidebar from "@/components/common/sidebar/appSidebar"
 import { Separator } from "@/components/ui/separator"
 import {
     SidebarInset,

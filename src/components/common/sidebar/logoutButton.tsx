@@ -1,14 +1,14 @@
 "use client"
 
-import { LogOut } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { LogOut } from "lucide-react"
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
-export function LogoutButton() {
+const LogoutButton = () => {
   return (
     <SidebarMenu className="border-t border-primary-900">
       <SidebarMenuItem>
@@ -30,3 +30,5 @@ export function LogoutButton() {
     </SidebarMenu>
   )
 }
+
+export default LogoutButton;

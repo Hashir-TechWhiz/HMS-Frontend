@@ -17,3 +17,27 @@ export const ForgotPasswordStepContent = [
         description: "Your password has been reset successfully!"
     },
 ];
+
+// Public Header Navigation
+export const PUBLIC_HEADER_NAVIGATION = [
+    {
+        id: 0,
+        name: "Home",
+        link: "/",
+    },
+    {
+        id: 1,
+        name: "About",
+        link: "/about",
+    },
+    {
+        id: 2,
+        name: "Services",
+        link: "/services",
+    },
+    {
+        id: 3,
+        name: "Contact",
+        link: "/contact-us",
+    },
+];

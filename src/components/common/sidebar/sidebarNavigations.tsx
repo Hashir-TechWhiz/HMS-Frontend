@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { usePathname } from "next/navigation";
+
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -17,7 +19,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-export function NavMain({ items }: { items: NavSection[] }) {
+const SidebarNavigations = ({ items }: { items: NavSection[] }) => {
   const pathname = usePathname();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -96,4 +98,6 @@ export function NavMain({ items }: { items: NavSection[] }) {
       ))}
     </>
   );
-}
+};
+
+export default SidebarNavigations;
