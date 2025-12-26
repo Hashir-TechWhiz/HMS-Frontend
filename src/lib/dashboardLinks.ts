@@ -64,17 +64,17 @@ export const DASHBOARD_LINKS = {
                 },
             ],
         },
-        {
-            title: "Reports",
-            links: [
-                {
-                    label: "Reports",
-                    href: "/dashboard/reports",
-                    icon: "/icons/Reports.svg",
-                    roles: getAllowedRoles("/dashboard/reports")!,
-                },
-            ],
-        },
+        // {
+        //     title: "Reports",
+        //     links: [
+        //         {
+        //             label: "Reports",
+        //             href: "/dashboard/reports",
+        //             icon: "/icons/Reports.svg",
+        //             roles: getAllowedRoles("/dashboard/reports")!,
+        //         },
+        //     ],
+        // },
         {
             title: "Administration",
             links: [

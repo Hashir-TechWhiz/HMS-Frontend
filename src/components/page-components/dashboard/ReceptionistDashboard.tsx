@@ -69,7 +69,7 @@ export const ReceptionistDashboard = () => {
     const bookingChartData = reportData
         ? [
             { name: "Confirmed", value: reportData.bookings.byStatus.confirmed, fill: "var(--chart-cyan-2)" },
-            { name: "Pending", value: reportData.bookings.byStatus.pending, fill: "var(--chart-yellow-4)" },
+            { name: "Pending", value: reportData.bookings.byStatus.pending, fill: "var(--chart-yellow-1)" },
             { name: "Cancelled", value: reportData.bookings.byStatus.cancelled, fill: "var(--chart-rose-4)" },
         ]
         : [];

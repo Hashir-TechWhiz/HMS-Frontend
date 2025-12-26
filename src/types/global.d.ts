@@ -156,6 +156,12 @@ declare global {
         updatedAt: string;
     }
 
+    // Date filter types for API queries
+    interface IDateRangeFilter {
+        from?: string; // ISO date string
+        to?: string; // ISO date string
+    }
+
     // Service Request Types
     type ServiceType = 'housekeeping' | 'room_service' | 'maintenance';
     type ServiceStatus = 'pending' | 'in_progress' | 'completed';
@@ -172,6 +178,14 @@ declare global {
         notes?: string;
         createdAt: string;
         updatedAt: string;
+    }
+
+    // Service Request filter types for API queries
+    interface IServiceRequestFilters extends IDateRangeFilter {
+        status?: ServiceStatus;
+        serviceType?: ServiceType;
+        assignedRole?: string;
+        roomId?: string;
     }
 
     // Report Types (matching backend response structure)

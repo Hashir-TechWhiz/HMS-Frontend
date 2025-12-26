@@ -85,12 +85,21 @@ export const getBookingById = async (bookingId: string): Promise<ApiResponse<IBo
  * 
  * @param page - Page number (default: 1)
  * @param limit - Items per page (default: 10)
+ * @param filters - Optional filters (from, to)
  * @returns Promise with paginated bookings
  */
-export const getAllBookings = async (page: number = 1, limit: number = 10): Promise<ApiResponse<PaginatedResponse<IBooking>>> => {
+export const getAllBookings = async (
+    page: number = 1,
+    limit: number = 10,
+    filters?: { from?: string; to?: string }
+): Promise<ApiResponse<PaginatedResponse<IBooking>>> => {
     try {
+        const params: any = { page, limit };
+        if (filters?.from) params.from = filters.from;
+        if (filters?.to) params.to = filters.to;
+
         const response = await api.get<ApiResponse<PaginatedResponse<IBooking>>>('/bookings', {
-            params: { page, limit }
+            params
         });
         return response.data;
     } catch (error) {
@@ -113,12 +122,21 @@ export const getAllBookings = async (page: number = 1, limit: number = 10): Prom
  * 
  * @param page - Page number (default: 1)
  * @param limit - Items per page (default: 10)
+ * @param filters - Optional filters (from, to)
  * @returns Promise with paginated user bookings
  */
-export const getMyBookings = async (page: number = 1, limit: number = 10): Promise<ApiResponse<PaginatedResponse<IBooking>>> => {
+export const getMyBookings = async (
+    page: number = 1,
+    limit: number = 10,
+    filters?: { from?: string; to?: string }
+): Promise<ApiResponse<PaginatedResponse<IBooking>>> => {
     try {
+        const params: any = { page, limit };
+        if (filters?.from) params.from = filters.from;
+        if (filters?.to) params.to = filters.to;
+
         const response = await api.get<ApiResponse<PaginatedResponse<IBooking>>>('/bookings/my-bookings', {
-            params: { page, limit }
+            params
         });
         return response.data;
     } catch (error) {

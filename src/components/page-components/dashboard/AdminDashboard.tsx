@@ -55,30 +55,30 @@ export const AdminDashboard = () => {
     const bookingChartConfig: ChartConfig = {
         confirmed: {
             label: "Confirmed",
-            color: "var(--chart-green-1)",
+            color: "var(--chart-cyan-1)",
         },
         pending: {
             label: "Pending",
-            color: "var(--chart-yellow-1)",
+            color: "var(--chart-yellow-5)",
         },
         cancelled: {
             label: "Cancelled",
-            color: "var(--chart-rose-1)",
+            color: "var(--chart-rose-4)",
         },
     };
 
     const roomChartConfig: ChartConfig = {
         available: {
             label: "Available",
-            color: "var(--chart-green-1)",
+            color: "var(--chart-2)",
         },
         unavailable: {
             label: "Unavailable",
-            color: "var(--chart-rose-1)",
+            color: "var(--chart-rose-4)",
         },
         maintenance: {
             label: "Maintenance",
-            color: "var(--chart-yellow-1)",
+            color: "var(--chart-violet-1)",
         },
     };
 
@@ -100,17 +100,17 @@ export const AdminDashboard = () => {
     // Prepare chart data
     const bookingChartData = reportData
         ? [
-            { name: "Confirmed", value: reportData.bookings.byStatus.confirmed, fill: "var(--chart-green-5)" },
-            { name: "Pending", value: reportData.bookings.byStatus.pending, fill: "var(--chart-yellow-1)" },
-            { name: "Cancelled", value: reportData.bookings.byStatus.cancelled, fill: "var(--chart-rose-1)" },
+            { name: "Confirmed", value: reportData.bookings.byStatus.confirmed, fill: "var(--chart-cyan-1)" },
+            { name: "Pending", value: reportData.bookings.byStatus.pending, fill: "var(--chart-yellow-5)" },
+            { name: "Cancelled", value: reportData.bookings.byStatus.cancelled, fill: "var(--chart-rose-4)" },
         ]
         : [];
 
     const roomStatusData = reportData
         ? [
-            { name: "Available", value: reportData.rooms.byStatus.available, fill: "var(--chart-green-1)" },
-            { name: "Unavailable", value: reportData.rooms.byStatus.unavailable, fill: "var(--chart-rose-1)" },
-            { name: "Maintenance", value: reportData.rooms.byStatus.maintenance, fill: "var(--chart-yellow-1)" },
+            { name: "Available", value: reportData.rooms.byStatus.available, fill: "var(--chart-2)" },
+            { name: "Unavailable", value: reportData.rooms.byStatus.unavailable, fill: "var(--chart-rose-4)" },
+            { name: "Maintenance", value: reportData.rooms.byStatus.maintenance, fill: "var(--chart-violet-1)" },
         ]
         : [];
 

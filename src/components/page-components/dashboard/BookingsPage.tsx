@@ -8,7 +8,9 @@ import DialogBox from "@/components/common/DialogBox";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Eye, XCircle, CheckCircle } from "lucide-react";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, normalizeDateRange } from "@/lib/utils";
+import { DateRangePicker } from "@/components/common/DateRangePicker";
+import { DateRange } from "react-day-picker";
 
 const BookingsPage = () => {
     const { role, loading: authLoading } = useAuth();
@@ -18,6 +20,7 @@ const BookingsPage = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
     // Dialog states
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -37,10 +40,14 @@ const BookingsPage = () => {
             setLoading(true);
             let response;
 
+            // Normalize date range for API
+            const { from, to } = normalizeDateRange(dateRange);
+            const filters = from || to ? { from, to } : undefined;
+
             if (role === "guest") {
-                response = await getMyBookings(page, itemsPerPage);
+                response = await getMyBookings(page, itemsPerPage, filters);
             } else if (role === "receptionist" || role === "admin") {
-                response = await getAllBookings(page, itemsPerPage);
+                response = await getAllBookings(page, itemsPerPage, filters);
             } else {
                 return;
             }
@@ -76,13 +83,19 @@ const BookingsPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [role, authLoading]);
+    }, [role, authLoading, dateRange]);
 
     useEffect(() => {
         if (role && !authLoading) {
             fetchBookings(currentPage);
         }
     }, [role, authLoading, currentPage, fetchBookings]);
+
+    // Handle date range change
+    const handleDateRangeChange = (range: DateRange | undefined) => {
+        setDateRange(range);
+        setCurrentPage(1); // Reset to first page when filtering
+    };
 
     // Handle page change
     const handlePageChange = (newPage: number) => {
@@ -237,6 +250,11 @@ const BookingsPage = () => {
             ),
         },
         {
+            key: "bookedDate",
+            label: "Booked Date",
+            render: (booking: IBooking) => formatDateTime(booking.createdAt),
+        },
+        {
             key: "checkInDate",
             label: "Check-in",
             render: (booking: IBooking) => formatDateTime(booking.checkInDate),
@@ -308,6 +326,11 @@ const BookingsPage = () => {
             ),
         },
         {
+            key: "bookedDate",
+            label: "Booked Date",
+            render: (booking: IBooking) => formatDateTime(booking.createdAt),
+        },
+        {
             key: "checkInDate",
             label: "Check-in",
             render: (booking: IBooking) => formatDateTime(booking.checkInDate),
@@ -322,13 +345,6 @@ const BookingsPage = () => {
             label: "Type",
             render: (booking: IBooking) => (
                 <span className="text-sm">{getBookingType(booking)}</span>
-            ),
-        },
-        {
-            key: "createdBy",
-            label: "Created By",
-            render: (booking: IBooking) => (
-                <span className="text-sm">{getCreatedByName(booking)}</span>
             ),
         },
         {
@@ -384,7 +400,7 @@ const BookingsPage = () => {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl font-bold text-white">{pageTitle}</h1>
@@ -394,6 +410,12 @@ const BookingsPage = () => {
                             : "View and manage all hotel bookings"}
                     </p>
                 </div>
+
+                <DateRangePicker
+                    value={dateRange}
+                    onChange={handleDateRangeChange}
+                    className="w-full max-w-sm"
+                />
             </div>
 
             <DataTable

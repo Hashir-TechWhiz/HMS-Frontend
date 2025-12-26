@@ -10,7 +10,9 @@ import SelectField from "@/components/forms/SelectField";
 import { toast } from "sonner";
 import { Eye, RefreshCw } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, normalizeDateRange } from "@/lib/utils";
+import { DateRangePicker } from "@/components/common/DateRangePicker";
+import { DateRange } from "react-day-picker";
 
 const AdminServiceRequestsPage = () => {
     const { role, loading: authLoading } = useAuth();
@@ -20,6 +22,7 @@ const AdminServiceRequestsPage = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
     // Dialog states
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -44,7 +47,12 @@ const AdminServiceRequestsPage = () => {
 
         try {
             setLoading(true);
-            const response = await getAllServiceRequests(page, itemsPerPage);
+
+            // Normalize date range for API
+            const { from, to } = normalizeDateRange(dateRange);
+            const filters = from || to ? { from, to } : undefined;
+
+            const response = await getAllServiceRequests(page, itemsPerPage, filters);
 
             if (response.success) {
                 const requestsData: any = response.data;
@@ -70,7 +78,7 @@ const AdminServiceRequestsPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [role, authLoading]);
+    }, [role, authLoading, dateRange]);
 
     useEffect(() => {
         if (role && !authLoading && role === "admin") {
@@ -81,6 +89,12 @@ const AdminServiceRequestsPage = () => {
     // Handle page change
     const handlePageChange = (newPage: number) => {
         setCurrentPage(newPage);
+    };
+
+    // Handle date range change
+    const handleDateRangeChange = (range: DateRange | undefined) => {
+        setDateRange(range);
+        setCurrentPage(1); // Reset to first page when filtering
     };
 
     // Handle view details
@@ -264,7 +278,8 @@ const AdminServiceRequestsPage = () => {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
+
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl font-bold text-white">Service Requests Management</h1>
@@ -272,6 +287,11 @@ const AdminServiceRequestsPage = () => {
                         View and manage all service requests
                     </p>
                 </div>
+                <DateRangePicker
+                    value={dateRange}
+                    onChange={handleDateRangeChange}
+                    className="w-full max-w-sm"
+                />
             </div>
 
             <DataTable

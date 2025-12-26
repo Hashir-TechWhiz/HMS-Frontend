@@ -39,7 +39,7 @@ const CustomLegendContent = ({
         value?: any;
         dataKey?: string;
         color?: string;
-        payload?: { name?: string; [key: string]: any };
+        payload?: { name?: string;[key: string]: any };
         [key: string]: any;
     }>;
     nameKey?: string;
@@ -115,10 +115,11 @@ export const StatusBarChart = ({ title, data, config, description }: StatusBarCh
 
                         <Bar
                             dataKey="value"
-                            radius={[6, 6, 6, 6]}
+                            radius={[10, 10, 10, 10]}
                             isAnimationActive={true}
                             animationDuration={1200}
                             animationBegin={100}
+                            barSize={40}
                             animationEasing="ease-in"
                         >
                             {/* Labels inside the bar */}

@@ -12,7 +12,9 @@ import TextAreaField from "@/components/forms/TextAreaField";
 import { toast } from "sonner";
 import { Eye, Plus } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, normalizeDateRange } from "@/lib/utils";
+import { DateRangePicker } from "@/components/common/DateRangePicker";
+import { DateRange } from "react-day-picker";
 
 const MyServiceRequestsPage = () => {
     const { role, loading: authLoading } = useAuth();
@@ -22,6 +24,7 @@ const MyServiceRequestsPage = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
     // Bookings for dropdown
     const [bookings, setBookings] = useState<IBooking[]>([]);
@@ -52,7 +55,12 @@ const MyServiceRequestsPage = () => {
 
         try {
             setLoading(true);
-            const response = await getMyServiceRequests(page, itemsPerPage);
+
+            // Normalize date range for API
+            const { from, to } = normalizeDateRange(dateRange);
+            const filters = from || to ? { from, to } : undefined;
+
+            const response = await getMyServiceRequests(page, itemsPerPage, filters);
 
             if (response.success) {
                 const requestsData: any = response.data;
@@ -78,7 +86,7 @@ const MyServiceRequestsPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [role, authLoading]);
+    }, [role, authLoading, dateRange]);
 
     // Fetch bookings for dropdown
     const fetchBookings = useCallback(async () => {
@@ -118,6 +126,12 @@ const MyServiceRequestsPage = () => {
     // Handle page change
     const handlePageChange = (newPage: number) => {
         setCurrentPage(newPage);
+    };
+
+    // Handle date range change
+    const handleDateRangeChange = (range: DateRange | undefined) => {
+        setDateRange(range);
+        setCurrentPage(1); // Reset to first page when filtering
     };
 
     // Handle view details
@@ -340,10 +354,17 @@ const MyServiceRequestsPage = () => {
                         Create and track your service requests
                     </p>
                 </div>
-                <Button onClick={handleAddClick} className="flex items-center gap-2">
-                    <Plus className="h-4 w-4" />
-                    New Service Request
-                </Button>
+                <div className="flex items-center gap-3">
+                    <DateRangePicker
+                        value={dateRange}
+                        onChange={handleDateRangeChange}
+                        className="w-full max-w-sm"
+                    />
+                    <Button onClick={handleAddClick} className="flex items-center gap-2">
+                        <Plus className="h-4 w-4" />
+                        New Service Request
+                    </Button>
+                </div>
             </div>
 
             <DataTable

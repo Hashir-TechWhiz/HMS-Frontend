@@ -76,12 +76,21 @@ export const getServiceRequestById = async (serviceRequestId: string): Promise<A
  * 
  * @param page - Page number (default: 1)
  * @param limit - Items per page (default: 10)
+ * @param filters - Optional filters (from, to)
  * @returns Promise with paginated user service requests
  */
-export const getMyServiceRequests = async (page: number = 1, limit: number = 10): Promise<ApiResponse<PaginatedResponse<IServiceRequest>>> => {
+export const getMyServiceRequests = async (
+    page: number = 1,
+    limit: number = 10,
+    filters?: { from?: string; to?: string }
+): Promise<ApiResponse<PaginatedResponse<IServiceRequest>>> => {
     try {
+        const params: any = { page, limit };
+        if (filters?.from) params.from = filters.from;
+        if (filters?.to) params.to = filters.to;
+
         const response = await api.get<ApiResponse<PaginatedResponse<IServiceRequest>>>('/service-requests/my-requests', {
-            params: { page, limit }
+            params
         });
         return response.data;
     } catch (error) {
@@ -106,7 +115,7 @@ export const getMyServiceRequests = async (page: number = 1, limit: number = 10)
  * 
  * @param page - Page number (default: 1)
  * @param limit - Items per page (default: 10)
- * @param filters - Optional filters (status, serviceType, assignedRole, roomId)
+ * @param filters - Optional filters (status, serviceType, assignedRole, roomId, from, to)
  * @returns Promise with paginated service requests
  */
 export const getAllServiceRequests = async (
@@ -117,6 +126,8 @@ export const getAllServiceRequests = async (
         serviceType?: ServiceType;
         assignedRole?: string;
         roomId?: string;
+        from?: string;
+        to?: string;
     }
 ): Promise<ApiResponse<PaginatedResponse<IServiceRequest>>> => {
     try {
@@ -145,15 +156,21 @@ export const getAllServiceRequests = async (
  * 
  * @param page - Page number (default: 1)
  * @param limit - Items per page (default: 10)
+ * @param filters - Optional filters (from, to)
  * @returns Promise with paginated assigned service requests
  */
 export const getAssignedServiceRequests = async (
     page: number = 1,
-    limit: number = 10
+    limit: number = 10,
+    filters?: { from?: string; to?: string }
 ): Promise<ApiResponse<PaginatedResponse<IServiceRequest>>> => {
     try {
+        const params: any = { page, limit };
+        if (filters?.from) params.from = filters.from;
+        if (filters?.to) params.to = filters.to;
+
         const response = await api.get<ApiResponse<PaginatedResponse<IServiceRequest>>>('/service-requests/assigned', {
-            params: { page, limit }
+            params
         });
         return response.data;
     } catch (error) {

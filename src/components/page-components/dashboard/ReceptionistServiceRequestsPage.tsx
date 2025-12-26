@@ -8,7 +8,9 @@ import DialogBox from "@/components/common/DialogBox";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Eye } from "lucide-react";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, normalizeDateRange } from "@/lib/utils";
+import { DateRangePicker } from "@/components/common/DateRangePicker";
+import { DateRange } from "react-day-picker";
 
 const ReceptionistServiceRequestsPage = () => {
     const { role, loading: authLoading } = useAuth();
@@ -18,6 +20,7 @@ const ReceptionistServiceRequestsPage = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
     // Dialog states
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -31,7 +34,12 @@ const ReceptionistServiceRequestsPage = () => {
 
         try {
             setLoading(true);
-            const response = await getAllServiceRequests(page, itemsPerPage);
+
+            // Normalize date range for API
+            const { from, to } = normalizeDateRange(dateRange);
+            const filters = from || to ? { from, to } : undefined;
+
+            const response = await getAllServiceRequests(page, itemsPerPage, filters);
 
             if (response.success) {
                 const requestsData: any = response.data;
@@ -57,7 +65,7 @@ const ReceptionistServiceRequestsPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [role, authLoading]);
+    }, [role, authLoading, dateRange]);
 
     useEffect(() => {
         if (role && !authLoading && role === "receptionist") {
@@ -68,6 +76,12 @@ const ReceptionistServiceRequestsPage = () => {
     // Handle page change
     const handlePageChange = (newPage: number) => {
         setCurrentPage(newPage);
+    };
+
+    // Handle date range change
+    const handleDateRangeChange = (range: DateRange | undefined) => {
+        setDateRange(range);
+        setCurrentPage(1); // Reset to first page when filtering
     };
 
     // Handle view details
@@ -204,6 +218,11 @@ const ReceptionistServiceRequestsPage = () => {
                         View all service requests from guests
                     </p>
                 </div>
+                <DateRangePicker
+                    value={dateRange}
+                    onChange={handleDateRangeChange}
+                    className="w-full max-w-sm"
+                />
             </div>
 
             <DataTable

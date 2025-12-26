@@ -144,3 +144,39 @@ export function formatDateTime(
     return FALLBACK;
   }
 }
+
+
+/**
+ * normalizeDateRange()
+ * ----------------------------------------------
+ * Takes a DateRange object and returns:
+ * { from: ISO string | "", to: ISO string | "" }
+ *
+ * - Ensures start-of-day for `from`
+ * - Ensures end-of-day for `to`
+ * - Prevents timezone shift issues
+ */
+export function normalizeDateRange(range?: { from?: Date; to?: Date }) {
+  if (!range) {
+    return { from: "", to: "" };
+  }
+
+  let from = "";
+  let to = "";
+
+  if (range.from instanceof Date && !isNaN(range.from.getTime())) {
+    const start = new Date(range.from);
+    start.setHours(0, 0, 0, 0);
+    from = start.toISOString();
+  }
+
+  if (range.to instanceof Date && !isNaN(range.to.getTime())) {
+    const end = new Date(range.to);
+    end.setHours(23, 59, 59, 999);
+    to = end.toISOString();
+  }
+
+  return { from, to };
+}
+
+
