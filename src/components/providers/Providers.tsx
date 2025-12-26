@@ -12,7 +12,7 @@ export default function Providers({ children }: ProvidersProps) {
     return (
         <AuthProvider>
             {children}
-            <Toaster position="top-right" />
+            <Toaster position="top-right" richColors />
         </AuthProvider>
     );
 }

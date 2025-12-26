@@ -7,8 +7,8 @@ import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { format } from "date-fns";
 import { Eye, XCircle, CheckCircle } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
 
 const BookingsPage = () => {
     const { role, loading: authLoading } = useAuth();
@@ -151,14 +151,6 @@ const BookingsPage = () => {
         }
     };
 
-    // Format date helper
-    const formatDate = (dateString: string) => {
-        try {
-            return format(new Date(dateString), "MMM dd, yyyy");
-        } catch {
-            return dateString;
-        }
-    };
 
     // Get guest/customer name
     const getCustomerName = (booking: IBooking): string => {
@@ -241,12 +233,12 @@ const BookingsPage = () => {
         {
             key: "checkInDate",
             label: "Check-in",
-            render: (booking: IBooking) => formatDate(booking.checkInDate),
+            render: (booking: IBooking) => formatDateTime(booking.checkInDate),
         },
         {
             key: "checkOutDate",
             label: "Check-out",
-            render: (booking: IBooking) => formatDate(booking.checkOutDate),
+            render: (booking: IBooking) => formatDateTime(booking.checkOutDate),
         },
         {
             key: "status",
@@ -304,12 +296,12 @@ const BookingsPage = () => {
         {
             key: "checkInDate",
             label: "Check-in",
-            render: (booking: IBooking) => formatDate(booking.checkInDate),
+            render: (booking: IBooking) => formatDateTime(booking.checkInDate),
         },
         {
             key: "checkOutDate",
             label: "Check-out",
-            render: (booking: IBooking) => formatDate(booking.checkOutDate),
+            render: (booking: IBooking) => formatDateTime(booking.checkOutDate),
         },
         {
             key: "bookingType",
@@ -467,11 +459,11 @@ const BookingsPage = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <p className="text-sm text-gray-400">Check-in Date</p>
-                                    <p className="text-sm font-medium">{formatDate(selectedBooking.checkInDate)}</p>
+                                    <p className="text-sm font-medium">{formatDateTime(selectedBooking.checkInDate)}</p>
                                 </div>
                                 <div>
                                     <p className="text-sm text-gray-400">Check-out Date</p>
-                                    <p className="text-sm font-medium">{formatDate(selectedBooking.checkOutDate)}</p>
+                                    <p className="text-sm font-medium">{formatDateTime(selectedBooking.checkOutDate)}</p>
                                 </div>
                             </div>
                         </div>
@@ -480,11 +472,11 @@ const BookingsPage = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <p className="text-sm text-gray-400">Created At</p>
-                                    <p className="text-sm font-medium">{formatDate(selectedBooking.createdAt)}</p>
+                                    <p className="text-sm font-medium">{formatDateTime(selectedBooking.createdAt)}</p>
                                 </div>
                                 <div>
                                     <p className="text-sm text-gray-400">Last Updated</p>
-                                    <p className="text-sm font-medium">{formatDate(selectedBooking.updatedAt)}</p>
+                                    <p className="text-sm font-medium">{formatDateTime(selectedBooking.updatedAt)}</p>
                                 </div>
                             </div>
                         </div>

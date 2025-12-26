@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { format } from "date-fns"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -60,4 +61,86 @@ export function formatUserRole(role: UserRole): string {
 export function hasRolePermission(userRole: UserRole | null, allowedRoles: UserRole[]): boolean {
   if (!userRole) return false;
   return allowedRoles.includes(userRole);
+}
+
+/**
+ * Format date and time for display with Asia/Colombo timezone
+ * 
+ * @param dateString - Date string or null to format
+ * @param options - Optional configuration
+ * @param options.hideTime - If true, only show date without time (default: true)
+ * @param options.format - Custom date format string (default: "MMM dd, yyyy")
+ * @returns Formatted date string or "—" for invalid/empty dates
+ * 
+ * @example
+ * formatDateTime("2024-01-15T10:30:00Z") // "Jan 15, 2024"
+ * formatDateTime("2024-01-15T10:30:00Z", { hideTime: false }) // "Jan 15, 2024, 10:30 AM"
+ * formatDateTime(null) // "—"
+ * formatDateTime("invalid") // "—"
+ */
+export function formatDateTime(
+  dateString: string | null | undefined,
+  options?: { hideTime?: boolean; format?: string }
+): string {
+  // Fallback symbol for invalid or empty dates
+  const FALLBACK = "—";
+
+  if (!dateString) {
+    return FALLBACK;
+  }
+
+  try {
+    const date = new Date(dateString);
+
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return FALLBACK;
+    }
+
+    // If custom format is provided, use date-fns with timezone conversion
+    if (options?.format) {
+      // Get date parts in Asia/Colombo timezone
+      const colomboParts = new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Colombo",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      }).formatToParts(date);
+
+      // Extract parts
+      const year = parseInt(colomboParts.find(p => p.type === "year")?.value || "0");
+      const month = parseInt(colomboParts.find(p => p.type === "month")?.value || "1") - 1; // 0-indexed
+      const day = parseInt(colomboParts.find(p => p.type === "day")?.value || "1");
+      const hour = parseInt(colomboParts.find(p => p.type === "hour")?.value || "0");
+      const minute = parseInt(colomboParts.find(p => p.type === "minute")?.value || "0");
+      const second = parseInt(colomboParts.find(p => p.type === "second")?.value || "0");
+
+      // Create date object with Colombo timezone values (in local timezone)
+      const colomboDate = new Date(year, month, day, hour, minute, second);
+      return format(colomboDate, options.format);
+    }
+
+    // Default formatting with Asia/Colombo timezone
+    const hideTime = options?.hideTime !== false; // Default to true
+
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Colombo",
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      ...(hideTime === false && {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      }),
+    });
+
+    return formatter.format(date);
+  } catch {
+    return FALLBACK;
+  }
 }

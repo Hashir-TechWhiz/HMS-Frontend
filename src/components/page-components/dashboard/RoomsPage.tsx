@@ -12,8 +12,8 @@ import InputField from "@/components/forms/InputField";
 import TextAreaField from "@/components/forms/TextAreaField";
 import SelectField from "@/components/forms/SelectField";
 import { toast } from "sonner";
-import { format } from "date-fns";
 import { Eye, Pencil, Trash2, Plus } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
 
@@ -271,14 +271,6 @@ const RoomsPage = () => {
         }
     };
 
-    // Format date helper
-    const formatDate = (dateString: string) => {
-        try {
-            return format(new Date(dateString), "MMM dd, yyyy");
-        } catch {
-            return dateString;
-        }
-    };
 
     // Status badge
     const StatusBadge = ({ status }: { status: RoomStatus }) => {
@@ -316,7 +308,7 @@ const RoomsPage = () => {
         {
             key: "createdAt",
             label: "Created Date",
-            render: (room: IRoom) => formatDate(room.createdAt),
+            render: (room: IRoom) => formatDateTime(room.createdAt),
         },
         {
             key: "roomNumber",
@@ -512,13 +504,13 @@ const RoomsPage = () => {
                                 <div>
                                     <p className="text-sm text-gray-400">Created At</p>
                                     <p className="text-sm font-medium">
-                                        {formatDate(selectedRoom.createdAt)}
+                                        {formatDateTime(selectedRoom.createdAt)}
                                     </p>
                                 </div>
                                 <div>
                                     <p className="text-sm text-gray-400">Last Updated</p>
                                     <p className="text-sm font-medium">
-                                        {formatDate(selectedRoom.updatedAt)}
+                                        {formatDateTime(selectedRoom.updatedAt)}
                                     </p>
                                 </div>
                             </div>

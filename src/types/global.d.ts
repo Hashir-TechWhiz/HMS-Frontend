@@ -157,14 +157,15 @@ declare global {
     }
 
     // Service Request Types
-    type ServiceType = 'housekeeping' | 'room-service' | 'maintenance' | 'concierge';
-    type ServiceStatus = 'pending' | 'in-progress' | 'completed';
+    type ServiceType = 'housekeeping' | 'room_service' | 'maintenance';
+    type ServiceStatus = 'pending' | 'in_progress' | 'completed';
 
     interface IServiceRequest {
         _id: string;
         booking: IBooking | string;
-        guest: IUser | string;
+        guest?: IUser | string;
         room: IRoom | string;
+        requestedBy?: IUser | string;
         serviceType: ServiceType;
         status: ServiceStatus;
         assignedRole?: string;
