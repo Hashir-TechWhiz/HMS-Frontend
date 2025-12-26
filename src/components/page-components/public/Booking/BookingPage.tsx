@@ -9,7 +9,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { CalendarIcon, Loader2, AlertCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { CalendarIcon, Loader2, AlertCircle, Sparkles, CalendarDays, Clock, DollarSign, ArrowLeft } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { getRoomById } from "@/services/roomService";
 import { createBooking, CreateBookingData } from "@/services/bookingService";
@@ -289,7 +290,7 @@ const BookingPage: FC = () => {
     return (
         <div className="min-h-screen bg-background">
             {/* Page Header */}
-            <div className="relative text-white py-12 pt-28">
+            <div className="relative text-white py-12 pt-34">
                 <Image
                     src={room.images && room.images.length > 0 ? room.images[0] : "/images/SampleHotel.jpg"}
                     alt={room.roomType}
@@ -297,13 +298,13 @@ const BookingPage: FC = () => {
                     priority
                     className="object-cover"
                 />
-                <div className="absolute inset-0 bg-black/40" />
+                <div className="absolute inset-0 bg-black/50" />
                 <div className="relative container mx-auto px-4">
-                    <div className="max-w-4xl mx-auto">
+                    <div className="max-w-6xl mx-auto">
                         <h1 className="text-3xl md:text-4xl font-bold mb-2">
                             Complete Your Booking
                         </h1>
-                        <p className="text-gray-200 text-lg">
+                        <p className="text-gray-100 text-lg">
                             {room.roomType} Room {room.roomNumber}
                         </p>
                     </div>
@@ -316,9 +317,22 @@ const BookingPage: FC = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Booking Form */}
                         <div className="lg:col-span-2">
-                            <Card>
-                                <CardContent className="p-6">
-                                    <h2 className="text-2xl font-semibold text-foreground mb-6">
+                            <Card className="overflow-hidden transition-all duration-500 group p-0 table-bg-gradient border border-white/20 relative">
+                                {/* Glow effect on hover */}
+                                <div className="absolute inset-0 bg-linear-to-br from-primary/0 via-primary/0 to-primary/0 group-hover:from-primary/5 group-hover:via-primary/0 group-hover:to-primary/5 transition-all duration-500 pointer-events-none rounded-lg" />
+                                <CardContent className="p-6 relative z-10">
+                                    <div className="flex items-center gap-4 mb-6">
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            onClick={() => router.back()}
+                                            className="hover:bg-white/10 border border-white/20 hover:border-primary/30 transition-all duration-300"
+                                        >
+                                            <ArrowLeft className="h-4 w-4 mr-2" />
+                                            Back
+                                        </Button>
+                                    </div>
+                                    <h2 className="text-2xl font-semibold text-foreground mb-6 group-hover:text-primary transition-colors duration-300">
                                         Booking Details
                                     </h2>
 
@@ -497,68 +511,97 @@ const BookingPage: FC = () => {
 
                         {/* Room Summary */}
                         <div className="lg:col-span-1">
-                            <Card className="sticky top-24">
-                                <CardContent className="p-6">
-                                    <h3 className="text-xl font-semibold text-foreground mb-4">
+                            <Card className="sticky top-24 overflow-hidden transition-all duration-500 group p-0 table-bg-gradient border border-white/20 flex flex-col h-fit">
+                                {/* Glow effect on hover */}
+                                <div className="absolute inset-0 bg-linear-to-br from-primary/0 via-primary/0 to-primary/0 group-hover:from-primary/5 group-hover:via-primary/0 group-hover:to-primary/5 transition-all duration-500 pointer-events-none rounded-lg" />
+
+                                {/* Room Image - Enhanced */}
+                                <div className="relative h-48 w-full shrink-0 overflow-hidden">
+                                    <Image
+                                        src={room.images && room.images.length > 0 ? room.images[0] : "/images/SampleHotel.jpg"}
+                                        alt={room.roomType}
+                                        fill
+                                        className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+                                    />
+                                    {/* Enhanced linear overlay */}
+                                    <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/40 to-transparent group-hover:from-black/95 transition-all duration-500" />
+
+                                    {/* Shimmer effect overlay */}
+                                    <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
+
+                                    {/* Price Badge - Enhanced */}
+                                    <div className="absolute top-3 right-3 z-10">
+                                        <Badge className="bg-linear-to-r from-white/95 to-white/90 backdrop-blur-sm border border-white/50 text-black-500 hover:bg-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 font-semibold px-3 py-1 text-xs">
+                                            <Sparkles className="h-3 w-3 mr-1 text-primary-500" />
+                                            LKR {room.pricePerNight.toLocaleString()}
+                                            <span className="text-[10px] ml-1 opacity-70">/night</span>
+                                        </Badge>
+                                    </div>
+                                </div>
+
+                                <CardContent className="p-4 flex flex-col">
+                                    <h3 className="text-lg font-semibold text-foreground mb-4 group-hover:text-primary transition-colors duration-300">
                                         Booking Summary
                                     </h3>
 
-                                    {/* Room Image */}
-                                    <div className="relative h-48 w-full rounded-lg overflow-hidden mb-4">
-                                        <Image
-                                            src={room.images && room.images.length > 0 ? room.images[0] : "/images/SampleHotel.jpg"}
-                                            alt={room.roomType}
-                                            fill
-                                            className="object-cover"
-                                        />
-                                    </div>
-
                                     {/* Room Details */}
                                     <div className="space-y-3 mb-4">
-                                        <div>
-                                            <p className="text-sm text-muted-foreground">Room</p>
-                                            <p className="font-semibold text-foreground">
+                                        <div className="p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/30 transition-all duration-300">
+                                            <p className="text-xs text-muted-foreground mb-1">Room</p>
+                                            <p className="font-semibold text-foreground text-sm break-words">
                                                 {room.roomType} Room {room.roomNumber}
                                             </p>
                                         </div>
 
                                         {checkInDate && checkOutDate && (
                                             <>
-                                                <div>
-                                                    <p className="text-sm text-muted-foreground">Check-in</p>
-                                                    <p className="font-medium text-foreground">
-                                                        {format(checkInDate, "MMM dd, yyyy")}
-                                                    </p>
+                                                <div className="p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/30 transition-all duration-300 flex items-center gap-2">
+                                                    <CalendarDays className="h-3.5 w-3.5 text-primary shrink-0" />
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-xs text-muted-foreground">Check-in</p>
+                                                        <p className="font-medium text-foreground text-sm break-words">
+                                                            {format(checkInDate, "MMM dd, yyyy")}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="text-sm text-muted-foreground">Check-out</p>
-                                                    <p className="font-medium text-foreground">
-                                                        {format(checkOutDate, "MMM dd, yyyy")}
-                                                    </p>
+                                                <div className="p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/30 transition-all duration-300 flex items-center gap-2">
+                                                    <CalendarDays className="h-3.5 w-3.5 text-primary shrink-0" />
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-xs text-muted-foreground">Check-out</p>
+                                                        <p className="font-medium text-foreground text-sm break-words">
+                                                            {format(checkOutDate, "MMM dd, yyyy")}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="text-sm text-muted-foreground">Duration</p>
-                                                    <p className="font-medium text-foreground">
-                                                        {nights} {nights === 1 ? "night" : "nights"}
-                                                    </p>
+                                                <div className="p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/30 transition-all duration-300 flex items-center gap-2">
+                                                    <Clock className="h-3.5 w-3.5 text-primary shrink-0" />
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-xs text-muted-foreground">Duration</p>
+                                                        <p className="font-medium text-foreground text-sm">
+                                                            {nights} {nights === 1 ? "night" : "nights"}
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             </>
                                         )}
 
-                                        <div>
-                                            <p className="text-sm text-muted-foreground">Price per night</p>
-                                            <p className="font-medium text-foreground">
-                                                LKR {room.pricePerNight.toLocaleString()}
-                                            </p>
+                                        <div className="p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/30 transition-all duration-300 flex items-center gap-2">
+                                            <DollarSign className="h-3.5 w-3.5 text-primary shrink-0" />
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-xs text-muted-foreground">Price per night</p>
+                                                <p className="font-medium text-foreground text-sm">
+                                                    LKR {room.pricePerNight.toLocaleString()}
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
 
                                     {/* Total Price */}
                                     {checkInDate && checkOutDate && (
-                                        <div className="border-t pt-4">
-                                            <div className="flex justify-between items-center">
-                                                <p className="text-lg font-semibold text-foreground">Total</p>
-                                                <p className="text-xl font-bold text-primary">
+                                        <div className="border-t border-white/10 pt-4">
+                                            <div className="flex justify-between items-center p-3 rounded-lg bg-primary/10 border border-primary/20">
+                                                <p className="text-base font-semibold text-foreground">Total</p>
+                                                <p className="text-xl font-bold text-primary whitespace-nowrap">
                                                     LKR {totalPrice.toLocaleString()}
                                                 </p>
                                             </div>

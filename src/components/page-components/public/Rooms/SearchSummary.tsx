@@ -3,6 +3,8 @@
 import { FC } from "react";
 import { Calendar, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
 
 interface SearchSummaryProps {
@@ -29,56 +31,59 @@ const SearchSummary: FC<SearchSummaryProps> = ({
   };
 
   return (
-    <div className="bg-card rounded-lg shadow-md border border-border p-6 mb-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        {/* Search Criteria or Default Message */}
-        {hasSearchCriteria ? (
-          <div className="flex flex-wrap items-center gap-4 text-sm">
-            {checkIn && checkOut && (
-              <div className="flex items-center gap-2 text-foreground">
-                <Calendar className="h-4 w-4 text-primary" />
-                <span>
-                  {checkIn} - {checkOut}
-                </span>
-              </div>
-            )}
+    <Card className="overflow-hidden transition-all duration-500 group p-0 table-bg-gradient border border-white/15 relative mb-6">
+      
+      <CardContent className="p-4 relative z-10">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          {/* Search Criteria or Default Message */}
+          {hasSearchCriteria ? (
+            <div className="flex flex-wrap items-center gap-3">
+              {checkIn && checkOut && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/30 transition-all duration-300">
+                  <Calendar className="h-4 w-4 text-primary shrink-0" />
+                  <span className="text-sm font-medium text-foreground">
+                    {checkIn} - {checkOut}
+                  </span>
+                </div>
+              )}
 
-            {guests && (
-              <div className="flex items-center gap-2 text-foreground">
-                <Users className="h-4 w-4 text-primary" />
-                <span>
-                  {guests} {guests === 1 ? "Guest" : "Guests"}
-                </span>
-              </div>
-            )}
-            
-            {/* Clear Search Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClearSearch}
-              className="text-muted-foreground hover:text-foreground h-auto py-1 px-2"
-            >
-              <X className="h-3 w-3 mr-1" />
-              Clear Search
-            </Button>
-          </div>
-        ) : (
-          <div className="text-sm text-foreground">
-            <span className="font-medium">Showing all available rooms</span>
-            <span className="text-muted-foreground ml-2">
-              • Use the search above to refine your results
-            </span>
-          </div>
-        )}
+              {guests && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/30 transition-all duration-300">
+                  <Users className="h-4 w-4 text-primary shrink-0" />
+                  <span className="text-sm font-medium text-foreground">
+                    {guests} {guests === 1 ? "Guest" : "Guests"}
+                  </span>
+                </div>
+              )}
+              
+              {/* Clear Search Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearSearch}
+                className="hover:bg-white/10 border border-white/20 hover:border-primary/30 transition-all duration-300 h-auto py-2 px-3"
+              >
+                <X className="h-3.5 w-3.5 mr-1.5" />
+                Clear Search
+              </Button>
+            </div>
+          ) : (
+            <div className="text-sm text-foreground">
+              <span className="font-medium">Showing all available rooms</span>
+              <span className="text-muted-foreground ml-2">
+                • Use the search above to refine your results
+              </span>
+            </div>
+          )}
 
-        {/* Results Count */}
-        <div className="text-sm text-muted-foreground whitespace-nowrap">
-          <span className="font-semibold text-foreground">{resultsCount}</span>{" "}
-          {resultsCount === 1 ? "room" : "rooms"} available
+          {/* Results Count */}
+          <Badge className="bg-white/10 backdrop-blur-sm border border-white/50 text-black-500 shadow-lg font-semibold px-4 py-2 text-sm whitespace-nowrap">
+            <span className="font-semibold mr-1 text-white">{resultsCount}</span>
+            <span className="text-white">{resultsCount === 1 ? "Room" : "Rooms"} Available</span>
+          </Badge>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 

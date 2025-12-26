@@ -75,26 +75,26 @@ const PublicHeader = () => {
                 </Link>
 
                 {/* Desktop Navigation */}
-                <div className="hidden lg:flex items-center gap-10 rounded-full border border-white/15 bg-Header-gradient px-6 py-2.5 text-sm font-medium">
+                <div className="hidden lg:flex items-center gap-10 rounded-full border border-white/25 bg-Header-gradient px-6 py-2.5 text-sm font-medium">
                     <NavLinks pathname={pathname} />
                 </div>
 
                 {/* Right Actions */}
                 <div className="flex items-center gap-3">
                     {/* Desktop CTA */}
-                    {isAuthenticated ? (
-                        <Link href="/dashboard">
-                            <Button variant="outline" className="hidden lg:inline-flex w-[200px] rounded-full cursor-pointer">
-                                Go to Dashboard
-                            </Button>
-                        </Link>
-                    ) : (
-                        <Link href="/login">
-                            <Button variant="outline" className="hidden lg:inline-flex w-[200px] rounded-full cursor-pointer">
-                                Login
-                            </Button>
-                        </Link>
-                    )}
+                    <Link href={isAuthenticated ? "/dashboard" : "/login"} className="hidden lg:block">
+                        <Button
+                            variant="outline"
+                            className="relative w-[200px] rounded-full cursor-pointer overflow-hidden border border-white/25! text-primary-100 h-10"
+                        >
+                            <span className="relative z-10">
+                                {isAuthenticated ? "Go to Dashboard" : "Login"}
+                            </span>
+                            {/* Shimmer animation overlay */}
+                            <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shimmer" />
+                        </Button>
+                    </Link>
+
 
                     {/* Mobile Menu */}
                     {mounted ? (
@@ -129,19 +129,16 @@ const PublicHeader = () => {
                                 </div>
 
                                 {/* Footer Action */}
-                                {isAuthenticated ? (
-                                    <Link href="/dashboard" className="mt-auto" onClick={() => setOpen(false)}>
-                                        <Button variant="outline" className="w-full">
-                                            Go to Dashboard
-                                        </Button>
-                                    </Link>
-                                ) : (
-                                    <Link href="/login" className="mt-auto" onClick={() => setOpen(false)}>
-                                        <Button variant="outline" className="w-full">
-                                            Login
-                                        </Button>
-                                    </Link>
-                                )}
+                                <Link
+                                    href={isAuthenticated ? "/dashboard" : "/login"}
+                                    className="mt-auto"
+                                    onClick={() => setOpen(false)}
+                                >
+                                    <Button variant="outline" className="w-full main-button-gradient rounded-lg">
+                                        {isAuthenticated ? "Dashboard" : "Login"}
+                                    </Button>
+                                </Link>
+
                             </DrawerContent>
                         </Drawer>
                     ) : (

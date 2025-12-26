@@ -104,7 +104,7 @@ const RoomsFilters: FC<RoomsFiltersProps> = ({ onFilterChange }) => {
         <Button
           variant="outline"
           onClick={() => setShowFilters(!showFilters)}
-          className="w-full"
+          className="w-full hover:bg-white/10 border-white/20 hover:border-primary/30 transition-all duration-300"
         >
           <SlidersHorizontal className="mr-2 h-4 w-4" />
           {showFilters ? "Hide Filters" : "Show Filters"}
@@ -114,43 +114,48 @@ const RoomsFilters: FC<RoomsFiltersProps> = ({ onFilterChange }) => {
       {/* Filters Card */}
       <Card
         className={`${showFilters ? "block" : "hidden lg:block"
-          } bg-card border-border`}
+          } overflow-hidden transition-all duration-500 group p-0 table-bg-gradient border border-white/20 relative`}
       >
-        <CardHeader>
+        
+        <CardHeader className="relative z-10 pt-4 pb-3 px-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold text-foreground">Filters</CardTitle>
+            <CardTitle className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors duration-300">Filters</CardTitle>
             {hasActiveFilters && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleClearAll}
-                className="text-primary hover:text-primary/90"
+                className="hover:bg-white/10 border border-white/20 hover:border-primary/30 transition-all duration-300"
               >
-                <X className="mr-1 h-3 w-3" />
+                <X className="mr-1 h-3.5 w-3.5" />
                 Clear all
               </Button>
             )}
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4 relative z-10 pb-4 px-4">
           {/* Price Range */}
           <div>
             <Label className="text-sm font-semibold text-foreground mb-3 block">
               Price per Night
             </Label>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {priceRanges.map((range) => (
-                <div key={range.id} className="flex items-center space-x-2">
+                <div 
+                  key={range.id} 
+                  className="flex items-center space-x-2 p-2 rounded-lg hover:bg-white/5 transition-colors duration-200 cursor-pointer group/item"
+                >
                   <Checkbox
                     id={`price-${range.id}`}
                     checked={priceRange.includes(range.id)}
                     onCheckedChange={(checked) =>
                       handlePriceChange(range.id, checked as boolean)
                     }
+                    className="group-hover/item:border-primary/50"
                   />
                   <label
                     htmlFor={`price-${range.id}`}
-                    className="text-sm text-foreground cursor-pointer"
+                    className="text-sm text-foreground cursor-pointer flex-1 group-hover/item:text-primary transition-colors duration-200"
                   >
                     {range.label}
                   </label>
@@ -159,26 +164,30 @@ const RoomsFilters: FC<RoomsFiltersProps> = ({ onFilterChange }) => {
             </div>
           </div>
 
-          <Separator />
+          <Separator className="bg-white/10 my-3" />
 
           {/* Room Type */}
           <div>
             <Label className="text-sm font-semibold text-foreground mb-3 block">
               Room Type
             </Label>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {roomTypeOptions.map((type) => (
-                <div key={type.id} className="flex items-center space-x-2">
+                <div 
+                  key={type.id} 
+                  className="flex items-center space-x-2 p-2 rounded-lg hover:bg-white/5 transition-colors duration-200 cursor-pointer group/item"
+                >
                   <Checkbox
                     id={`type-${type.id}`}
                     checked={roomTypes.includes(type.id)}
                     onCheckedChange={(checked) =>
                       handleRoomTypeChange(type.id, checked as boolean)
                     }
+                    className="group-hover/item:border-primary/50"
                   />
                   <label
                     htmlFor={`type-${type.id}`}
-                    className="text-sm text-foreground cursor-pointer"
+                    className="text-sm text-foreground cursor-pointer flex-1 group-hover/item:text-primary transition-colors duration-200"
                   >
                     {type.label}
                   </label>
@@ -187,7 +196,7 @@ const RoomsFilters: FC<RoomsFiltersProps> = ({ onFilterChange }) => {
             </div>
           </div>
 
-          <Separator />
+          <Separator className="bg-white/10 my-3" />
 
           {/* Apply Filters Button */}
           <Button

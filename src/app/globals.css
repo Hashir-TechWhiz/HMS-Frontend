@@ -325,6 +325,10 @@
     background: linear-gradient(133.264deg, #FFFFFF 0%, #7CF6FF 100%);
   }
 
+  .search-gradient {
+    background: linear-gradient(79.906deg, rgba(48, 125, 237, 10%) 0%, rgba(0, 0, 0, 60%) 100%);
+  }
+
   .button-gradient {
     background: linear-gradient(79.906deg, rgba(48, 125, 237, 35%) 0%, rgba(0, 0, 0, 0%) 100%);
   }
@@ -391,7 +395,6 @@
     @apply relative flex flex-col items-center justify-center h-screen w-full p-3 bg-black-500 overflow-hidden bg-center bg-cover bg-no-repeat overflow-y-auto bg-[url(/images/AuthLeftBg.jpg)];
   }
 
-
   .auth-container {
     @apply relative flex flex-col items-center justify-between mt-12 p-4 w-full rounded-3xl backdrop-blur-3xl border border-white/20 shadow-sm shadow-white/10 max-w-lg;
   }
@@ -402,6 +405,22 @@
 
   .auth-children {
     @apply mt-13 flex flex-col items-center justify-center w-full;
+  }
+
+
+  /* Shimmer Animation */
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+
+    100% {
+      transform: translateX(200%);
+    }
+  }
+
+  .animate-shimmer {
+    animation: shimmer 3s ease-in-out infinite;
   }
 }
 
