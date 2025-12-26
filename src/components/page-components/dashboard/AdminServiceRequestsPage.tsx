@@ -3,12 +3,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAllServiceRequests, updateServiceRequestStatus } from "@/services/serviceRequestService";
+import { getServiceRequestsReport } from "@/services/reportService";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
+import KPICard from "@/components/common/KPICard";
 import { Button } from "@/components/ui/button";
 import SelectField from "@/components/forms/SelectField";
 import { toast } from "sonner";
-import { Eye, RefreshCw } from "lucide-react";
+import { Eye, RefreshCw, Settings, Clock, Loader2 as LoaderIcon, CheckCircle2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { formatDateTime, normalizeDateRange } from "@/lib/utils";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
@@ -23,6 +25,10 @@ const AdminServiceRequestsPage = () => {
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+    // KPI states
+    const [kpiLoading, setKpiLoading] = useState(false);
+    const [serviceRequestStats, setServiceRequestStats] = useState<IServiceRequestReport | null>(null);
 
     // Dialog states
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -80,11 +86,29 @@ const AdminServiceRequestsPage = () => {
         }
     }, [role, authLoading, dateRange]);
 
+    // Fetch service request statistics
+    const fetchServiceRequestStats = useCallback(async () => {
+        if (!role || authLoading || role !== "admin") return;
+
+        try {
+            setKpiLoading(true);
+            const response = await getServiceRequestsReport();
+            if (response.success && response.data) {
+                setServiceRequestStats(response.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch service request statistics:", error);
+        } finally {
+            setKpiLoading(false);
+        }
+    }, [role, authLoading]);
+
     useEffect(() => {
         if (role && !authLoading && role === "admin") {
             fetchServiceRequests(currentPage);
+            fetchServiceRequestStats();
         }
-    }, [role, authLoading, currentPage, fetchServiceRequests]);
+    }, [role, authLoading, currentPage, fetchServiceRequests, fetchServiceRequestStats]);
 
     // Handle page change
     const handlePageChange = (newPage: number) => {
@@ -293,6 +317,47 @@ const AdminServiceRequestsPage = () => {
                     className="w-full max-w-sm"
                 />
             </div>
+
+            {/* KPI Cards */}
+            {serviceRequestStats && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <KPICard
+                        title="Total Requests"
+                        value={serviceRequestStats.totalServiceRequests}
+                        icon={Settings}
+                        iconColor="text-blue-400"
+                        iconBg="bg-blue-500/10"
+                        loading={kpiLoading}
+                    />
+                    <KPICard
+                        title="Pending"
+                        value={serviceRequestStats.byStatus.pending}
+                        icon={Clock}
+                        iconColor="text-yellow-400"
+                        iconBg="bg-yellow-500/10"
+                        loading={kpiLoading}
+                        subtitle="Awaiting action"
+                    />
+                    <KPICard
+                        title="In Progress"
+                        value={serviceRequestStats.byStatus.in_progress}
+                        icon={LoaderIcon}
+                        iconColor="text-blue-400"
+                        iconBg="bg-blue-500/10"
+                        loading={kpiLoading}
+                        subtitle="Being handled"
+                    />
+                    <KPICard
+                        title="Completed"
+                        value={serviceRequestStats.byStatus.completed}
+                        icon={CheckCircle2}
+                        iconColor="text-green-400"
+                        iconBg="bg-green-500/10"
+                        loading={kpiLoading}
+                        subtitle="Finished requests"
+                    />
+                </div>
+            )}
 
             <DataTable
                 columns={columns}

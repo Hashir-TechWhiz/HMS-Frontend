@@ -3,11 +3,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAllBookings, getMyBookings, cancelBooking, confirmBooking } from "@/services/bookingService";
+import { getBookingsReport } from "@/services/reportService";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
+import KPICard from "@/components/common/KPICard";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Eye, XCircle, CheckCircle } from "lucide-react";
+import { Eye, XCircle, CheckCircle, ClipboardList, CheckCircle2, Clock } from "lucide-react";
 import { formatDateTime, normalizeDateRange } from "@/lib/utils";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { DateRange } from "react-day-picker";
@@ -21,6 +23,10 @@ const BookingsPage = () => {
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+    
+    // KPI states
+    const [kpiLoading, setKpiLoading] = useState(false);
+    const [bookingStats, setBookingStats] = useState<IBookingReport | null>(null);
 
     // Dialog states
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -85,11 +91,29 @@ const BookingsPage = () => {
         }
     }, [role, authLoading, dateRange]);
 
+    // Fetch booking statistics (for receptionist/admin)
+    const fetchBookingStats = useCallback(async () => {
+        if (!role || authLoading || role === "guest" || role === "housekeeping") return;
+
+        try {
+            setKpiLoading(true);
+            const response = await getBookingsReport();
+            if (response.success && response.data) {
+                setBookingStats(response.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch booking statistics:", error);
+        } finally {
+            setKpiLoading(false);
+        }
+    }, [role, authLoading]);
+
     useEffect(() => {
         if (role && !authLoading) {
             fetchBookings(currentPage);
+            fetchBookingStats();
         }
-    }, [role, authLoading, currentPage, fetchBookings]);
+    }, [role, authLoading, currentPage, fetchBookings, fetchBookingStats]);
 
     // Handle date range change
     const handleDateRangeChange = (range: DateRange | undefined) => {
@@ -417,6 +441,61 @@ const BookingsPage = () => {
                     className="w-full max-w-sm"
                 />
             </div>
+
+            {/* KPI Cards - Only for Admin/Receptionist */}
+            {(role === "receptionist" || role === "admin") && bookingStats && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <KPICard
+                        title="Total Bookings"
+                        value={bookingStats.totalBookings}
+                        icon={ClipboardList}
+                        iconColor="text-blue-400"
+                        iconBg="bg-blue-500/10"
+                        loading={kpiLoading}
+                    />
+                    <KPICard
+                        title="Confirmed"
+                        value={bookingStats.byStatus.confirmed}
+                        icon={CheckCircle2}
+                        iconColor="text-green-400"
+                        iconBg="bg-green-500/10"
+                        loading={kpiLoading}
+                        subtitle="Active bookings"
+                    />
+                    <KPICard
+                        title="Pending"
+                        value={bookingStats.byStatus.pending}
+                        icon={Clock}
+                        iconColor="text-yellow-400"
+                        iconBg="bg-yellow-500/10"
+                        loading={kpiLoading}
+                        subtitle="Awaiting confirmation"
+                    />
+                    <KPICard
+                        title="Cancelled"
+                        value={bookingStats.byStatus.cancelled}
+                        icon={XCircle}
+                        iconColor="text-red-400"
+                        iconBg="bg-red-500/10"
+                        loading={kpiLoading}
+                        subtitle="Cancelled bookings"
+                    />
+                </div>
+            )}
+
+            {/* KPI Card for Guests - Show only total */}
+            {role === "guest" && totalItems > 0 && !loading && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-lg">
+                    <KPICard
+                        title="My Bookings"
+                        value={totalItems}
+                        icon={ClipboardList}
+                        iconColor="text-blue-400"
+                        iconBg="bg-blue-500/10"
+                        subtitle="Total bookings"
+                    />
+                </div>
+            )}
 
             <DataTable
                 columns={columns}

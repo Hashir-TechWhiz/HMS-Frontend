@@ -6,9 +6,10 @@ import { getUsers, updateUserStatus } from "@/services/adminUserService";
 import { getAllBookings } from "@/services/bookingService";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
+import KPICard from "@/components/common/KPICard";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Eye, UserCheck, UserX } from "lucide-react";
+import { Eye, UserCheck, UserX, Users } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 
 interface GuestWithBookings extends IUser {
@@ -273,6 +274,20 @@ const GuestsPage = () => {
                     </p>
                 </div>
             </div>
+
+            {/* KPI Card - Show total guests */}
+            {totalItems > 0 && !loading && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-2xl">
+                    <KPICard
+                        title="Total Guests"
+                        value={totalItems}
+                        icon={Users}
+                        iconColor="text-purple-400"
+                        iconBg="bg-purple-500/10"
+                        subtitle="Registered guests"
+                    />
+                </div>
+            )}
 
             <DataTable
                 columns={columns}

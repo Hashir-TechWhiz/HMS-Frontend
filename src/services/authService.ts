@@ -95,3 +95,22 @@ export const registerGuest = async (data: GuestRegistrationData): Promise<ApiRes
     }
 };
 
+/**
+ * Update current user profile
+ * PATCH /auth/me
+ * 
+ * @param data - Profile data to update (name, email)
+ * @returns Promise with updated user data
+ */
+export const updateProfile = async (data: { name?: string; email?: string }): Promise<ApiResponse<IUser>> => {
+    try {
+        const response = await api.patch<ApiResponse<IUser>>('/auth/me', data);
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data) {
+            return error.response.data as ApiErrorResponse;
+        }
+        throw error;
+    }
+};
+

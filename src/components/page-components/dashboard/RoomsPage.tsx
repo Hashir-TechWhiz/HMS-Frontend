@@ -3,16 +3,18 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getRooms, createRoom, updateRoom, deleteRoom } from "@/services/roomService";
+import { getRoomsReport } from "@/services/reportService";
 import { useEdgeStore } from "@/lib/edgestore";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
+import KPICard from "@/components/common/KPICard";
 import { EdgeStoreUploader } from "@/components/common/EdgeStoreUploader";
 import { Button } from "@/components/ui/button";
 import InputField from "@/components/forms/InputField";
 import TextAreaField from "@/components/forms/TextAreaField";
 import SelectField from "@/components/forms/SelectField";
 import { toast } from "sonner";
-import { Eye, Pencil, Trash2, Plus } from "lucide-react";
+import { Eye, Pencil, Trash2, Plus, Building2, CheckCircle2, Ban, Wrench } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
@@ -26,6 +28,10 @@ const RoomsPage = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
+
+    // KPI states
+    const [kpiLoading, setKpiLoading] = useState(false);
+    const [roomStats, setRoomStats] = useState<IRoomReport | null>(null);
 
     // Dialog states
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -77,11 +83,29 @@ const RoomsPage = () => {
         }
     }, [role, authLoading]);
 
+    // Fetch room statistics
+    const fetchRoomStats = useCallback(async () => {
+        if (!role || authLoading) return;
+
+        try {
+            setKpiLoading(true);
+            const response = await getRoomsReport();
+            if (response.success && response.data) {
+                setRoomStats(response.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch room statistics:", error);
+        } finally {
+            setKpiLoading(false);
+        }
+    }, [role, authLoading]);
+
     useEffect(() => {
         if (role && !authLoading) {
             fetchRooms();
+            fetchRoomStats();
         }
-    }, [role, authLoading, fetchRooms]);
+    }, [role, authLoading, fetchRooms, fetchRoomStats]);
 
     // Handle page change
     const handlePageChange = (newPage: number) => {
@@ -415,6 +439,47 @@ const RoomsPage = () => {
                     Add Room
                 </Button>
             </div>
+
+            {/* KPI Cards */}
+            {roomStats && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <KPICard
+                        title="Total Rooms"
+                        value={roomStats.totalRooms}
+                        icon={Building2}
+                        iconColor="text-blue-400"
+                        iconBg="bg-blue-500/10"
+                        loading={kpiLoading}
+                    />
+                    <KPICard
+                        title="Available"
+                        value={roomStats.byStatus.available}
+                        icon={CheckCircle2}
+                        iconColor="text-green-400"
+                        iconBg="bg-green-500/10"
+                        loading={kpiLoading}
+                        subtitle="Ready for booking"
+                    />
+                    <KPICard
+                        title="Unavailable"
+                        value={roomStats.byStatus.unavailable}
+                        icon={Ban}
+                        iconColor="text-red-400"
+                        iconBg="bg-red-500/10"
+                        loading={kpiLoading}
+                        subtitle="Currently occupied"
+                    />
+                    <KPICard
+                        title="Maintenance"
+                        value={roomStats.byStatus.maintenance}
+                        icon={Wrench}
+                        iconColor="text-orange-400"
+                        iconBg="bg-orange-500/10"
+                        loading={kpiLoading}
+                        subtitle="Under maintenance"
+                    />
+                </div>
+            )}
 
             <DataTable
                 columns={columns}

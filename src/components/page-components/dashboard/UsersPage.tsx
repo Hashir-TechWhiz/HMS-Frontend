@@ -2,14 +2,15 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getUsers, createUser, updateUser, updateUserStatus } from "@/services/adminUserService";
+import { getUsers, createUser, updateUser, updateUserStatus, getUserStatistics } from "@/services/adminUserService";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
+import KPICard from "@/components/common/KPICard";
 import { Button } from "@/components/ui/button";
 import InputField from "@/components/forms/InputField";
 import SelectField from "@/components/forms/SelectField";
 import { toast } from "sonner";
-import { Eye, Pencil, UserCheck, UserX, Plus } from "lucide-react";
+import { Eye, Pencil, UserCheck, UserX, Plus, Users, CheckCircle2, Ban } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 import { useForm } from "react-hook-form";
 
@@ -21,6 +22,10 @@ const UsersPage = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
+    
+    // KPI states
+    const [kpiLoading, setKpiLoading] = useState(false);
+    const [userStats, setUserStats] = useState<{ total: number; active: number; byRole: Record<UserRole, number> } | null>(null);
 
     // Dialog states
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -73,11 +78,29 @@ const UsersPage = () => {
         }
     }, [role, authLoading]);
 
+    // Fetch user statistics
+    const fetchUserStats = useCallback(async () => {
+        if (!role || authLoading) return;
+
+        try {
+            setKpiLoading(true);
+            const response = await getUserStatistics();
+            if (response.success && response.data) {
+                setUserStats(response.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch user statistics:", error);
+        } finally {
+            setKpiLoading(false);
+        }
+    }, [role, authLoading]);
+
     useEffect(() => {
         if (role && !authLoading) {
             fetchUsers();
+            fetchUserStats();
         }
-    }, [role, authLoading, fetchUsers]);
+    }, [role, authLoading, fetchUsers, fetchUserStats]);
 
     // Handle page change
     const handlePageChange = (newPage: number) => {
@@ -355,6 +378,53 @@ const UsersPage = () => {
                     Add User
                 </Button>
             </div>
+
+            {/* KPI Cards - Exclude guests from stats */}
+            {userStats && !loading && (() => {
+                // Calculate system users only (exclude guests from backend role stats)
+                const totalSystemUsers = (userStats.byRole.admin || 0) + 
+                                        (userStats.byRole.receptionist || 0) + 
+                                        (userStats.byRole.housekeeping || 0);
+                
+                // Calculate active/inactive from loaded data
+                // NOTE: This works because ALL users are loaded at once (no backend pagination)
+                // The 'users' array already excludes guests and contains all staff users
+                // If backend pagination is implemented, this calculation would need to be updated
+                const activeSystemUsers = users.filter(u => u.isActive).length;
+                const inactiveSystemUsers = totalSystemUsers - activeSystemUsers;
+                
+                return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <KPICard
+                            title="Total Staff"
+                            value={totalSystemUsers}
+                            icon={Users}
+                            iconColor="text-blue-400"
+                            iconBg="bg-blue-500/10"
+                            loading={kpiLoading}
+                            subtitle="System users (excl. guests)"
+                        />
+                        <KPICard
+                            title="Active Staff"
+                            value={activeSystemUsers}
+                            icon={CheckCircle2}
+                            iconColor="text-green-400"
+                            iconBg="bg-green-500/10"
+                            loading={kpiLoading}
+                            subtitle="Currently active"
+                        />
+                        <KPICard
+                            title="Inactive Staff"
+                            value={inactiveSystemUsers}
+                            icon={Ban}
+                            iconColor="text-red-400"
+                            iconBg="bg-red-500/10"
+                            loading={kpiLoading}
+                            subtitle="Deactivated accounts"
+                        />
+                    </div>
+                );
+            })()}
 
             <DataTable
                 columns={columns}
