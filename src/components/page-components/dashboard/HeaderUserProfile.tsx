@@ -28,13 +28,13 @@ const HeaderUserProfile = () => {
     return (
         <div className="flex items-center gap-3 px-2">
             <Avatar className="h-9 w-9 rounded-lg border border-white/20">
-                <AvatarFallback className="rounded-lg bg-linear-to-br from-primary-400 to-primary-600 text-white font-semibold text-sm">
+                <AvatarFallback className="rounded-lg bg-linear-to-br from-primary-400 to-primary-600 font-semibold text-sm">
                     {getInitials(user.name)}
                 </AvatarFallback>
             </Avatar>
 
             <div className="flex flex-col items-start">
-                <span className="text-sm font-medium text-primary-200">
+                <span className="text-sm font-medium text-primary-100">
                     {user.name}
                 </span>
                 <span className="text-xs text-primary-100">

@@ -66,11 +66,77 @@
   --border: oklch(0.929 0.013 255.508);
   --input: oklch(0.929 0.013 255.508);
   --ring: oklch(0.704 0.04 256.788);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+
+  /* DEFAULT = BLUE (LIGHT MODE) */
+  --chart-1: #3b82f6;
+  /* blue-500 */
+  --chart-2: #2563eb;
+  /* blue-600 */
+  --chart-3: #1d4ed8;
+  /* blue-700 */
+  --chart-4: #60a5fa;
+  /* blue-400 */
+  --chart-5: #93c5fd;
+  /* blue-300 */
+
+  /* EXTRA COLOR PALETTES */
+
+  /* GREEN */
+  --chart-green-1: #22c55e;
+  --chart-green-2: #16a34a;
+  --chart-green-3: #15803d;
+  --chart-green-4: #4ade80;
+  --chart-green-5: #86efac;
+
+  /* VIOLET */
+  --chart-violet-1: #8b5cf6;
+  --chart-violet-2: #7c3aed;
+  --chart-violet-3: #6d28d9;
+  --chart-violet-4: #a78bfa;
+  --chart-violet-5: #c4b5fd;
+
+  /* ORANGE */
+  --chart-orange-1: #f97316;
+  --chart-orange-2: #ea580c;
+  --chart-orange-3: #c2410c;
+  --chart-orange-4: #fb923c;
+  --chart-orange-5: #fdba74;
+
+  /* TEAL */
+  --chart-teal-1: #14b8a6;
+  --chart-teal-2: #0d9488;
+  --chart-teal-3: #0f766e;
+  --chart-teal-4: #2dd4bf;
+  --chart-teal-5: #5eead4;
+
+  /* CYAN */
+  --chart-cyan-1: #06b6d4;
+  --chart-cyan-2: #0891b2;
+  --chart-cyan-3: #0e7490;
+  --chart-cyan-4: #67e8f9;
+  --chart-cyan-5: #a5f3fc;
+
+  /* ROSE */
+  --chart-rose-1: #f43f5e;
+  --chart-rose-2: #e11d48;
+  --chart-rose-3: #be123c;
+  --chart-rose-4: #fb7185;
+  --chart-rose-5: #fecdd3;
+
+  /* YELLOW */
+  --chart-yellow-1: #eab308;
+  --chart-yellow-2: #ca8a04;
+  --chart-yellow-3: #a16207;
+  --chart-yellow-4: #facc15;
+  --chart-yellow-5: #fde047;
+
+  /* SLATE (NEUTRAL) */
+  --chart-slate-1: #94a3b8;
+  --chart-slate-2: #64748b;
+  --chart-slate-3: #475569;
+  --chart-slate-4: #cbd5e1;
+  --chart-slate-5: #e2e8f0;
+
   --sidebar: oklch(0.984 0.003 247.858);
   --sidebar-foreground: oklch(0.129 0.042 264.695);
   --sidebar-primary: oklch(0.208 0.042 265.755);
@@ -100,11 +166,77 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
+
+  /* 💙 DEFAULT BLUE (DARK MODE) */
+  --chart-1: #60a5fa;
+  /* blue-400 */
+  --chart-2: #3b82f6;
+  /* blue-500 */
+  --chart-3: #2563eb;
+  /* blue-600 */
+  --chart-4: #1d4ed8;
+  /* blue-700 */
+  --chart-5: #93c5fd;
+  /* blue-300 */
+
+  /* EXTRA COLOR PALETTES */
+
+  /* GREEN */
+  --chart-green-1: #4ade80;
+  --chart-green-2: #22c55e;
+  --chart-green-3: #16a34a;
+  --chart-green-4: #15803d;
+  --chart-green-5: #86efac;
+
+  /* VIOLET */
+  --chart-violet-1: #a78bfa;
+  --chart-violet-2: #8b5cf6;
+  --chart-violet-3: #7c3aed;
+  --chart-violet-4: #6d28d9;
+  --chart-violet-5: #c4b5fd;
+
+  /* ORANGE */
+  --chart-orange-1: #fb923c;
+  --chart-orange-2: #f97316;
+  --chart-orange-3: #ea580c;
+  --chart-orange-4: #c2410c;
+  --chart-orange-5: #fdba74;
+
+  /* TEAL */
+  --chart-teal-1: #2dd4bf;
+  --chart-teal-2: #14b8a6;
+  --chart-teal-3: #0d9488;
+  --chart-teal-4: #0f766e;
+  --chart-teal-5: #5eead4;
+
+  /* CYAN */
+  --chart-cyan-1: #06b6d4;
+  --chart-cyan-2: #0891b2;
+  --chart-cyan-3: #0e7490;
+  --chart-cyan-4: #67e8f9;
+  --chart-cyan-5: #a5f3fc;
+
+  /* ROSE */
+  --chart-rose-1: #f43f5e;
+  --chart-rose-2: #e11d48;
+  --chart-rose-3: #be123c;
+  --chart-rose-4: #fb7185;
+  --chart-rose-5: #fecdd3;
+
+  /* YELLOW */
+  --chart-yellow-1: #eab308;
+  --chart-yellow-2: #ca8a04;
+  --chart-yellow-3: #a16207;
+  --chart-yellow-4: #facc15;
+  --chart-yellow-5: #fde047;
+
+  /* SLATE (NEUTRAL) */
+  --chart-slate-1: #94a3b8;
+  --chart-slate-2: #64748b;
+  --chart-slate-3: #475569;
+  --chart-slate-4: #cbd5e1;
+  --chart-slate-5: #e2e8f0;
+
   /* --sidebar: oklch(0.208 0.042 265.755); */
   --sidebar: oklch(0.129 0.042 264.695);
   --sidebar-foreground: oklch(0.984 0.003 247.858);
@@ -211,6 +343,46 @@
 
   .table-header-gradient {
     background: linear-gradient(90deg, rgba(0, 0, 0, 12%) 0%, rgba(48, 125, 237, 12%) 100%);
+  }
+
+  .text-gradient {
+    background: linear-gradient(90deg, #FFFFFF 0%, #999999 50%, #FFFFFF 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Blue color gradient for border */
+  .border-gradient {
+    position: relative;
+    border-radius: 20px;
+    z-index: 0;
+    isolation: isolate;
+  }
+
+  .border-gradient {
+    position: relative;
+    border-radius: 20px;
+    z-index: 0;
+  }
+
+  .border-gradient::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    padding: 1px;
+    background: linear-gradient(90deg,
+        rgba(48, 125, 237, 0.3) 0%,
+        rgba(0, 0, 0, 0.5) 100%);
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: destination-out;
+    mask-composite: exclude;
+    z-index: -1;
+    box-sizing: border-box;
   }
 
 

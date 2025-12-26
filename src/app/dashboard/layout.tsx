@@ -18,10 +18,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         <SidebarProvider>
             <AppSidebar variant="inset" />
 
-            <SidebarInset className="border border-white/10">
+            <SidebarInset className="border border-white/10 overflow-hidden">
                 <DashboardHeader />
 
-                <main className="p-4">
+                <main className="relative flex-1 overflow-y-auto p-4">
+                    <div className="absolute top-1/2 left-1/2 -translate-y-1/2 w-30 h-30 gradient-01 pointer-events-none z-0" />
                     {children}
                 </main>
             </SidebarInset>

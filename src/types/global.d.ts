@@ -173,6 +173,44 @@ declare global {
         createdAt: string;
         updatedAt: string;
     }
+
+    // Report Types (matching backend response structure)
+    interface IBookingReport {
+        totalBookings: number;
+        byStatus: {
+            pending: number;
+            confirmed: number;
+            cancelled: number;
+        };
+    }
+
+    interface IRoomReport {
+        totalRooms: number;
+        byStatus: {
+            available: number;
+            unavailable: number;
+            maintenance: number;
+        };
+    }
+
+    interface IServiceRequestReport {
+        totalServiceRequests: number;
+        byStatus: {
+            pending: number;
+            in_progress: number;
+            completed: number;
+        };
+        byAssignedRole: {
+            housekeeping: number;
+            maintenance: number;
+        };
+    }
+
+    interface IReportOverview {
+        bookings: IBookingReport;
+        rooms: IRoomReport;
+        serviceRequests: IServiceRequestReport;
+    }
 }
 
 export { };
