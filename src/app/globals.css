@@ -204,6 +204,15 @@
     filter: blur(90px);
   }
 
+  /* Table Gradients */
+  .table-bg-gradient {
+    background: linear-gradient(79.74deg, rgba(48, 125, 237, 5%) 0%, rgba(0, 0, 0, 12%) 100%);
+  }
+
+  .table-header-gradient {
+    background: linear-gradient(90deg, rgba(0, 0, 0, 12%) 0%, rgba(48, 125, 237, 12%) 100%);
+  }
+
 
   /* Auth */
   .auth-layout {

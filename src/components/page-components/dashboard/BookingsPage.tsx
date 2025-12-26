@@ -97,6 +97,12 @@ const BookingsPage = () => {
 
     // Handle cancel booking
     const handleCancelClick = (booking: IBooking) => {
+        // Guests can only cancel bookings that are not yet confirmed
+        if (role === "guest" && booking.status === "confirmed") {
+            toast.error("You cannot cancel a confirmed booking. Please contact the hotel directly for assistance.");
+            return;
+        }
+
         setSelectedBooking(booking);
         setCancelDialogOpen(true);
     };
@@ -255,6 +261,7 @@ const BookingsPage = () => {
                         variant="outline"
                         onClick={() => handleViewDetails(booking)}
                         className="h-8 px-2"
+                        title="View Details"
                     >
                         <Eye className="h-4 w-4" />
                     </Button>
@@ -262,8 +269,15 @@ const BookingsPage = () => {
                         size="sm"
                         variant="destructive"
                         onClick={() => handleCancelClick(booking)}
-                        disabled={booking.status === "cancelled"}
+                        disabled={booking.status === "cancelled" || booking.status === "confirmed"}
                         className="h-8 px-2"
+                        title={
+                            booking.status === "cancelled"
+                                ? "Booking already cancelled"
+                                : booking.status === "confirmed"
+                                    ? "Cannot cancel confirmed bookings. Contact hotel for assistance."
+                                    : "Cancel Booking"
+                        }
                     >
                         <XCircle className="h-4 w-4" />
                     </Button>

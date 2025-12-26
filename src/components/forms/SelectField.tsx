@@ -46,7 +46,7 @@ const SelectField = ({
                 />
             </SelectTrigger>
 
-            <SelectContent className="text-white mt-1">
+            <SelectContent className="text-white mt-1" side="bottom" position="popper">
                 {options.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                         {option.label}

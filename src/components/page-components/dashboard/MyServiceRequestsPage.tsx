@@ -469,6 +469,7 @@ const MyServiceRequestsPage = () => {
                             <SelectField
                                 name="bookingId"
                                 label="Select Booking *"
+                                placeholder="Select your Booking"
                                 options={bookingOptions}
                                 control={control}
                                 required
