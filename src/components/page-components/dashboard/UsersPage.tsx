@@ -1,18 +1,33 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import {
+    useState,
+    useEffect,
+    useCallback
+} from "react";
+
 import { useAuth } from "@/contexts/AuthContext";
-import { getUsers, createUser, updateUser, updateUserStatus, getUserStatistics } from "@/services/adminUserService";
-import DataTable from "@/components/common/DataTable";
-import DialogBox from "@/components/common/DialogBox";
-import KPICard from "@/components/common/KPICard";
+
+import {
+    getUsers,
+    createUser,
+    updateUser,
+    updateUserStatus,
+    getUserStatistics
+} from "@/services/adminUserService";
+
+import { useForm } from "react-hook-form";
+import { formatDateTime } from "@/lib/utils";
+
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import StatCard from "@/components/common/StatCard";
+import DialogBox from "@/components/common/DialogBox";
+import DataTable from "@/components/common/DataTable";
 import InputField from "@/components/forms/InputField";
 import SelectField from "@/components/forms/SelectField";
-import { toast } from "sonner";
+
 import { Eye, Pencil, UserCheck, UserX, Plus, Users, CheckCircle2, Ban } from "lucide-react";
-import { formatDateTime } from "@/lib/utils";
-import { useForm } from "react-hook-form";
 
 const UsersPage = () => {
     const { role, loading: authLoading, user: currentUser } = useAuth();
@@ -22,7 +37,7 @@ const UsersPage = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
-    
+
     // KPI states
     const [kpiLoading, setKpiLoading] = useState(false);
     const [userStats, setUserStats] = useState<{ total: number; active: number; byRole: Record<UserRole, number> } | null>(null);
@@ -364,38 +379,17 @@ const UsersPage = () => {
     }
 
     return (
-        <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
-
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-2xl font-bold text-white">User Management</h1>
-                    <p className="text-sm text-gray-400 mt-1">
-                        View and manage all system users
-                    </p>
-                </div>
-                <Button onClick={handleAddClick} className="flex items-center gap-2">
-                    <Plus className="h-4 w-4" />
-                    Add User
-                </Button>
-            </div>
-
-            {/* KPI Cards - Exclude guests from stats */}
+        <div className="space-y-6">
+            {/* KPI Cards */}
             {userStats && !loading && (() => {
-                // Calculate system users only (exclude guests from backend role stats)
-                const totalSystemUsers = (userStats.byRole.admin || 0) + 
-                                        (userStats.byRole.receptionist || 0) + 
-                                        (userStats.byRole.housekeeping || 0);
-                
-                // Calculate active/inactive from loaded data
-                // NOTE: This works because ALL users are loaded at once (no backend pagination)
-                // The 'users' array already excludes guests and contains all staff users
-                // If backend pagination is implemented, this calculation would need to be updated
+                const totalSystemUsers = (userStats.byRole.admin || 0) +
+                    (userStats.byRole.receptionist || 0) +
+                    (userStats.byRole.housekeeping || 0);
                 const activeSystemUsers = users.filter(u => u.isActive).length;
                 const inactiveSystemUsers = totalSystemUsers - activeSystemUsers;
-                
                 return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <KPICard
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <StatCard
                             title="Total Staff"
                             value={totalSystemUsers}
                             icon={Users}
@@ -404,7 +398,7 @@ const UsersPage = () => {
                             loading={kpiLoading}
                             subtitle="System users (excl. guests)"
                         />
-                        <KPICard
+                        <StatCard
                             title="Active Staff"
                             value={activeSystemUsers}
                             icon={CheckCircle2}
@@ -413,7 +407,7 @@ const UsersPage = () => {
                             loading={kpiLoading}
                             subtitle="Currently active"
                         />
-                        <KPICard
+                        <StatCard
                             title="Inactive Staff"
                             value={inactiveSystemUsers}
                             icon={Ban}
@@ -426,194 +420,201 @@ const UsersPage = () => {
                 );
             })()}
 
-            <DataTable
-                columns={columns}
-                data={users}
-                loading={loading}
-                emptyMessage="No users found."
-                pagination={{
-                    page: currentPage,
-                    totalPages: totalPages,
-                    total: totalItems,
-                    onPageChange: handlePageChange,
-                }}
-                selectable={false}
-            />
-
-            {/* View Details Dialog */}
-            <DialogBox
-                open={viewDialogOpen}
-                onOpenChange={setViewDialogOpen}
-                title="User Details"
-                widthClass="max-w-2xl"
-            >
-                {selectedUser && (
-                    <div className="space-y-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <p className="text-sm text-gray-400">User ID</p>
-                                <p className="text-sm font-medium">{selectedUser._id}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-400">Status</p>
-                                <StatusBadge isActive={selectedUser.isActive} />
-                            </div>
-                        </div>
-
-                        <div className="border-t border-gray-700 pt-4">
-                            <h3 className="text-sm font-semibold mb-3">User Information</h3>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-sm text-gray-400">Name</p>
-                                    <p className="text-sm font-medium">{selectedUser.name}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-400">Email</p>
-                                    <p className="text-sm font-medium">{selectedUser.email}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-400">Role</p>
-                                    <RoleBadge role={selectedUser.role} />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="border-t border-gray-700 pt-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-sm text-gray-400">Created At</p>
-                                    <p className="text-sm font-medium">
-                                        {formatDateTime(selectedUser.createdAt)}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-400">Last Updated</p>
-                                    <p className="text-sm font-medium">
-                                        {formatDateTime(selectedUser.updatedAt)}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+            {/* Table */}
+            <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h1 className="text-2xl font-bold text-white">User Management</h1>
+                        <p className="text-sm text-gray-400 mt-1">
+                            View and manage all system users
+                        </p>
                     </div>
-                )}
-            </DialogBox>
+                    <Button onClick={handleAddClick} className="flex items-center gap-2">
+                        <Plus className="h-4 w-4" />
+                        Add User
+                    </Button>
+                </div>
 
-            {/* Add/Edit Form Dialog */}
-            <DialogBox
-                open={formDialogOpen}
-                onOpenChange={setFormDialogOpen}
-                title={isEditMode ? "Edit User" : "Add New User"}
-                widthClass="max-w-xl"
-                showFooter
-                confirmText={isEditMode ? "Update User" : "Create User"}
-                cancelText="Cancel"
-                onConfirm={handleSubmit(onSubmit)}
-                onCancel={() => setFormDialogOpen(false)}
-                disableConfirm={formLoading}
-                confirmLoading={formLoading}
-            >
-                <form
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        handleSubmit(onSubmit)(e);
+                <DataTable
+                    columns={columns}
+                    data={users}
+                    loading={loading}
+                    emptyMessage="No users found."
+                    pagination={{
+                        page: currentPage,
+                        totalPages: totalPages,
+                        total: totalItems,
+                        onPageChange: handlePageChange,
                     }}
-                    className="space-y-4 py-4"
+                    selectable={false}
+                />
+                {/* View Details Dialog */}
+                <DialogBox
+                    open={viewDialogOpen}
+                    onOpenChange={setViewDialogOpen}
+                    title="User Details"
+                    widthClass="max-w-2xl"
                 >
-                    <InputField
-                        name="name"
-                        label="Name *"
-                        placeholder="Enter user name"
-                        register={register}
-                        error={errors.name}
-                        validation={{
-                            required: "Name is required",
-                            minLength: {
-                                value: 2,
-                                message: "Name must be at least 2 characters",
-                            },
+                    {selectedUser && (
+                        <div className="space-y-4 py-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-sm text-gray-400">User ID</p>
+                                    <p className="text-sm font-medium">{selectedUser._id}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-400">Status</p>
+                                    <StatusBadge isActive={selectedUser.isActive} />
+                                </div>
+                            </div>
+                            <div className="border-t border-gray-700 pt-4">
+                                <h3 className="text-sm font-semibold mb-3">User Information</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-sm text-gray-400">Name</p>
+                                        <p className="text-sm font-medium">{selectedUser.name}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-400">Email</p>
+                                        <p className="text-sm font-medium">{selectedUser.email}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-400">Role</p>
+                                        <RoleBadge role={selectedUser.role} />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="border-t border-gray-700 pt-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-sm text-gray-400">Created At</p>
+                                        <p className="text-sm font-medium">
+                                            {formatDateTime(selectedUser.createdAt)}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-400">Last Updated</p>
+                                        <p className="text-sm font-medium">
+                                            {formatDateTime(selectedUser.updatedAt)}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </DialogBox>
+                {/* Add/Edit Form Dialog */}
+                <DialogBox
+                    open={formDialogOpen}
+                    onOpenChange={setFormDialogOpen}
+                    title={isEditMode ? "Edit User" : "Add New User"}
+                    widthClass="max-w-xl"
+                    showFooter
+                    confirmText={isEditMode ? "Update User" : "Create User"}
+                    cancelText="Cancel"
+                    onConfirm={handleSubmit(onSubmit)}
+                    onCancel={() => setFormDialogOpen(false)}
+                    disableConfirm={formLoading}
+                    confirmLoading={formLoading}
+                >
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            handleSubmit(onSubmit)(e);
                         }}
-                    />
-
-                    <InputField
-                        name="email"
-                        label="Email *"
-                        type="email"
-                        placeholder="Enter email address"
-                        register={register}
-                        error={errors.email}
-                        validation={{
-                            required: "Email is required",
-                            pattern: {
-                                value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                                message: "Invalid email address",
-                            },
-                        }}
-                        disabled={isEditMode}
-                        readonly={isEditMode}
-                    />
-
-                    {!isEditMode && (
+                        className="space-y-4 py-4"
+                    >
                         <InputField
-                            name="password"
-                            label="Password *"
-                            type="password"
-                            placeholder="Enter password (min 6 characters)"
+                            name="name"
+                            label="Name *"
+                            placeholder="Enter user name"
                             register={register}
-                            error={errors.password}
+                            error={errors.name}
                             validation={{
-                                required: "Password is required",
+                                required: "Name is required",
                                 minLength: {
-                                    value: 6,
-                                    message: "Password must be at least 6 characters",
+                                    value: 2,
+                                    message: "Name must be at least 2 characters",
                                 },
                             }}
                         />
-                    )}
-
-                    <SelectField
-                        name="role"
-                        label="Role *"
-                        options={roleOptions}
-                        control={control}
-                        required
-                        error={errors.role}
-                        disabled={
-                            isEditMode &&
-                            !!selectedUser &&
-                            !!currentUser &&
-                            selectedUser._id === currentUser._id
-                        }
-                    />
-
-                    {isEditMode &&
-                        selectedUser &&
-                        currentUser &&
-                        selectedUser._id === currentUser._id && (
-                            <p className="text-xs text-yellow-500">
-                                Note: You cannot change your own role
-                            </p>
+                        <InputField
+                            name="email"
+                            label="Email *"
+                            type="email"
+                            placeholder="Enter email address"
+                            register={register}
+                            error={errors.email}
+                            validation={{
+                                required: "Email is required",
+                                pattern: {
+                                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                                    message: "Invalid email address",
+                                },
+                            }}
+                            disabled={isEditMode}
+                            readonly={isEditMode}
+                        />
+                        {!isEditMode && (
+                            <InputField
+                                name="password"
+                                label="Password *"
+                                type="password"
+                                placeholder="Enter password (min 6 characters)"
+                                register={register}
+                                error={errors.password}
+                                validation={{
+                                    required: "Password is required",
+                                    minLength: {
+                                        value: 6,
+                                        message: "Password must be at least 6 characters",
+                                    },
+                                }}
+                            />
                         )}
-                </form>
-            </DialogBox>
-
-            {/* Status Change Confirmation Dialog */}
-            <DialogBox
-                open={statusDialogOpen}
-                onOpenChange={setStatusDialogOpen}
-                title={`${pendingStatus ? "Activate" : "Deactivate"} User`}
-                description={`Are you sure you want to ${pendingStatus ? "activate" : "deactivate"
-                    } ${selectedUser?.name}? ${!pendingStatus
-                        ? "This user will no longer be able to access the system."
-                        : "This user will regain access to the system."
-                    }`}
-                showFooter
-                confirmText={pendingStatus ? "Activate User" : "Deactivate User"}
-                cancelText="Cancel"
-                onConfirm={handleStatusConfirm}
-                onCancel={() => setStatusDialogOpen(false)}
-                confirmLoading={statusLoading}
-                variant={pendingStatus ? "default" : "danger"}
-            />
+                        <SelectField
+                            name="role"
+                            label="Role *"
+                            options={roleOptions}
+                            control={control}
+                            required
+                            error={errors.role}
+                            disabled={
+                                isEditMode &&
+                                !!selectedUser &&
+                                !!currentUser &&
+                                selectedUser._id === currentUser._id
+                            }
+                        />
+                        {isEditMode &&
+                            selectedUser &&
+                            currentUser &&
+                            selectedUser._id === currentUser._id && (
+                                <p className="text-xs text-yellow-500">
+                                    Note: You cannot change your own role
+                                </p>
+                            )}
+                    </form>
+                </DialogBox>
+                {/* Status Change Confirmation Dialog */}
+                <DialogBox
+                    open={statusDialogOpen}
+                    onOpenChange={setStatusDialogOpen}
+                    title={`${pendingStatus ? "Activate" : "Deactivate"} User`}
+                    description={`Are you sure you want to ${pendingStatus ? "activate" : "deactivate"
+                        } ${selectedUser?.name}? ${!pendingStatus
+                            ? "This user will no longer be able to access the system."
+                            : "This user will regain access to the system."
+                        }`}
+                    showFooter
+                    confirmText={pendingStatus ? "Activate User" : "Deactivate User"}
+                    cancelText="Cancel"
+                    onConfirm={handleStatusConfirm}
+                    onCancel={() => setStatusDialogOpen(false)}
+                    confirmLoading={statusLoading}
+                    variant={pendingStatus ? "default" : "danger"}
+                />
+            </div>
         </div>
     );
 };

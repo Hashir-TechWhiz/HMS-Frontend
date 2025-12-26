@@ -1,23 +1,39 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import {
+    useState,
+    useEffect,
+    useCallback
+} from "react";
+
+import Image from "next/image";
+
 import { useAuth } from "@/contexts/AuthContext";
-import { getRooms, createRoom, updateRoom, deleteRoom } from "@/services/roomService";
+
+import {
+    getRooms,
+    createRoom,
+    updateRoom,
+    deleteRoom
+} from "@/services/roomService";
 import { getRoomsReport } from "@/services/reportService";
+
+import { useForm } from "react-hook-form";
 import { useEdgeStore } from "@/lib/edgestore";
+
+import { formatDateTime } from "@/lib/utils";
+
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import StatCard from "@/components/common/StatCard";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
-import KPICard from "@/components/common/KPICard";
-import { EdgeStoreUploader } from "@/components/common/EdgeStoreUploader";
-import { Button } from "@/components/ui/button";
 import InputField from "@/components/forms/InputField";
-import TextAreaField from "@/components/forms/TextAreaField";
 import SelectField from "@/components/forms/SelectField";
-import { toast } from "sonner";
+import TextAreaField from "@/components/forms/TextAreaField";
+import { EdgeStoreUploader } from "@/components/common/EdgeStoreUploader";
+
 import { Eye, Pencil, Trash2, Plus, Building2, CheckCircle2, Ban, Wrench } from "lucide-react";
-import { formatDateTime } from "@/lib/utils";
-import Image from "next/image";
-import { useForm } from "react-hook-form";
 
 const RoomsPage = () => {
     const { role, loading: authLoading } = useAuth();
@@ -42,6 +58,7 @@ const RoomsPage = () => {
     const [formLoading, setFormLoading] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [imageFiles, setImageFiles] = useState<(File | string)[]>([]);
+    const [submitAttempted, setSubmitAttempted] = useState(false);
 
     const {
         register,
@@ -123,6 +140,7 @@ const RoomsPage = () => {
         setIsEditMode(false);
         setSelectedRoom(null);
         setImageFiles([]);
+        setSubmitAttempted(false);
         reset({
             roomNumber: "",
             roomType: "Single",
@@ -139,6 +157,7 @@ const RoomsPage = () => {
         setIsEditMode(true);
         setSelectedRoom(room);
         setImageFiles(room.images);
+        setSubmitAttempted(false);
         reset({
             roomNumber: room.roomNumber,
             roomType: room.roomType,
@@ -196,6 +215,7 @@ const RoomsPage = () => {
         status: RoomStatus;
         description: string;
     }) => {
+        setSubmitAttempted(true);
         if (imageFiles.length < 1) {
             toast.error("At least one image is required");
             return;
@@ -425,25 +445,11 @@ const RoomsPage = () => {
     }
 
     return (
-        <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
-
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-2xl font-bold text-white">Room Management</h1>
-                    <p className="text-sm text-gray-400 mt-1">
-                        View and manage all hotel rooms
-                    </p>
-                </div>
-                <Button onClick={handleAddClick} className="flex items-center gap-2">
-                    <Plus className="h-4 w-4" />
-                    Add Room
-                </Button>
-            </div>
-
+        <div className="flex flex-col gap-6">
             {/* KPI Cards */}
             {roomStats && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <KPICard
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <StatCard
                         title="Total Rooms"
                         value={roomStats.totalRooms}
                         icon={Building2}
@@ -451,7 +457,7 @@ const RoomsPage = () => {
                         iconBg="bg-blue-500/10"
                         loading={kpiLoading}
                     />
-                    <KPICard
+                    <StatCard
                         title="Available"
                         value={roomStats.byStatus.available}
                         icon={CheckCircle2}
@@ -460,7 +466,7 @@ const RoomsPage = () => {
                         loading={kpiLoading}
                         subtitle="Ready for booking"
                     />
-                    <KPICard
+                    <StatCard
                         title="Unavailable"
                         value={roomStats.byStatus.unavailable}
                         icon={Ban}
@@ -469,7 +475,7 @@ const RoomsPage = () => {
                         loading={kpiLoading}
                         subtitle="Currently occupied"
                     />
-                    <KPICard
+                    <StatCard
                         title="Maintenance"
                         value={roomStats.byStatus.maintenance}
                         icon={Wrench}
@@ -481,238 +487,247 @@ const RoomsPage = () => {
                 </div>
             )}
 
-            <DataTable
-                columns={columns}
-                data={rooms}
-                loading={loading}
-                emptyMessage="No rooms found."
-                pagination={{
-                    page: currentPage,
-                    totalPages: totalPages,
-                    total: totalItems,
-                    onPageChange: handlePageChange,
-                }}
-                selectable={false}
-            />
+            {/* Table */}
+            <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h1 className="text-2xl font-bold text-white">Room Management</h1>
+                        <p className="text-sm text-gray-400 mt-1">
+                            View and manage all hotel rooms
+                        </p>
+                    </div>
+                    <Button onClick={handleAddClick} className="flex items-center gap-2 main-button-gradient">
+                        <Plus className="h-4 w-4" />
+                        Add Room
+                    </Button>
+                </div>
 
-            {/* View Details Dialog */}
-            <DialogBox
-                open={viewDialogOpen}
-                onOpenChange={setViewDialogOpen}
-                title="Room Details"
-                widthClass="max-w-3xl"
-            >
-                {selectedRoom && (
-                    <div className="space-y-4 py-4">
+                <DataTable
+                    columns={columns}
+                    data={rooms}
+                    loading={loading}
+                    emptyMessage="No rooms found."
+                    pagination={{
+                        page: currentPage,
+                        totalPages: totalPages,
+                        total: totalItems,
+                        onPageChange: handlePageChange,
+                    }}
+                    selectable={false}
+                />
+                {/* View Details Dialog */}
+                <DialogBox
+                    open={viewDialogOpen}
+                    onOpenChange={setViewDialogOpen}
+                    title="Room Details"
+                    widthClass="max-w-3xl"
+                >
+                    {selectedRoom && (
+                        <div className="space-y-4 py-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-sm text-gray-400">Room ID</p>
+                                    <p className="text-sm font-medium">{selectedRoom._id}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-400">Status</p>
+                                    <StatusBadge status={selectedRoom.status} />
+                                </div>
+                            </div>
+                            <div className="border-t border-gray-700 pt-4">
+                                <h3 className="text-sm font-semibold mb-3">Room Information</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-sm text-gray-400">Room Number</p>
+                                        <p className="text-sm font-medium">{selectedRoom.roomNumber}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-400">Room Type</p>
+                                        <p className="text-sm font-medium">{selectedRoom.roomType}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-400">Capacity</p>
+                                        <p className="text-sm font-medium">{selectedRoom.capacity}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-400">Price Per Night</p>
+                                        <p className="text-sm font-medium">
+                                            ${selectedRoom.pricePerNight.toFixed(2)}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            {selectedRoom.description && (
+                                <div className="border-t border-gray-700 pt-4">
+                                    <h3 className="text-sm font-semibold mb-2">Description</h3>
+                                    <p className="text-sm text-gray-300">{selectedRoom.description}</p>
+                                </div>
+                            )}
+                            <div className="border-t border-gray-700 pt-4">
+                                <h3 className="text-sm font-semibold mb-3">Images</h3>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {selectedRoom.images.map((imageUrl, index) => (
+                                        <div
+                                            key={index}
+                                            className="relative w-full aspect-square rounded-lg overflow-hidden"
+                                        >
+                                            <Image
+                                                src={imageUrl}
+                                                alt={`Room ${selectedRoom.roomNumber} - Image ${index + 1}`}
+                                                fill
+                                                className="object-cover"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="border-t border-gray-700 pt-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-sm text-gray-400">Created At</p>
+                                        <p className="text-sm font-medium">
+                                            {formatDateTime(selectedRoom.createdAt)}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-400">Last Updated</p>
+                                        <p className="text-sm font-medium">
+                                            {formatDateTime(selectedRoom.updatedAt)}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </DialogBox>
+
+                {/* Add/Edit Form Dialog */}
+                <DialogBox
+                    open={formDialogOpen}
+                    onOpenChange={(open) => {
+                        setFormDialogOpen(open);
+                        if (!open) {
+                            setSubmitAttempted(false);
+                        }
+                    }}
+                    title={isEditMode ? "Edit Room" : "Add New Room"}
+                    widthClass="min-w-3xl!"
+                    showFooter
+                    confirmText={isEditMode ? "Update Room" : "Create Room"}
+                    cancelText="Cancel"
+                    onConfirm={handleSubmit(onSubmit)}
+                    onCancel={() => {
+                        setFormDialogOpen(false);
+                        setSubmitAttempted(false);
+                    }}
+                    disableConfirm={formLoading}
+                    confirmLoading={formLoading}
+                >
+                    <form onSubmit={(e) => { e.preventDefault(); handleSubmit(onSubmit)(e); }} className="space-y-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <InputField
+                                name="roomNumber"
+                                label="Room Number *"
+                                placeholder="e.g., 101"
+                                register={register}
+                                error={errors.roomNumber}
+                                validation={{
+                                    required: "Room number is required",
+                                }}
+                            />
+                            <SelectField
+                                name="roomType"
+                                label="Room Type *"
+                                options={roomTypeOptions}
+                                control={control}
+                                required
+                                error={errors.roomType}
+                            />
+                        </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <p className="text-sm text-gray-400">Room ID</p>
-                                <p className="text-sm font-medium">{selectedRoom._id}</p>
+                                <InputField
+                                    name="capacity"
+                                    label="Capacity *"
+                                    type="number"
+                                    placeholder="e.g., 2"
+                                    register={register}
+                                    error={errors.capacity}
+                                    validation={{
+                                        required: "Capacity is required",
+                                        min: { value: 1, message: "Capacity must be at least 1" },
+                                        valueAsNumber: true,
+                                    }}
+                                />
                             </div>
                             <div>
-                                <p className="text-sm text-gray-400">Status</p>
-                                <StatusBadge status={selectedRoom.status} />
+                                <InputField
+                                    name="pricePerNight"
+                                    label="Price Per Night *"
+                                    type="number"
+                                    placeholder="e.g., 100.00"
+                                    register={register}
+                                    error={errors.pricePerNight}
+                                    validation={{
+                                        required: "Price per night is required",
+                                        min: { value: 0, message: "Price cannot be negative" },
+                                        valueAsNumber: true,
+                                    }}
+                                />
                             </div>
                         </div>
-
-                        <div className="border-t border-gray-700 pt-4">
-                            <h3 className="text-sm font-semibold mb-3">Room Information</h3>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-sm text-gray-400">Room Number</p>
-                                    <p className="text-sm font-medium">{selectedRoom.roomNumber}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-400">Room Type</p>
-                                    <p className="text-sm font-medium">{selectedRoom.roomType}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-400">Capacity</p>
-                                    <p className="text-sm font-medium">{selectedRoom.capacity}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-400">Price Per Night</p>
-                                    <p className="text-sm font-medium">
-                                        ${selectedRoom.pricePerNight.toFixed(2)}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {selectedRoom.description && (
-                            <div className="border-t border-gray-700 pt-4">
-                                <h3 className="text-sm font-semibold mb-2">Description</h3>
-                                <p className="text-sm text-gray-300">{selectedRoom.description}</p>
-                            </div>
-                        )}
-
-                        <div className="border-t border-gray-700 pt-4">
-                            <h3 className="text-sm font-semibold mb-3">Images</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {selectedRoom.images.map((imageUrl, index) => (
-                                    <div
-                                        key={index}
-                                        className="relative w-full aspect-square rounded-lg overflow-hidden"
-                                    >
-                                        <Image
-                                            src={imageUrl}
-                                            alt={`Room ${selectedRoom.roomNumber} - Image ${index + 1}`}
-                                            fill
-                                            className="object-cover"
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="border-t border-gray-700 pt-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-sm text-gray-400">Created At</p>
-                                    <p className="text-sm font-medium">
-                                        {formatDateTime(selectedRoom.createdAt)}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-400">Last Updated</p>
-                                    <p className="text-sm font-medium">
-                                        {formatDateTime(selectedRoom.updatedAt)}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </DialogBox>
-
-            {/* Add/Edit Form Dialog */}
-            <DialogBox
-                open={formDialogOpen}
-                onOpenChange={setFormDialogOpen}
-                title={isEditMode ? "Edit Room" : "Add New Room"}
-                widthClass="max-w-2xl"
-                showFooter
-                confirmText={isEditMode ? "Update Room" : "Create Room"}
-                cancelText="Cancel"
-                onConfirm={handleSubmit(onSubmit)}
-                onCancel={() => setFormDialogOpen(false)}
-                disableConfirm={formLoading}
-                confirmLoading={formLoading}
-            >
-                <form onSubmit={(e) => { e.preventDefault(); handleSubmit(onSubmit)(e); }} className="space-y-4 py-4">
-                    <div className="grid grid-cols-2 gap-4">
-
-                        <InputField
-                            name="roomNumber"
-                            label="Room Number *"
-                            placeholder="e.g., 101"
-                            register={register}
-                            error={errors.roomNumber}
-                            validation={{
-                                required: "Room number is required",
-                            }}
-                        />
-
-
-
-                        <SelectField
-                            name="roomType"
-                            label="Room Type *"
-                            options={roomTypeOptions}
-                            control={control}
-                            required
-                            error={errors.roomType}
-                        />
-
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <InputField
-                                name="capacity"
-                                label="Capacity *"
-                                type="number"
-                                placeholder="e.g., 2"
-                                register={register}
-                                error={errors.capacity}
-                                validation={{
-                                    required: "Capacity is required",
-                                    min: { value: 1, message: "Capacity must be at least 1" },
-                                    valueAsNumber: true,
-                                }}
+                            <SelectField
+                                name="status"
+                                label="Status *"
+                                options={statusOptions}
+                                control={control}
+                                required
+                                error={errors.status}
                             />
                         </div>
-
                         <div>
-                            <InputField
-                                name="pricePerNight"
-                                label="Price Per Night *"
-                                type="number"
-                                placeholder="e.g., 100.00"
+                            <TextAreaField
+                                name="description"
+                                label="Description"
+                                placeholder="Room description (optional)"
                                 register={register}
-                                error={errors.pricePerNight}
-                                validation={{
-                                    required: "Price per night is required",
-                                    min: { value: 0, message: "Price cannot be negative" },
-                                    valueAsNumber: true,
-                                }}
+                                error={errors.description}
+                                rows={3}
                             />
                         </div>
-                    </div>
+                        <div>
+                            <EdgeStoreUploader
+                                maxFiles={4}
+                                maxSizeMB={4}
+                                value={imageFiles}
+                                onChange={setImageFiles}
+                                initialUrls={isEditMode ? selectedRoom?.images || [] : []}
+                                error={
+                                    submitAttempted && imageFiles.length < 1
+                                        ? "At least one image is required"
+                                        : undefined
+                                }
+                            />
+                        </div>
+                    </form>
+                </DialogBox>
 
-                    <div>
-                        <SelectField
-                            name="status"
-                            label="Status *"
-                            options={statusOptions}
-                            control={control}
-                            required
-                            error={errors.status}
-                        />
-                    </div>
-
-                    <div>
-                        <TextAreaField
-                            name="description"
-                            label="Description"
-                            placeholder="Room description (optional)"
-                            register={register}
-                            error={errors.description}
-                            rows={3}
-                        />
-                    </div>
-
-                    <div>
-                        <EdgeStoreUploader
-                            maxFiles={4}
-                            maxSizeMB={4}
-                            value={imageFiles}
-                            onChange={setImageFiles}
-                            initialUrls={isEditMode ? selectedRoom?.images || [] : []}
-                            error={
-                                imageFiles.length < 1
-                                    ? "At least one image is required"
-                                    : undefined
-                            }
-                        />
-                    </div>
-                </form>
-            </DialogBox>
-
-            {/* Delete Confirmation Dialog */}
-            <DialogBox
-                open={deleteDialogOpen}
-                onOpenChange={setDeleteDialogOpen}
-                title="Delete Room"
-                description={`Are you sure you want to delete room ${selectedRoom?.roomNumber}? This action cannot be undone. All associated images will also be deleted.`}
-                showFooter
-                confirmText="Delete Room"
-                cancelText="Cancel"
-                onConfirm={handleDeleteConfirm}
-                onCancel={() => setDeleteDialogOpen(false)}
-                confirmLoading={deleteLoading}
-                variant="danger"
-            />
+                {/* Delete Confirmation Dialog */}
+                <DialogBox
+                    open={deleteDialogOpen}
+                    onOpenChange={setDeleteDialogOpen}
+                    title="Delete Room"
+                    description={`Are you sure you want to delete room ${selectedRoom?.roomNumber}? This action cannot be undone. All associated images will also be deleted.`}
+                    showFooter
+                    confirmText="Delete Room"
+                    cancelText="Cancel"
+                    onConfirm={handleDeleteConfirm}
+                    onCancel={() => setDeleteDialogOpen(false)}
+                    confirmLoading={deleteLoading}
+                    variant="danger"
+                />
+            </div>
         </div>
     );
 };

@@ -219,12 +219,12 @@ export const EdgeStoreUploader: React.FC<EdgeStoreUploaderProps> = ({
             </div>
 
             {globalError && (
-                <p className="text-sm text-red-500 font-semibold mt-3 text-center">
+                <p className="text-sm text-red-500 font-semibold mt-3 text-left">
                     {globalError}
                 </p>
             )}
             {!globalError && error && (
-                <p className="text-sm text-red-400 font-medium mt-2 text-center">
+                <p className="text-sm text-red-400 font-medium mt-2 text-left">
                     {error}
                 </p>
             )}

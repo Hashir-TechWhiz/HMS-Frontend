@@ -122,6 +122,14 @@ const ReceptionistServiceRequestsPage = () => {
         return "N/A";
     };
 
+    // Get assigned staff name
+    const getAssignedStaffName = (request: IServiceRequest): string => {
+        if (request.assignedTo && typeof request.assignedTo === "object") {
+            return request.assignedTo.name;
+        }
+        return "Unassigned";
+    };
+
     // Status badge
     const StatusBadge = ({ status }: { status: ServiceStatus }) => {
         const colors = {
@@ -179,6 +187,17 @@ const ReceptionistServiceRequestsPage = () => {
             label: "Service Type",
             render: (request: IServiceRequest) => (
                 <span>{serviceTypeLabels[request.serviceType]}</span>
+            ),
+        },
+        {
+            key: "assignedStaff",
+            label: "Assigned Staff",
+            render: (request: IServiceRequest) => (
+                <div>
+                    <div className={`text-sm ${getAssignedStaffName(request) === "Unassigned" ? "text-gray-400" : "font-medium"}`}>
+                        {getAssignedStaffName(request)}
+                    </div>
+                </div>
             ),
         },
         {
@@ -278,6 +297,12 @@ const ReceptionistServiceRequestsPage = () => {
                                     <p className="text-sm text-gray-400">Assigned Role</p>
                                     <p className="text-sm font-medium capitalize">
                                         {selectedRequest.assignedRole || "N/A"}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-400">Assigned Staff</p>
+                                    <p className={`text-sm ${getAssignedStaffName(selectedRequest) === "Unassigned" ? "text-gray-400" : "font-medium"}`}>
+                                        {getAssignedStaffName(selectedRequest)}
                                     </p>
                                 </div>
                             </div>

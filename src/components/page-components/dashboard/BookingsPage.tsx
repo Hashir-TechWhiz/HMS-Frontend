@@ -6,7 +6,7 @@ import { getAllBookings, getMyBookings, cancelBooking, confirmBooking } from "@/
 import { getBookingsReport } from "@/services/reportService";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
-import KPICard from "@/components/common/KPICard";
+import StatCard from "@/components/common/StatCard";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Eye, XCircle, CheckCircle, ClipboardList, CheckCircle2, Clock } from "lucide-react";
@@ -23,7 +23,7 @@ const BookingsPage = () => {
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-    
+
     // KPI states
     const [kpiLoading, setKpiLoading] = useState(false);
     const [bookingStats, setBookingStats] = useState<IBookingReport | null>(null);
@@ -424,28 +424,11 @@ const BookingsPage = () => {
     }
 
     return (
-        <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-2xl font-bold text-white">{pageTitle}</h1>
-                    <p className="text-sm text-gray-400 mt-1">
-                        {role === "guest"
-                            ? "View and manage your bookings"
-                            : "View and manage all hotel bookings"}
-                    </p>
-                </div>
-
-                <DateRangePicker
-                    value={dateRange}
-                    onChange={handleDateRangeChange}
-                    className="w-full max-w-sm"
-                />
-            </div>
-
+        <div className="flex flex-col gap-6">
             {/* KPI Cards - Only for Admin/Receptionist */}
             {(role === "receptionist" || role === "admin") && bookingStats && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <KPICard
+                    <StatCard
                         title="Total Bookings"
                         value={bookingStats.totalBookings}
                         icon={ClipboardList}
@@ -453,40 +436,37 @@ const BookingsPage = () => {
                         iconBg="bg-blue-500/10"
                         loading={kpiLoading}
                     />
-                    <KPICard
+                    <StatCard
                         title="Confirmed"
                         value={bookingStats.byStatus.confirmed}
                         icon={CheckCircle2}
                         iconColor="text-green-400"
                         iconBg="bg-green-500/10"
                         loading={kpiLoading}
-                        subtitle="Active bookings"
                     />
-                    <KPICard
+                    <StatCard
                         title="Pending"
                         value={bookingStats.byStatus.pending}
                         icon={Clock}
                         iconColor="text-yellow-400"
                         iconBg="bg-yellow-500/10"
                         loading={kpiLoading}
-                        subtitle="Awaiting confirmation"
+
                     />
-                    <KPICard
+                    <StatCard
                         title="Cancelled"
                         value={bookingStats.byStatus.cancelled}
                         icon={XCircle}
                         iconColor="text-red-400"
                         iconBg="bg-red-500/10"
                         loading={kpiLoading}
-                        subtitle="Cancelled bookings"
                     />
                 </div>
             )}
-
             {/* KPI Card for Guests - Show only total */}
             {role === "guest" && totalItems > 0 && !loading && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-lg">
-                    <KPICard
+                    <StatCard
                         title="My Bookings"
                         value={totalItems}
                         icon={ClipboardList}
@@ -496,138 +476,148 @@ const BookingsPage = () => {
                     />
                 </div>
             )}
-
-            <DataTable
-                columns={columns}
-                data={bookings}
-                loading={loading}
-                emptyMessage="No bookings found."
-                pagination={{
-                    page: currentPage,
-                    totalPages: totalPages,
-                    total: totalItems,
-                    onPageChange: handlePageChange,
-                }}
-                selectable={false}
-            />
-
-            {/* View Details Dialog */}
-            <DialogBox
-                open={viewDialogOpen}
-                onOpenChange={setViewDialogOpen}
-                title="Booking Details"
-                widthClass="max-w-2xl"
-            >
-                {selectedBooking && (
-                    <div className="space-y-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <p className="text-sm text-gray-400">Booking ID</p>
-                                <p className="text-sm font-medium">{selectedBooking._id}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-400">Status</p>
-                                <StatusBadge status={selectedBooking.status} />
-                            </div>
-                        </div>
-
-                        <div className="border-t border-gray-700 pt-4">
-                            <h3 className="text-sm font-semibold mb-3">Customer Information</h3>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-sm text-gray-400">Name</p>
-                                    <p className="text-sm font-medium">{getCustomerName(selectedBooking)}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-400">Contact</p>
-                                    <p className="text-sm font-medium">{getCustomerPhone(selectedBooking)}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-400">Booking Type</p>
-                                    <p className="text-sm font-medium">{getBookingType(selectedBooking)}</p>
-                                </div>
-                                {(role === "receptionist" || role === "admin") && (
-                                    <div>
-                                        <p className="text-sm text-gray-400">Created By</p>
-                                        <p className="text-sm font-medium">{getCreatedByName(selectedBooking)}</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="border-t border-gray-700 pt-4">
-                            <h3 className="text-sm font-semibold mb-3">Room Information</h3>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-sm text-gray-400">Room Number</p>
-                                    <p className="text-sm font-medium">{getRoomNumber(selectedBooking)}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-400">Room Type</p>
-                                    <p className="text-sm font-medium">{getRoomType(selectedBooking)}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="border-t border-gray-700 pt-4">
-                            <h3 className="text-sm font-semibold mb-3">Booking Dates</h3>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-sm text-gray-400">Check-in Date</p>
-                                    <p className="text-sm font-medium">{formatDateTime(selectedBooking.checkInDate)}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-400">Check-out Date</p>
-                                    <p className="text-sm font-medium">{formatDateTime(selectedBooking.checkOutDate)}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="border-t border-gray-700 pt-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-sm text-gray-400">Created At</p>
-                                    <p className="text-sm font-medium">{formatDateTime(selectedBooking.createdAt)}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-400">Last Updated</p>
-                                    <p className="text-sm font-medium">{formatDateTime(selectedBooking.updatedAt)}</p>
-                                </div>
-                            </div>
-                        </div>
+            <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h1 className="text-2xl font-bold text-white">{pageTitle}</h1>
+                        <p className="text-sm text-gray-400 mt-1">
+                            {role === "guest"
+                                ? "View and manage your bookings"
+                                : "View and manage all hotel bookings"}
+                        </p>
                     </div>
-                )}
-            </DialogBox>
+                    <DateRangePicker
+                        value={dateRange}
+                        onChange={handleDateRangeChange}
+                        className="w-full max-w-sm"
+                    />
+                </div>
 
-            {/* Cancel Confirmation Dialog */}
-            <DialogBox
-                open={cancelDialogOpen}
-                onOpenChange={setCancelDialogOpen}
-                title="Cancel Booking"
-                description="Are you sure you want to cancel this booking? This action cannot be undone."
-                showFooter
-                confirmText="Cancel Booking"
-                cancelText="Go Back"
-                onConfirm={handleCancelConfirm}
-                onCancel={() => setCancelDialogOpen(false)}
-                confirmLoading={cancelLoading}
-                variant="danger"
-            />
-
-            {/* Confirm Booking Dialog */}
-            <DialogBox
-                open={confirmDialogOpen}
-                onOpenChange={setConfirmDialogOpen}
-                title="Confirm Booking"
-                description="Are you sure you want to confirm this booking? The guest will receive a confirmation email notification."
-                showFooter
-                confirmText="Confirm Booking"
-                cancelText="Go Back"
-                onConfirm={handleConfirmConfirm}
-                onCancel={() => setConfirmDialogOpen(false)}
-                confirmLoading={confirmLoading}
-                variant="success"
-            />
+                <DataTable
+                    columns={columns}
+                    data={bookings}
+                    loading={loading}
+                    emptyMessage="No bookings found."
+                    pagination={{
+                        page: currentPage,
+                        totalPages: totalPages,
+                        total: totalItems,
+                        onPageChange: handlePageChange,
+                    }}
+                    selectable={false}
+                />
+                {/* View Details Dialog */}
+                <DialogBox
+                    open={viewDialogOpen}
+                    onOpenChange={setViewDialogOpen}
+                    title="Booking Details"
+                    widthClass="max-w-2xl"
+                >
+                    {selectedBooking && (
+                        <div className="space-y-4 py-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-sm text-gray-400">Booking ID</p>
+                                    <p className="text-sm font-medium">{selectedBooking._id}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-400">Status</p>
+                                    <StatusBadge status={selectedBooking.status} />
+                                </div>
+                            </div>
+                            <div className="border-t border-gray-700 pt-4">
+                                <h3 className="text-sm font-semibold mb-3">Customer Information</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-sm text-gray-400">Name</p>
+                                        <p className="text-sm font-medium">{getCustomerName(selectedBooking)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-400">Contact</p>
+                                        <p className="text-sm font-medium">{getCustomerPhone(selectedBooking)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-400">Booking Type</p>
+                                        <p className="text-sm font-medium">{getBookingType(selectedBooking)}</p>
+                                    </div>
+                                    {(role === "receptionist" || role === "admin") && (
+                                        <div>
+                                            <p className="text-sm text-gray-400">Created By</p>
+                                            <p className="text-sm font-medium">{getCreatedByName(selectedBooking)}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="border-t border-gray-700 pt-4">
+                                <h3 className="text-sm font-semibold mb-3">Room Information</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-sm text-gray-400">Room Number</p>
+                                        <p className="text-sm font-medium">{getRoomNumber(selectedBooking)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-400">Room Type</p>
+                                        <p className="text-sm font-medium">{getRoomType(selectedBooking)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="border-t border-gray-700 pt-4">
+                                <h3 className="text-sm font-semibold mb-3">Booking Dates</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-sm text-gray-400">Check-in Date</p>
+                                        <p className="text-sm font-medium">{formatDateTime(selectedBooking.checkInDate)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-400">Check-out Date</p>
+                                        <p className="text-sm font-medium">{formatDateTime(selectedBooking.checkOutDate)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="border-t border-gray-700 pt-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-sm text-gray-400">Created At</p>
+                                        <p className="text-sm font-medium">{formatDateTime(selectedBooking.createdAt)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-400">Last Updated</p>
+                                        <p className="text-sm font-medium">{formatDateTime(selectedBooking.updatedAt)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </DialogBox>
+                {/* Cancel Confirmation Dialog */}
+                <DialogBox
+                    open={cancelDialogOpen}
+                    onOpenChange={setCancelDialogOpen}
+                    title="Cancel Booking"
+                    description="Are you sure you want to cancel this booking? This action cannot be undone."
+                    showFooter
+                    confirmText="Cancel Booking"
+                    cancelText="Go Back"
+                    onConfirm={handleCancelConfirm}
+                    onCancel={() => setCancelDialogOpen(false)}
+                    confirmLoading={cancelLoading}
+                    variant="danger"
+                />
+                {/* Confirm Booking Dialog */}
+                <DialogBox
+                    open={confirmDialogOpen}
+                    onOpenChange={setConfirmDialogOpen}
+                    title="Confirm Booking"
+                    description="Are you sure you want to confirm this booking? The guest will receive a confirmation email notification."
+                    showFooter
+                    confirmText="Confirm Booking"
+                    cancelText="Go Back"
+                    onConfirm={handleConfirmConfirm}
+                    onCancel={() => setConfirmDialogOpen(false)}
+                    confirmLoading={confirmLoading}
+                    variant="success"
+                />
+            </div>
         </div>
     );
 };

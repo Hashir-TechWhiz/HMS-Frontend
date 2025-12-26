@@ -1,20 +1,38 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import {
+    useState,
+    useEffect,
+    useCallback
+} from "react";
+
 import { useAuth } from "@/contexts/AuthContext";
-import { getAllServiceRequests, updateServiceRequestStatus } from "@/services/serviceRequestService";
+
+import {
+    getAllServiceRequests,
+    updateServiceRequestStatus
+} from "@/services/serviceRequestService";
+
 import { getServiceRequestsReport } from "@/services/reportService";
+
+import { DateRange } from "react-day-picker";
+import { useForm } from "react-hook-form";
+
+import {
+    formatDateTime,
+    normalizeDateRange
+} from "@/lib/utils";
+
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import StatCard from "@/components/common/StatCard";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
-import KPICard from "@/components/common/KPICard";
-import { Button } from "@/components/ui/button";
 import SelectField from "@/components/forms/SelectField";
-import { toast } from "sonner";
-import { Eye, RefreshCw, Settings, Clock, Loader2 as LoaderIcon, CheckCircle2 } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { formatDateTime, normalizeDateRange } from "@/lib/utils";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
-import { DateRange } from "react-day-picker";
+
+import { Eye, RefreshCw, Settings, Clock, Loader2 as LoaderIcon, CheckCircle2 } from "lucide-react";
 
 const AdminServiceRequestsPage = () => {
     const { role, loading: authLoading } = useAuth();
@@ -191,6 +209,14 @@ const AdminServiceRequestsPage = () => {
         return "N/A";
     };
 
+    // Get assigned staff name
+    const getAssignedStaffName = (request: IServiceRequest): string => {
+        if (request.assignedTo && typeof request.assignedTo === "object") {
+            return request.assignedTo.name;
+        }
+        return "Unassigned";
+    };
+
     // Status badge
     const StatusBadge = ({ status }: { status: ServiceStatus }) => {
         const colors = {
@@ -258,10 +284,14 @@ const AdminServiceRequestsPage = () => {
             ),
         },
         {
-            key: "assignedRole",
-            label: "Assigned Role",
+            key: "assignedStaff",
+            label: "Assigned To",
             render: (request: IServiceRequest) => (
-                <span className="capitalize">{request.assignedRole || "N/A"}</span>
+                <div>
+                    <div className={`text-sm ${getAssignedStaffName(request) === "Unassigned" ? "text-gray-400" : "font-medium"}`}>
+                        {getAssignedStaffName(request)}
+                    </div>
+                </div>
             ),
         },
         {
@@ -302,26 +332,11 @@ const AdminServiceRequestsPage = () => {
     }
 
     return (
-        <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
-
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-2xl font-bold text-white">Service Requests Management</h1>
-                    <p className="text-sm text-gray-400 mt-1">
-                        View and manage all service requests
-                    </p>
-                </div>
-                <DateRangePicker
-                    value={dateRange}
-                    onChange={handleDateRangeChange}
-                    className="w-full max-w-sm"
-                />
-            </div>
-
+        <div className="space-y-6">
             {/* KPI Cards */}
             {serviceRequestStats && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <KPICard
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <StatCard
                         title="Total Requests"
                         value={serviceRequestStats.totalServiceRequests}
                         icon={Settings}
@@ -329,7 +344,7 @@ const AdminServiceRequestsPage = () => {
                         iconBg="bg-blue-500/10"
                         loading={kpiLoading}
                     />
-                    <KPICard
+                    <StatCard
                         title="Pending"
                         value={serviceRequestStats.byStatus.pending}
                         icon={Clock}
@@ -338,7 +353,7 @@ const AdminServiceRequestsPage = () => {
                         loading={kpiLoading}
                         subtitle="Awaiting action"
                     />
-                    <KPICard
+                    <StatCard
                         title="In Progress"
                         value={serviceRequestStats.byStatus.in_progress}
                         icon={LoaderIcon}
@@ -347,7 +362,7 @@ const AdminServiceRequestsPage = () => {
                         loading={kpiLoading}
                         subtitle="Being handled"
                     />
-                    <KPICard
+                    <StatCard
                         title="Completed"
                         value={serviceRequestStats.byStatus.completed}
                         icon={CheckCircle2}
@@ -359,141 +374,157 @@ const AdminServiceRequestsPage = () => {
                 </div>
             )}
 
-            <DataTable
-                columns={columns}
-                data={serviceRequests}
-                loading={loading}
-                emptyMessage="No service requests found."
-                pagination={{
-                    page: currentPage,
-                    totalPages: totalPages,
-                    total: totalItems,
-                    onPageChange: handlePageChange,
-                }}
-                selectable={false}
-            />
-
-            {/* View Details Dialog */}
-            <DialogBox
-                open={viewDialogOpen}
-                onOpenChange={setViewDialogOpen}
-                title="Service Request Details"
-                widthClass="max-w-2xl"
-            >
-                {selectedRequest && (
-                    <div className="space-y-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <p className="text-sm text-gray-400">Request ID</p>
-                                <p className="text-sm font-medium">{selectedRequest._id}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-400">Status</p>
-                                <StatusBadge status={selectedRequest.status} />
-                            </div>
-                        </div>
-
-                        <div className="border-t border-gray-700 pt-4">
-                            <h3 className="text-sm font-semibold mb-3">Service Information</h3>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-sm text-gray-400">Service Type</p>
-                                    <p className="text-sm font-medium">
-                                        {serviceTypeLabels[selectedRequest.serviceType]}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-400">Booking Reference</p>
-                                    <p className="text-sm font-medium">
-                                        {getBookingReference(selectedRequest)}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-400">Assigned Role</p>
-                                    <p className="text-sm font-medium capitalize">
-                                        {selectedRequest.assignedRole || "N/A"}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="border-t border-gray-700 pt-4">
-                            <h3 className="text-sm font-semibold mb-3">Room Information</h3>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-sm text-gray-400">Room Number</p>
-                                    <p className="text-sm font-medium">{getRoomNumber(selectedRequest)}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-400">Room Type</p>
-                                    <p className="text-sm font-medium">{getRoomType(selectedRequest)}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="border-t border-gray-700 pt-4">
-                            <h3 className="text-sm font-semibold mb-3">Guest Information</h3>
-                            <div>
-                                <p className="text-sm text-gray-400">Guest Name</p>
-                                <p className="text-sm font-medium">{getGuestName(selectedRequest)}</p>
-                            </div>
-                        </div>
-
-                        {selectedRequest.notes && (
-                            <div className="border-t border-gray-700 pt-4">
-                                <h3 className="text-sm font-semibold mb-2">Notes</h3>
-                                <p className="text-sm text-gray-300">{selectedRequest.notes}</p>
-                            </div>
-                        )}
-
-                        <div className="border-t border-gray-700 pt-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-sm text-gray-400">Created At</p>
-                                    <p className="text-sm font-medium">
-                                        {formatDateTime(selectedRequest.createdAt)}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-400">Last Updated</p>
-                                    <p className="text-sm font-medium">
-                                        {formatDateTime(selectedRequest.updatedAt)}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+            {/* Table */}
+            <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h1 className="text-2xl font-semibold">Service Requests</h1>
+                        <p className="text-sm text-gray-400 mt-1">
+                            View and manage all service requests
+                        </p>
                     </div>
-                )}
-            </DialogBox>
-
-            {/* Update Status Dialog */}
-            <DialogBox
-                open={statusDialogOpen}
-                onOpenChange={setStatusDialogOpen}
-                title="Update Service Request Status"
-                widthClass="max-w-md"
-                showFooter
-                confirmText="Update Status"
-                cancelText="Cancel"
-                onConfirm={handleSubmit(onStatusSubmit)}
-                onCancel={() => setStatusDialogOpen(false)}
-                disableConfirm={statusLoading}
-                confirmLoading={statusLoading}
-            >
-                <form onSubmit={(e) => { e.preventDefault(); handleSubmit(onStatusSubmit)(e); }} className="space-y-4 py-4">
-                    <SelectField
-                        name="status"
-                        label="Service Request Status *"
-                        options={statusOptions}
-                        control={control}
-                        required
-                        error={errors.status}
+                    <DateRangePicker
+                        value={dateRange}
+                        onChange={handleDateRangeChange}
+                        className="w-full max-w-sm"
                     />
-                    <p className="text-xs text-gray-400">
-                        Update the status to reflect the current state of the service request.
-                    </p>
-                </form>
-            </DialogBox>
+                </div>
+                <DataTable
+                    columns={columns}
+                    data={serviceRequests}
+                    loading={loading}
+                    emptyMessage="No service requests found."
+                    pagination={{
+                        page: currentPage,
+                        totalPages: totalPages,
+                        total: totalItems,
+                        onPageChange: handlePageChange,
+                    }}
+                    selectable={false}
+                />
+                {/* View Details Dialog */}
+                <DialogBox
+                    open={viewDialogOpen}
+                    onOpenChange={setViewDialogOpen}
+                    title="Service Request Details"
+                    widthClass="max-w-2xl"
+                >
+                    {selectedRequest && (
+                        <div className="space-y-4 py-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-sm text-gray-400">Request ID</p>
+                                    <p className="text-sm font-medium">{selectedRequest._id}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-400">Status</p>
+                                    <StatusBadge status={selectedRequest.status} />
+                                </div>
+                            </div>
+                            <div className="border-t border-gray-700 pt-4">
+                                <h3 className="text-sm font-semibold mb-3">Service Information</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-sm text-gray-400">Service Type</p>
+                                        <p className="text-sm font-medium">
+                                            {serviceTypeLabels[selectedRequest.serviceType]}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-400">Booking Reference</p>
+                                        <p className="text-sm font-medium">
+                                            {getBookingReference(selectedRequest)}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-400">Assigned Role</p>
+                                        <p className="text-sm font-medium capitalize">
+                                            {selectedRequest.assignedRole || "N/A"}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-400">Assigned Staff</p>
+                                        <p className={`text-sm ${getAssignedStaffName(selectedRequest) === "Unassigned" ? "text-gray-400" : "font-medium"}`}>
+                                            {getAssignedStaffName(selectedRequest)}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="border-t border-gray-700 pt-4">
+                                <h3 className="text-sm font-semibold mb-3">Room Information</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-sm text-gray-400">Room Number</p>
+                                        <p className="text-sm font-medium">{getRoomNumber(selectedRequest)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-400">Room Type</p>
+                                        <p className="text-sm font-medium">{getRoomType(selectedRequest)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="border-t border-gray-700 pt-4">
+                                <h3 className="text-sm font-semibold mb-3">Guest Information</h3>
+                                <div>
+                                    <p className="text-sm text-gray-400">Guest Name</p>
+                                    <p className="text-sm font-medium">{getGuestName(selectedRequest)}</p>
+                                </div>
+                            </div>
+                            {selectedRequest.notes && (
+                                <div className="border-t border-gray-700 pt-4">
+                                    <h3 className="text-sm font-semibold mb-2">Notes</h3>
+                                    <p className="text-sm text-gray-300">{selectedRequest.notes}</p>
+                                </div>
+                            )}
+                            <div className="border-t border-gray-700 pt-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-sm text-gray-400">Created At</p>
+                                        <p className="text-sm font-medium">
+                                            {formatDateTime(selectedRequest.createdAt)}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-400">Last Updated</p>
+                                        <p className="text-sm font-medium">
+                                            {formatDateTime(selectedRequest.updatedAt)}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </DialogBox>
+
+                {/* Update Status Dialog */}
+                <DialogBox
+                    open={statusDialogOpen}
+                    onOpenChange={setStatusDialogOpen}
+                    title="Update Service Request Status"
+                    widthClass="max-w-md"
+                    showFooter
+                    confirmText="Update Status"
+                    cancelText="Cancel"
+                    onConfirm={handleSubmit(onStatusSubmit)}
+                    onCancel={() => setStatusDialogOpen(false)}
+                    disableConfirm={statusLoading}
+                    confirmLoading={statusLoading}
+                >
+                    <form onSubmit={(e) => { e.preventDefault(); handleSubmit(onStatusSubmit)(e); }} className="space-y-4 py-4">
+                        <SelectField
+                            name="status"
+                            label="Service Request Status *"
+                            options={statusOptions}
+                            control={control}
+                            required
+                            error={errors.status}
+                        />
+                        <p className="text-xs text-gray-400">
+                            Update the status to reflect the current state of the service request.
+                        </p>
+                    </form>
+                </DialogBox>
+            </div>
         </div>
     );
 };

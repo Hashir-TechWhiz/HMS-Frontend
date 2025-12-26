@@ -89,7 +89,7 @@ export const StatusBarChart = ({ title, data, config, description }: StatusBarCh
                     No data available
                 </div>
             ) : (
-                <ChartContainer config={config} className="h-full w-full min-h-[250px]">
+                <ChartContainer config={config} className="h-full w-full min-h-[250px] max-h-[300px]">
                     <BarChart
                         data={data}
                         layout="vertical"

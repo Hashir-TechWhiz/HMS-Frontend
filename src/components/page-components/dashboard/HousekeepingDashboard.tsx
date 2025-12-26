@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import { getAssignedServiceRequests } from "@/services/serviceRequestService";
 import { KPICard, StatusBarChart, ActionCard } from "@/components/charts";
 import { Button } from "@/components/ui/button";
@@ -12,11 +13,14 @@ import { ChartConfig } from "@/components/ui/chart";
 
 export const HousekeepingDashboard = () => {
     const router = useRouter();
+    const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [serviceRequests, setServiceRequests] = useState<IServiceRequest[]>([]);
 
     useEffect(() => {
         const fetchServiceRequests = async () => {
+            if (!user) return;
+
             try {
                 setLoading(true);
                 // Fetch all assigned service requests (no pagination for dashboard stats)
@@ -28,7 +32,23 @@ export const HousekeepingDashboard = () => {
                     const serviceRequestsArray = Array.isArray(serviceRequestsData)
                         ? serviceRequestsData
                         : (serviceRequestsData?.items || serviceRequestsData?.data || []);
-                    setServiceRequests(serviceRequestsArray);
+
+                    // Filter to show:
+                    // 1. Unassigned pending requests (available to accept)
+                    // 2. Requests assigned to the current user (any status)
+                    const relevantRequests = serviceRequestsArray.filter((request: IServiceRequest) => {
+                        // Show unassigned pending requests
+                        if (request.status === "pending" && !request.assignedTo) {
+                            return true;
+                        }
+                        // Show requests assigned to current user
+                        if (request.assignedTo && typeof request.assignedTo === "object") {
+                            return request.assignedTo._id === user._id;
+                        }
+                        return false;
+                    });
+
+                    setServiceRequests(relevantRequests);
                 } else {
                     setServiceRequests([]);
                     if (!response.success) {
@@ -43,21 +63,42 @@ export const HousekeepingDashboard = () => {
         };
 
         fetchServiceRequests();
-    }, []);
+    }, [user]);
 
     // Calculate statistics from service requests
     const stats = {
         total: serviceRequests.length,
-        pending: serviceRequests.filter((sr) => sr.status === "pending").length,
-        in_progress: serviceRequests.filter((sr) => sr.status === "in_progress").length,
-        completed: serviceRequests.filter((sr) => sr.status === "completed").length,
+        // Pending = unassigned new requests (available to accept)
+        pending: serviceRequests.filter((sr) => sr.status === "pending" && !sr.assignedTo).length,
+        // In Progress = assigned to me and in progress
+        in_progress: serviceRequests.filter((sr) => {
+            if (sr.status !== "in_progress") return false;
+            if (sr.assignedTo && typeof sr.assignedTo === "object") {
+                return sr.assignedTo._id === user?._id;
+            }
+            return false;
+        }).length,
+        // Completed = assigned to me and completed
+        completed: serviceRequests.filter((sr) => {
+            if (sr.status !== "completed") return false;
+            if (sr.assignedTo && typeof sr.assignedTo === "object") {
+                return sr.assignedTo._id === user?._id;
+            }
+            return false;
+        }).length,
     };
 
-    // Get today's completed tasks
+    // Get today's completed tasks (only those assigned to current user)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const completedToday = serviceRequests.filter((sr) => {
         if (sr.status !== "completed") return false;
+        // Only count if assigned to current user
+        if (sr.assignedTo && typeof sr.assignedTo === "object") {
+            if (sr.assignedTo._id !== user?._id) return false;
+        } else {
+            return false;
+        }
         const completedDate = new Date(sr.updatedAt);
         completedDate.setHours(0, 0, 0, 0);
         return completedDate.getTime() === today.getTime();
@@ -117,7 +158,7 @@ export const HousekeepingDashboard = () => {
                     iconColor="text-orange-400"
                     iconBg="bg-orange-500/10"
                     gradient="linear-gradient(79.74deg, rgba(255, 165, 0, 0.15) 0%, rgba(0, 0, 0, 0.12) 100%)"
-                    description="Awaiting assignment or action"
+                    description="New requests available to accept"
                 />
                 <KPICard
                     title="In Progress"
@@ -126,7 +167,7 @@ export const HousekeepingDashboard = () => {
                     iconColor="text-cyan-400"
                     iconBg="bg-cyan-500/10"
                     gradient="linear-gradient(79.74deg, rgba(6, 182, 212, 0.15) 0%, rgba(0, 0, 0, 0.12) 100%)"
-                    description="Currently being handled"
+                    description="Your tasks currently in progress"
                 />
                 <KPICard
                     title="Completed Today"
@@ -140,12 +181,14 @@ export const HousekeepingDashboard = () => {
             </div>
 
             {/* Chart */}
-            <StatusBarChart
-                title="Assigned Service Requests by Status"
-                data={serviceRequestData}
-                config={serviceRequestChartConfig}
-                description="Your current workload breakdown"
-            />
+            <div className="">
+                <StatusBarChart
+                    title="Assigned Service Requests by Status"
+                    data={serviceRequestData}
+                    config={serviceRequestChartConfig}
+                    description="Your current workload breakdown"
+                />
+            </div>
 
             {/* Quick Actions */}
             <div className="space-y-4 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg 
@@ -168,9 +211,9 @@ export const HousekeepingDashboard = () => {
             {stats.total === 0 && (
                 <div className="rounded-lg border border-border bg-card/50 p-12 text-center">
                     <ClipboardCheck className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <h3 className="text-lg font-semibold mb-2">No Assigned Tasks</h3>
+                    <h3 className="text-lg font-semibold mb-2">No Available Tasks</h3>
                     <p className="text-muted-foreground">
-                        You don&apos;t have any service requests assigned to you at the moment.
+                        There are no pending requests to accept and no tasks assigned to you at the moment.
                     </p>
                 </div>
             )}

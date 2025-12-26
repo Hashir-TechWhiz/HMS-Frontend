@@ -175,6 +175,7 @@ declare global {
         serviceType: ServiceType;
         status: ServiceStatus;
         assignedRole?: string;
+        assignedTo?: IUser | string;
         notes?: string;
         createdAt: string;
         updatedAt: string;

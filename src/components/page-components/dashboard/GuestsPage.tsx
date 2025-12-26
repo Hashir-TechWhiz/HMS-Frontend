@@ -6,7 +6,7 @@ import { getUsers, updateUserStatus } from "@/services/adminUserService";
 import { getAllBookings } from "@/services/bookingService";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
-import KPICard from "@/components/common/KPICard";
+import StatCard from "@/components/common/StatCard";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Eye, UserCheck, UserX, Users } from "lucide-react";
@@ -264,21 +264,19 @@ const GuestsPage = () => {
     }
 
     return (
-        <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
-            
-            <div className="flex justify-between items-center">
+        <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15 w-full">
+
+            <div className="flex justify-between items-center w-full">
                 <div>
                     <h1 className="text-2xl font-bold text-white">Guest Management</h1>
                     <p className="text-sm text-gray-400 mt-1">
                         View and manage registered guest users
                     </p>
                 </div>
-            </div>
 
-            {/* KPI Card - Show total guests */}
-            {totalItems > 0 && !loading && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-2xl">
-                    <KPICard
+                {/* KPI Card - Show total guests */}
+                {totalItems > 0 && !loading && (
+                    <StatCard
                         title="Total Guests"
                         value={totalItems}
                         icon={Users}
@@ -286,8 +284,8 @@ const GuestsPage = () => {
                         iconBg="bg-purple-500/10"
                         subtitle="Registered guests"
                     />
-                </div>
-            )}
+                )}
+            </div>
 
             <DataTable
                 columns={columns}

@@ -130,13 +130,13 @@ export const GuestDashboard = () => {
 
     // Prepare chart data
     const bookingChartData = [
-        { name: "Confirmed", value: bookingStats.confirmed, fill: "var(--chart-cyan-3)" },
+        { name: "Confirmed", value: bookingStats.confirmed, fill: "var(--chart-cyan-1)" },
         { name: "Pending", value: bookingStats.pending, fill: "var(--chart-yellow-4)" },
         { name: "Cancelled", value: bookingStats.cancelled, fill: "var(--chart-rose-4)" },
     ];
 
     const serviceRequestData = [
-        { name: "Pending", value: serviceRequestStats.pending, fill: "var(--chart-yellow-4)" },
+        { name: "Pending", value: serviceRequestStats.pending, fill: "var(--chart-yellow-1)" },
         { name: "In Progress", value: serviceRequestStats.in_progress, fill: "var(--chart-cyan-2)" },
         { name: "Completed", value: serviceRequestStats.completed, fill: "var(--chart-green-3)" },
     ];
