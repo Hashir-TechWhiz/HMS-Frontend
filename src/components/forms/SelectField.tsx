@@ -35,7 +35,7 @@ const SelectField = ({
                 iconColor={iconColor}
                 disabled={disabled}
                 className={cn(
-                    "disable-rings w-full px-3 h-10! rounded-lg cursor-pointer",
+                    "disable-rings w-full px-3 h-12! rounded-lg cursor-pointer",
                     disabled && "opacity-50 cursor-not-allowed",
                     className
                 )}

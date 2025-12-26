@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Poppins, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/providers/Providers";
+import { EdgeStoreProvider } from "@/lib/edgestore";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -31,7 +32,9 @@ export default function RootLayout({
         className={`${poppins.variable} ${playfair.variable} antialiased scrollbar-hide scroll-container`}
       >
         <Providers>
-          {children}
+          <EdgeStoreProvider>
+            {children}
+          </EdgeStoreProvider>
         </Providers>
       </body>
     </html>
