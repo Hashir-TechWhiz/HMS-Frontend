@@ -303,7 +303,8 @@ const HousekeepingServiceRequestsPage = () => {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg 
+            shadow-primary-900/15">
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl font-bold text-white">Assigned Service Requests</h1>

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import DialogBox from "@/components/common/DialogBox";
 import InputField from "@/components/forms/InputField";
 import { formatDateTime, formatUserRole } from "@/lib/utils";
-import { User, Mail, Shield, Calendar, BadgeCheck, Key, AlertCircle} from "lucide-react";
+import { User, Mail, Shield, Calendar, BadgeCheck, Key, AlertCircle } from "lucide-react";
 
 const ProfilePage = () => {
     const { user, loading: authLoading, refreshUser } = useAuth();
@@ -144,7 +144,7 @@ const ProfilePage = () => {
                             <Button
                                 type="submit"
                                 disabled={updateLoading}
-                                className="w-full"
+                                className="w-full main-button-gradient"
                             >
                                 {updateLoading ? "Saving..." : "Save Changes"}
                             </Button>

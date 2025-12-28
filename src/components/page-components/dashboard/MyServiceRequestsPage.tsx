@@ -346,7 +346,8 @@ const MyServiceRequestsPage = () => {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg 
+            shadow-primary-900/15">
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl font-bold text-white">My Service Requests</h1>
@@ -360,7 +361,7 @@ const MyServiceRequestsPage = () => {
                         onChange={handleDateRangeChange}
                         className="w-full max-w-sm"
                     />
-                    <Button onClick={handleAddClick} className="flex items-center gap-2">
+                    <Button onClick={handleAddClick} className="flex items-center gap-2 main-button-gradient">
                         <Plus className="h-4 w-4" />
                         New Service Request
                     </Button>
