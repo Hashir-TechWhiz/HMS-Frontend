@@ -391,20 +391,46 @@
 
 
   /* Auth */
+  /* Auth */
   .auth-layout {
-    @apply relative flex flex-col items-center justify-center h-screen w-full p-3 bg-black-500 overflow-hidden bg-center bg-cover bg-no-repeat overflow-y-auto bg-[url(/images/AuthLeftBg.jpg)];
+    @apply relative flex flex-col justify-between lg:flex-row h-screen bg-black-500 overflow-hidden;
   }
 
   .auth-container {
-    @apply relative flex flex-col items-center justify-between mt-12 p-4 w-full rounded-3xl backdrop-blur-3xl border border-white/20 shadow-sm shadow-white/10 max-w-lg;
+    @apply relative flex flex-col items-center justify-between mt-12 p-4 w-full rounded-3xl backdrop-blur-3xl border border-white/20 shadow-sm shadow-white/10;
   }
 
   .auth-logo-container {
     @apply absolute z-10 left-1/2 -translate-x-1/2 -top-12 h-[100px] w-[100px] rounded-3xl border border-white/30 bg-black-500 backdrop-blur-2xl shadow-sm shadow-white/20;
   }
 
+  .auth-left-section {
+    @apply relative flex flex-col items-center justify-center w-full lg:w-[45%] h-full lg:h-screen px-6 xl:px-20 lg:border-r-2 bg-center bg-cover bg-no-repeat overflow-y-auto bg-[url(/images/AuthLeftBg.jpg)];
+  }
+
+  .auth-left-section::before {
+    content: "";
+    @apply absolute inset-0 bg-black/10;
+  }
+
   .auth-children {
     @apply mt-13 flex flex-col items-center justify-center w-full;
+  }
+
+  .auth-right-section {
+    @apply flex flex-col justify-start w-full max-lg:border-t max-lg:border-gray-600 lg:w-[55%] lg:h-screen px-6 py-4 md:p-6 lg:py-12 lg:px-18;
+  }
+
+  .auth-blockquote {
+    @apply text-sm md:text-lg lg:text-2xl font-medium text-gray-400 mb-1 md:mb-6 lg:mb-8;
+  }
+
+  .auth-testimonial-author {
+    @apply text-xs md:text-lg font-bold text-gray-400 not-italic;
+  }
+
+  .auth-dashboard-preview {
+    @apply absolute top-0 border-4 border-gray-800 left-0 hidden w-5xl max-w-none lg:block rounded-xl shadow-2xl;
   }
 
 

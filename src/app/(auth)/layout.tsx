@@ -15,34 +15,61 @@ const AuthLayout = async ({ children }: { children: ReactNode }) => {
 
     return (
         <main className="auth-layout">
+            <section className="auth-left-section">
 
-            <div className="absolute inset-0 bg-black/10" />
+                <div className="auth-container">
+                    <div className="auth-logo-container">
+                        <Image
+                            src="/images/HMSLogo.png"
+                            alt="Logo"
+                            width={600}
+                            height={500}
+                            priority
+                            className="w-full h-full object-cover rounded-2xl"
+                        />
+                    </div>
 
-            <div className="auth-container">
-                {/* Logo */}
-                <div className="auth-logo-container">
+                    <div className="auth-children">
+                        {children}
+                    </div>
+
+                    <div className="flex flex-col gap-4 w-full text-center mt-5">
+                        <Separator />
+                        <p className="text-xs lg:text-sm text-secondary-100">
+                            &copy; {year} HMS. All rights reserved.
+                        </p>
+                    </div>
+                </div>
+
+            </section>
+
+            <section className="auth-right-section">
+                <div className="z-10 relative lg:mt-4 lg:mb-16">
+                    <blockquote className="auth-blockquote">
+                        A modern hotel management system developed using the MERN stack to support efficient hotel operations.
+                    </blockquote>
+
+                    <div>
+                        <cite className="auth-testimonial-author">
+                            - SDP Group Project
+                        </cite>
+                        <p className="max-md:text-xs text-gray-500">
+                            BSc (Hons) Software Engineering (Top-Up) · 2025
+                        </p>
+                    </div>
+
+                </div>
+
+                <div className="flex-1 relative">
                     <Image
-                        src="/images/HMSLogo.png"
-                        alt="HMS Logo"
-                        fill
-                        priority
-                        className="object-cover"
+                        src="/images/AdminDashboard.png"
+                        alt="Dashboard Preview"
+                        width={1440}
+                        height={1150}
+                        className="auth-dashboard-preview"
                     />
                 </div>
-
-                {/* Form */}
-                <div className="auth-children">
-                    {children}
-                </div>
-
-                {/* Footer */}
-                <div className="flex flex-col gap-4 w-full text-center mt-5">
-                    <Separator />
-                    <p className="text-xs lg:text-sm text-secondary-100">
-                        &copy; {year} HMS by SDP Group. All rights reserved.
-                    </p>
-                </div>
-            </div>
+            </section>
         </main>
     );
 };
