@@ -659,5 +659,6 @@ For questions or issues:
 - Check network requests in browser DevTools
 
 ---
+-------------------------------------------------------
 
 _Last Updated: December 27, 2025_
