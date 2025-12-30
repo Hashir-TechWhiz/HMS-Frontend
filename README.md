@@ -563,6 +563,7 @@ hms-frontend/
 
 ## Environment Configuration
 
+
 ### Required Environment Variables
 
 Create `.env.local` file with:
@@ -609,6 +610,7 @@ npm run lint
 - Firefox (latest)
 - Safari (latest)
 - Edge (latest)
+- Opera (latest)
 
 ---
 
