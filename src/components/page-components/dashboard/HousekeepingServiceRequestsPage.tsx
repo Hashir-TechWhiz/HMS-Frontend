@@ -8,7 +8,7 @@ import DialogBox from "@/components/common/DialogBox";
 import { Button } from "@/components/ui/button";
 import SelectField from "@/components/forms/SelectField";
 import { toast } from "sonner";
-import { Eye, RefreshCw, Check } from "lucide-react";
+import { Eye, RefreshCw } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { formatDateTime } from "@/lib/utils";
 
@@ -40,7 +40,7 @@ const HousekeepingServiceRequestsPage = () => {
 
     // Fetch assigned service requests
     const fetchServiceRequests = useCallback(async (page: number = 1) => {
-        if (!role || authLoading || role !== "housekeeping" || !user) return;
+        if (!role || authLoading || role !== "housekeeping") return;
 
         try {
             setLoading(true);
@@ -52,30 +52,19 @@ const HousekeepingServiceRequestsPage = () => {
                     ? requestsData
                     : (requestsData?.items || []);
 
-                // Filter to show only:
-                // 1. Pending requests with no assignedTo (available to accept)
-                // 2. Requests assigned to current user (any status)
-                const filteredRequests = requestsArray.filter((request: IServiceRequest) => {
-                    // Show unassigned pending requests
-                    if (request.status === "pending" && !request.assignedTo) {
-                        return true;
-                    }
-                    // Show requests assigned to current user
-                    if (request.assignedTo && typeof request.assignedTo === "object") {
-                        return request.assignedTo._id === user._id;
-                    }
-                    return false;
-                });
-
-                setServiceRequests(filteredRequests);
+                setServiceRequests(requestsArray);
 
                 // Handle pagination
-                if (requestsData?.pagination) {
+                const paginationData: any = response;
+                if (paginationData.pagination) {
+                    setTotalPages(paginationData.pagination.totalPages || 1);
+                    setTotalItems(paginationData.pagination.totalRequests || paginationData.pagination.totalItems || 0);
+                } else if (requestsData?.pagination) {
                     setTotalPages(requestsData.pagination.totalPages || 1);
-                    setTotalItems(filteredRequests.length);
+                    setTotalItems(requestsData.pagination.totalRequests || requestsData.pagination.totalItems || 0);
                 } else {
-                    setTotalPages(filteredRequests.length > 0 ? 1 : 0);
-                    setTotalItems(filteredRequests.length);
+                    setTotalPages(requestsArray.length > 0 ? 1 : 0);
+                    setTotalItems(requestsArray.length);
                 }
             } else {
                 toast.error(response.message || "Failed to fetch service requests");
@@ -85,7 +74,7 @@ const HousekeepingServiceRequestsPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [role, authLoading, user]);
+    }, [role, authLoading]);
 
     useEffect(() => {
         if (role && !authLoading && role === "housekeeping") {
@@ -104,25 +93,6 @@ const HousekeepingServiceRequestsPage = () => {
         setViewDialogOpen(true);
     };
 
-    // Handle accept request
-    const handleAcceptRequest = async (request: IServiceRequest) => {
-        try {
-            setStatusLoading(true);
-
-            const response = await updateServiceRequestStatus(request._id, "in_progress");
-
-            if (response.success) {
-                toast.success("Service request accepted successfully");
-                fetchServiceRequests(currentPage);
-            } else {
-                toast.error(response.message || "Failed to accept request");
-            }
-        } catch (error: any) {
-            toast.error(error?.message || "An error occurred");
-        } finally {
-            setStatusLoading(false);
-        }
-    };
 
     // Handle update status
     const handleUpdateStatusClick = (request: IServiceRequest) => {
@@ -255,46 +225,30 @@ const HousekeepingServiceRequestsPage = () => {
         {
             key: "actions",
             label: "Actions",
-            render: (request: IServiceRequest) => {
-                const isUnassignedPending = request.status === "pending" && !request.assignedTo;
-                const isAssignedToMe = request.assignedTo && typeof request.assignedTo === "object" && user && request.assignedTo._id === user._id;
-
-                return (
-                    <div className="flex gap-2">
+            render: (request: IServiceRequest) => (
+                <div className="flex gap-2">
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleViewDetails(request)}
+                        className="h-8 px-2"
+                        title="View Details"
+                    >
+                        <Eye className="h-4 w-4" />
+                    </Button>
+                    {request.status !== "completed" && (
                         <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleViewDetails(request)}
+                            onClick={() => handleUpdateStatusClick(request)}
                             className="h-8 px-2"
-                            title="View Details"
+                            title="Update Status"
                         >
-                            <Eye className="h-4 w-4" />
+                            <RefreshCw className="h-4 w-4" />
                         </Button>
-                        {isUnassignedPending ? (
-                            <Button
-                                size="sm"
-                                variant="default"
-                                onClick={() => handleAcceptRequest(request)}
-                                className="h-8 px-2 bg-green-600 hover:bg-green-700"
-                                title="Accept Request"
-                                disabled={statusLoading}
-                            >
-                                <Check className="h-4 w-4" />
-                            </Button>
-                        ) : isAssignedToMe && request.status !== "completed" ? (
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleUpdateStatusClick(request)}
-                                className="h-8 px-2"
-                                title="Update Status"
-                            >
-                                <RefreshCw className="h-4 w-4" />
-                            </Button>
-                        ) : null}
-                    </div>
-                );
-            },
+                    )}
+                </div>
+            ),
         },
     ];
 

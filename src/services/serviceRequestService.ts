@@ -187,6 +187,39 @@ export const getAssignedServiceRequests = async (
 };
 
 /**
+ * Assign service request to a staff member
+ * PATCH /api/service-requests/:id/assign
+ * 
+ * Admin only - assign service request to a housekeeping staff member
+ * 
+ * @param serviceRequestId - The ID of the service request to assign
+ * @param staffId - The ID of the staff member to assign
+ * @returns Promise with updated service request
+ */
+export const assignServiceRequest = async (
+    serviceRequestId: string,
+    staffId: string
+): Promise<ApiResponse<IServiceRequest>> => {
+    try {
+        const response = await api.patch<ApiResponse<IServiceRequest>>(
+            `/service-requests/${serviceRequestId}/assign`,
+            { staffId }
+        );
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data) {
+            return error.response.data as ApiErrorResponse;
+        }
+        return {
+            success: false,
+            message: error instanceof AxiosError
+                ? error.message || 'Network error occurred'
+                : 'An unexpected error occurred'
+        };
+    }
+};
+
+/**
  * Update service request status
  * PATCH /api/service-requests/:id/status
  * 
