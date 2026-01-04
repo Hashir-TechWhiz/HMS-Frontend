@@ -382,11 +382,18 @@ const UsersPage = () => {
         <div className="space-y-6">
             {/* KPI Cards */}
             {userStats && !loading && (() => {
-                const totalSystemUsers = (userStats.byRole.admin || 0) +
+                const totalSystemUsers =
+                    (userStats.byRole.admin || 0) +
                     (userStats.byRole.receptionist || 0) +
                     (userStats.byRole.housekeeping || 0);
+
                 const activeSystemUsers = users.filter(u => u.isActive).length;
-                const inactiveSystemUsers = totalSystemUsers - activeSystemUsers;
+
+                const inactiveSystemUsers = Math.max(
+                    totalSystemUsers - activeSystemUsers,
+                    0
+                );
+
                 return (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <StatCard
@@ -429,7 +436,7 @@ const UsersPage = () => {
                             View and manage all system users
                         </p>
                     </div>
-                    <Button onClick={handleAddClick} className="flex items-center gap-2">
+                    <Button onClick={handleAddClick} className="flex items-center gap-2 main-button-gradient">
                         <Plus className="h-4 w-4" />
                         Add User
                     </Button>

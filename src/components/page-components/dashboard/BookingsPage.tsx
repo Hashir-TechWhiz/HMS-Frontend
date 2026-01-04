@@ -13,6 +13,12 @@ import { Eye, XCircle, CheckCircle, ClipboardList, CheckCircle2, Clock } from "l
 import { formatDateTime, normalizeDateRange } from "@/lib/utils";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { DateRange } from "react-day-picker";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const BookingsPage = () => {
     const { role, loading: authLoading } = useAuth();
@@ -303,26 +309,39 @@ const BookingsPage = () => {
                         variant="outline"
                         onClick={() => handleViewDetails(booking)}
                         className="h-8 px-2"
-                        title="View Details"
                     >
                         <Eye className="h-4 w-4" />
                     </Button>
-                    <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleCancelClick(booking)}
-                        disabled={booking.status === "cancelled" || booking.status === "confirmed"}
-                        className="h-8 px-2"
-                        title={
-                            booking.status === "cancelled"
-                                ? "Booking already cancelled"
-                                : booking.status === "confirmed"
-                                    ? "Cannot cancel confirmed bookings. Contact hotel for assistance."
-                                    : "Cancel Booking"
-                        }
-                    >
-                        <XCircle className="h-4 w-4" />
-                    </Button>
+
+                    <TooltipProvider>
+                        <Tooltip >
+                            <TooltipTrigger asChild>
+                                <span>
+                                    <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={() => handleCancelClick(booking)}
+                                        disabled={
+                                            booking.status === "cancelled" ||
+                                            booking.status === "confirmed"
+                                        }
+                                        className="h-8 px-2"
+                                    >
+                                        <XCircle className="h-4 w-4" />
+                                    </Button>
+                                </span>
+                            </TooltipTrigger>
+
+                            {(booking.status === "cancelled" ||
+                                booking.status === "confirmed") && (
+                                    <TooltipContent side="bottom">
+                                        {booking.status === "cancelled"
+                                            ? "Booking already cancelled"
+                                            : "Cannot cancel confirmed bookings. Contact hotel for assistance."}
+                                    </TooltipContent>
+                                )}
+                        </Tooltip>
+                    </TooltipProvider>
                 </div>
             ),
         },
