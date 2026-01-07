@@ -156,6 +156,11 @@ declare global {
         status: BookingStatus;
         createdAt: string;
         updatedAt: string;
+        // Cancellation penalty fields (for staff-managed cancellations)
+        cancellationPenalty?: number;
+        cancelledBy?: IUser | string;
+        cancellationReason?: string;
+        cancellationDate?: string;
     }
 
     // Date filter types for API queries

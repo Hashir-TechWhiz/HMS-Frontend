@@ -6,6 +6,7 @@ import { getAllBookings, getMyBookings, cancelBooking, confirmBooking } from "@/
 import { getBookingsReport } from "@/services/reportService";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
+import CancellationPenaltyDialog from "./CancellationPenaltyDialog";
 import StatCard from "@/components/common/StatCard";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -37,10 +38,15 @@ const BookingsPage = () => {
     // Dialog states
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+    const [penaltyDialogOpen, setPenaltyDialogOpen] = useState(false);
     const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState<IBooking | null>(null);
     const [cancelLoading, setCancelLoading] = useState(false);
     const [confirmLoading, setConfirmLoading] = useState(false);
+
+    // Penalty states
+    const [penaltyAmount, setPenaltyAmount] = useState(0);
+    const [penaltyMessage, setPenaltyMessage] = useState("");
 
     const itemsPerPage = 10;
 
@@ -132,6 +138,45 @@ const BookingsPage = () => {
         setCurrentPage(newPage);
     };
 
+    // Calculate cancellation penalty based on check-in date
+    const calculateCancellationPenalty = (booking: IBooking): { amount: number; message: string } => {
+        const now = new Date();
+        const checkInDate = new Date(booking.checkInDate);
+        const checkOutDate = new Date(booking.checkOutDate);
+
+        // Calculate hours until check-in
+        const hoursUntilCheckIn = (checkInDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+        // Get room price per night
+        const room = typeof booking.room === "string" ? null : booking.room;
+        const pricePerNight = room?.pricePerNight || 0;
+
+        // Calculate number of nights
+        const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        // Apply penalty rules
+        if (hoursUntilCheckIn > 24) {
+            // More than 24 hours before check-in → no penalty
+            return {
+                amount: 0,
+                message: "No penalty applies (cancellation is more than 24 hours before check-in)"
+            };
+        } else if (hoursUntilCheckIn > 0) {
+            // 24 hours or less before check-in → 1 night charge
+            return {
+                amount: pricePerNight,
+                message: "Penalty of 1 night charge applies (cancellation within 24 hours of check-in)"
+            };
+        } else {
+            // On or after check-in date → full amount (no refund)
+            const totalAmount = pricePerNight * nights;
+            return {
+                amount: totalAmount,
+                message: "Full booking amount applies as penalty (cancellation on or after check-in date)"
+            };
+        }
+    };
+
     // Handle view details
     const handleViewDetails = (booking: IBooking) => {
         setSelectedBooking(booking);
@@ -147,7 +192,17 @@ const BookingsPage = () => {
         }
 
         setSelectedBooking(booking);
-        setCancelDialogOpen(true);
+
+        // Staff cancelling confirmed bookings → show penalty dialog
+        if ((role === "admin" || role === "receptionist") && booking.status === "confirmed") {
+            const penalty = calculateCancellationPenalty(booking);
+            setPenaltyAmount(penalty.amount);
+            setPenaltyMessage(penalty.message);
+            setPenaltyDialogOpen(true);
+        } else {
+            // Guest cancelling pending or staff cancelling pending → regular dialog
+            setCancelDialogOpen(true);
+        }
     };
 
     const handleCancelConfirm = async () => {
@@ -162,6 +217,39 @@ const BookingsPage = () => {
                 setCancelDialogOpen(false);
                 setSelectedBooking(null);
                 fetchBookings(currentPage);
+                fetchBookingStats();
+            } else {
+                toast.error(response.message || "Failed to cancel booking");
+            }
+        } catch {
+            toast.error("An error occurred while cancelling the booking");
+        } finally {
+            setCancelLoading(false);
+        }
+    };
+
+    const handlePenaltyCancelConfirm = async (reason?: string) => {
+        if (!selectedBooking) return;
+
+        try {
+            setCancelLoading(true);
+            const penaltyData = {
+                cancellationPenalty: penaltyAmount,
+                cancellationReason: reason
+            };
+
+            const response = await cancelBooking(selectedBooking._id, penaltyData);
+
+            if (response.success) {
+                if (penaltyAmount > 0) {
+                    toast.success(`Booking cancelled with penalty of LKR ${penaltyAmount.toLocaleString()}`);
+                } else {
+                    toast.success("Booking cancelled successfully (no penalty)");
+                }
+                setPenaltyDialogOpen(false);
+                setSelectedBooking(null);
+                fetchBookings(currentPage);
+                fetchBookingStats();
             } else {
                 toast.error(response.message || "Failed to cancel booking");
             }
@@ -621,6 +709,16 @@ const BookingsPage = () => {
                     onCancel={() => setCancelDialogOpen(false)}
                     confirmLoading={cancelLoading}
                     variant="danger"
+                />
+                {/* Cancellation Penalty Dialog (Staff Only) */}
+                <CancellationPenaltyDialog
+                    open={penaltyDialogOpen}
+                    onOpenChange={setPenaltyDialogOpen}
+                    booking={selectedBooking}
+                    penaltyAmount={penaltyAmount}
+                    penaltyMessage={penaltyMessage}
+                    onConfirm={handlePenaltyCancelConfirm}
+                    loading={cancelLoading}
                 />
                 {/* Confirm Booking Dialog */}
                 <DialogBox

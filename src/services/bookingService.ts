@@ -158,11 +158,18 @@ export const getMyBookings = async (
  * PATCH /api/bookings/:id/cancel
  * 
  * @param bookingId - The ID of the booking to cancel
+ * @param penaltyData - Optional penalty data (for staff cancellations)
  * @returns Promise with updated booking data
  */
-export const cancelBooking = async (bookingId: string): Promise<ApiResponse<IBooking>> => {
+export const cancelBooking = async (
+    bookingId: string,
+    penaltyData?: { cancellationPenalty?: number; cancellationReason?: string }
+): Promise<ApiResponse<IBooking>> => {
     try {
-        const response = await api.patch<ApiResponse<IBooking>>(`/bookings/${bookingId}/cancel`);
+        const response = await api.patch<ApiResponse<IBooking>>(
+            `/bookings/${bookingId}/cancel`,
+            penaltyData || {}
+        );
         return response.data;
     } catch (error) {
         if (error instanceof AxiosError && error.response?.data) {
