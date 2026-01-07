@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAllBookings, getMyBookings, cancelBooking, confirmBooking } from "@/services/bookingService";
+import api from "@/lib/api";
+import BookingForm from "./BookingForm";
 import { getBookingsReport } from "@/services/reportService";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
@@ -42,9 +44,43 @@ const BookingsPage = () => {
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
     const [penaltyDialogOpen, setPenaltyDialogOpen] = useState(false);
     const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState<IBooking | null>(null);
+    const [editLoading, setEditLoading] = useState(false);
     const [cancelLoading, setCancelLoading] = useState(false);
     const [confirmLoading, setConfirmLoading] = useState(false);
+    // Handle edit booking (staff only)
+    const handleEditClick = (booking: IBooking) => {
+        setSelectedBooking(booking);
+        setEditDialogOpen(true);
+    };
+
+    const handleEditSubmit = async (data: any) => {
+        if (!selectedBooking) return;
+        setEditLoading(true);
+        try {
+            // Only send allowed fields
+            const payload: any = {
+                room: data.roomId,
+                checkInDate: data.checkInDate,
+                checkOutDate: data.checkOutDate,
+                status: data.status || selectedBooking.status,
+            };
+            const res = await api.put(`/bookings/${selectedBooking._id}`, payload);
+            if (res.data.success) {
+                toast.success("Booking updated successfully");
+                setEditDialogOpen(false);
+                setSelectedBooking(null);
+                fetchBookings(currentPage);
+            } else {
+                toast.error(res.data.message || "Failed to update booking");
+            }
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || "Error updating booking");
+        } finally {
+            setEditLoading(false);
+        }
+    };
 
     // Penalty states
     const [penaltyAmount, setPenaltyAmount] = useState(0);
@@ -508,6 +544,16 @@ const BookingsPage = () => {
                     >
                         <Eye className="h-4 w-4" />
                     </Button>
+                    <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleEditClick(booking)}
+                        className="h-8 px-2"
+                        title="Edit Booking"
+                        disabled={booking.status === "cancelled"}
+                    >
+                        ✎
+                    </Button>
                     {booking.status === "pending" && (
                         <Button
                             size="sm"
@@ -532,6 +578,27 @@ const BookingsPage = () => {
                 </div>
             ),
         },
+                    {/* Edit Booking Dialog (Staff Only) */}
+                    <DialogBox
+                        open={editDialogOpen}
+                        onOpenChange={setEditDialogOpen}
+                        title="Edit Booking"
+                        widthClass="max-w-lg"
+                        showFooter={false}
+                    >
+                        {selectedBooking && (
+                            <BookingForm
+                                initialData={{
+                                    roomId: typeof selectedBooking.room === "object" ? selectedBooking.room._id : selectedBooking.room,
+                                    checkInDate: selectedBooking.checkInDate,
+                                    checkOutDate: selectedBooking.checkOutDate,
+                                }}
+                                onSubmit={handleEditSubmit}
+                                submitText={editLoading ? "Saving..." : "Save Changes"}
+                                disabled={editLoading}
+                            />
+                        )}
+                    </DialogBox>
     ];
 
     const columns = role === "guest" ? guestColumns : staffColumns;

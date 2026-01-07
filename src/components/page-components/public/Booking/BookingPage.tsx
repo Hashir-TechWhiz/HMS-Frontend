@@ -12,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CalendarIcon, Loader2, AlertCircle, Sparkles, CalendarDays, Clock, DollarSign, ArrowLeft } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
-import { getRoomById } from "@/services/roomService";
+import { getRoomById, getAvailableRooms } from "@/services/roomService";
 import { createBooking, CreateBookingData, cancelBooking } from "@/services/bookingService";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,6 +35,8 @@ const BookingPage: FC = () => {
     const roomId = searchParams.get("roomId");
 
     const [room, setRoom] = useState<IRoom | null>(null);
+    const [availableRooms, setAvailableRooms] = useState<IRoom[]>([]);
+    const [roomSelectLoading, setRoomSelectLoading] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
@@ -66,6 +68,38 @@ const BookingPage: FC = () => {
 
     const checkInDate = watch("checkInDate");
     const checkOutDate = watch("checkOutDate");
+    const selectedRoomId = roomId;
+    // Fetch available rooms when check-in or check-out date changes
+    useEffect(() => {
+        const fetchAvailableRooms = async () => {
+            if (!checkInDate || !checkOutDate) {
+                setAvailableRooms([]);
+                return;
+            }
+            setRoomSelectLoading(true);
+            try {
+                const response = await getAvailableRooms(
+                    checkInDate.toISOString(),
+                    checkOutDate.toISOString()
+                );
+                if (response.success && response.data) {
+                    setAvailableRooms(response.data);
+                } else {
+                    setAvailableRooms([]);
+                }
+            } catch (err) {
+                setAvailableRooms([]);
+            } finally {
+                setRoomSelectLoading(false);
+            }
+        };
+        // Only fetch if both dates are selected and valid
+        if (checkInDate && checkOutDate && checkOutDate > checkInDate) {
+            fetchAvailableRooms();
+        } else {
+            setAvailableRooms([]);
+        }
+    }, [checkInDate, checkOutDate]);
 
     // Redirect if not authenticated
     useEffect(() => {
@@ -484,6 +518,30 @@ const BookingPage: FC = () => {
                                                     />
                                                 </div>
                                             )}
+                                            {/* Room Selection (dropdown) */}
+                                            <div className="space-y-2">
+                                                <Label className="text-sm font-medium text-foreground">
+                                                    Room *
+                                                </Label>
+                                                <select
+                                                    className="w-full h-12 rounded-lg border border-gray-500/20 bg-background text-white px-3"
+                                                    value={selectedRoomId || ""}
+                                                    onChange={e => router.replace(`/book?roomId=${e.target.value}`)}
+                                                    disabled={roomSelectLoading || !checkInDate || !checkOutDate || availableRooms.length === 0}
+                                                >
+                                                    <option value="" disabled>
+                                                        {roomSelectLoading ? "Loading rooms..." : "Select a room"}
+                                                    </option>
+                                                    {availableRooms.map(r => (
+                                                        <option key={r._id} value={r._id}>
+                                                            {r.roomType} Room {r.roomNumber}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                {(!roomSelectLoading && checkInDate && checkOutDate && availableRooms.length === 0) && (
+                                                    <p className="text-sm text-destructive">No rooms available for selected dates.</p>
+                                                )}
+                                            </div>
                                             {/* Check-in Date */}
                                             <div className="space-y-2">
                                                 <Label className="text-sm font-medium text-foreground">
@@ -518,7 +576,11 @@ const BookingPage: FC = () => {
                                                                     }
                                                                 }
                                                             }}
-                                                            disabled={(date) => date < new Date()}
+                                                            disabled={(date) => {
+                                                                const today = new Date();
+                                                                today.setHours(0,0,0,0);
+                                                                return date < today;
+                                                            }}
                                                         />
                                                     </PopoverContent>
                                                 </Popover>
@@ -560,9 +622,12 @@ const BookingPage: FC = () => {
                                                                     setValue("checkOutDate", date, { shouldValidate: true });
                                                                 }
                                                             }}
-                                                            disabled={(date) =>
-                                                                !checkInDate || date <= checkInDate
-                                                            }
+                                                            disabled={(date) => {
+                                                                if (!checkInDate) return true;
+                                                                const ci = new Date(checkInDate);
+                                                                ci.setHours(0,0,0,0);
+                                                                return date <= ci;
+                                                            }}
                                                         />
                                                     </PopoverContent>
                                                 </Popover>

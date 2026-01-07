@@ -140,3 +140,27 @@ export const deleteRoom = async (roomId: string): Promise<ApiResponse<IRoom>> =>
     }
 };
 
+/**
+ * Get available rooms for given check-in and check-out dates
+ * GET /bookings/rooms/available
+ * @param checkInDate - Check-in date (ISO string)
+ * @param checkOutDate - Check-out date (ISO string)
+ * @returns Promise with array of available rooms
+ */
+export const getAvailableRooms = async (
+    checkInDate: string,
+    checkOutDate: string
+): Promise<ApiResponse<IRoom[]>> => {
+    try {
+        const response = await api.get<ApiResponse<IRoom[]>>('/bookings/rooms/available', {
+            params: { checkInDate, checkOutDate }
+        });
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data) {
+            return error.response.data as ApiErrorResponse;
+        }
+        throw error;
+    }
+};
+
