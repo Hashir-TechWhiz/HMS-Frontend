@@ -44,6 +44,8 @@ declare global {
         autoComplete?: string;
         height?: string;
         readonly?: boolean;
+        icon?: React.ReactNode;
+        maxLength?: number;
     };
 
     type IFormTextareaProps = {

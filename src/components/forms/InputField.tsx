@@ -16,12 +16,15 @@ const InputField = ({
     value,
     autoComplete = "on",
     height = "h-12",
-    readonly = false
+    readonly = false,
+    icon,
+    maxLength
 }: IFormInputProps) => {
 
     const [showPassword, setShowPassword] = useState(false);
 
     const isPassword = type === "password";
+    const hasIcon = !!icon;
 
     return (
         <div className='space-y-2'>
@@ -31,6 +34,11 @@ const InputField = ({
             </Label>
 
             <div className="relative">
+                {hasIcon && (
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+                        {icon}
+                    </div>
+                )}
                 <Input
                     type={isPassword ? (showPassword ? "text" : "password") : type}
                     id={name}
@@ -39,8 +47,10 @@ const InputField = ({
                     value={value}
                     autoComplete={autoComplete}
                     readOnly={readonly}
+                    maxLength={maxLength}
                     className={cn(
-                        "text-white text-base placeholder:text-gray-500 border border-gray-500/20 backdrop-blur-2xl rounded-lg pr-10",
+                        "text-white text-base placeholder:text-gray-500 border border-gray-500/20 backdrop-blur-2xl rounded-lg",
+                        hasIcon ? "pl-10 pr-10" : "pr-10",
                         { 'pointer-events-none disable-rings!': readonly },
                         { 'opacity-50 cursor-not-allowed': disabled },
                         height,

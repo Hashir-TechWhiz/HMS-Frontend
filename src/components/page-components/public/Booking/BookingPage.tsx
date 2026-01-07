@@ -17,6 +17,8 @@ import { createBooking, CreateBookingData } from "@/services/bookingService";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import InputField from "@/components/forms/InputField";
+import PaymentDialog from "@/components/page-components/dashboard/PaymentDialog";
+import WalkInPaymentDialog from "@/components/page-components/dashboard/WalkInPaymentDialog";
 
 interface BookingFormData {
     checkInDate: Date;
@@ -36,6 +38,9 @@ const BookingPage: FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+    const [showWalkInPaymentDialog, setShowWalkInPaymentDialog] = useState(false);
+    const [pendingBookingData, setPendingBookingData] = useState<BookingFormData | null>(null);
 
     // Check if user is receptionist or admin (can book for walk-in customers)
     const isReceptionistOrAdmin = role === "receptionist" || role === "admin";
@@ -186,9 +191,29 @@ const BookingPage: FC = () => {
             return;
         }
 
+        // For guest users (online bookings), show payment dialog before proceeding
+        if (!isReceptionistOrAdmin) {
+            setPendingBookingData(data);
+            setShowPaymentDialog(true);
+            return;
+        }
+
+        // For receptionist/admin (walk-in bookings), show walk-in payment dialog
+        setPendingBookingData(data);
+        setShowWalkInPaymentDialog(true);
+    };
+
+    const processBooking = async (data: BookingFormData) => {
+        if (!roomId || !room) return;
+
         setSubmitting(true);
 
         try {
+            const checkIn = new Date(data.checkInDate);
+            checkIn.setHours(0, 0, 0, 0);
+            const checkOut = new Date(data.checkOutDate);
+            checkOut.setHours(0, 0, 0, 0);
+
             // Prepare booking data based on user role
             const bookingData: CreateBookingData = {
                 roomId,
@@ -223,6 +248,33 @@ const BookingPage: FC = () => {
         } finally {
             setSubmitting(false);
         }
+    };
+
+    const handlePaymentSuccess = () => {
+        setShowPaymentDialog(false);
+        if (pendingBookingData) {
+            processBooking(pendingBookingData);
+        }
+    };
+
+    const handlePaymentCancel = () => {
+        setShowPaymentDialog(false);
+        setPendingBookingData(null);
+        toast.info("Booking cancelled. Payment was not processed.");
+    };
+
+    const handleWalkInPaymentSuccess = (paymentMethod: "card" | "cash") => {
+        setShowWalkInPaymentDialog(false);
+        if (pendingBookingData) {
+            toast.success(`${paymentMethod === "card" ? "Card" : "Cash"} payment confirmed. Processing booking...`);
+            processBooking(pendingBookingData);
+        }
+    };
+
+    const handleWalkInPaymentCancel = () => {
+        setShowWalkInPaymentDialog(false);
+        setPendingBookingData(null);
+        toast.info("Walk-in booking cancelled. Payment was not processed.");
     };
 
     // Loading state
@@ -613,6 +665,28 @@ const BookingPage: FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Payment Dialog - Only for guest users */}
+            {!isReceptionistOrAdmin && (
+                <PaymentDialog
+                    open={showPaymentDialog}
+                    onOpenChange={setShowPaymentDialog}
+                    totalAmount={calculateTotalPrice()}
+                    onPaymentSuccess={handlePaymentSuccess}
+                    onPaymentCancel={handlePaymentCancel}
+                />
+            )}
+
+            {/* Walk-In Payment Dialog - Only for receptionist/admin */}
+            {isReceptionistOrAdmin && (
+                <WalkInPaymentDialog
+                    open={showWalkInPaymentDialog}
+                    onOpenChange={setShowWalkInPaymentDialog}
+                    totalAmount={calculateTotalPrice()}
+                    onPaymentSuccess={handleWalkInPaymentSuccess}
+                    onPaymentCancel={handleWalkInPaymentCancel}
+                />
+            )}
         </div>
     );
 };
