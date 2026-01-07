@@ -3,7 +3,8 @@
 import {
     useState,
     useEffect,
-    useCallback
+    useCallback,
+    useMemo
 } from "react";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,13 +40,13 @@ import { Eye, RefreshCw, Settings, Clock, Loader2 as LoaderIcon, CheckCircle2, U
 const AdminServiceRequestsPage = () => {
     const { role, loading: authLoading } = useAuth();
 
-    const [serviceRequests, setServiceRequests] = useState<IServiceRequest[]>([]);
-    const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [allServiceRequests, setAllServiceRequests] = useState<IServiceRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+    const [statusFilter, setStatusFilter] = useState<string>("all");
 
     // KPI states
     const [kpiLoading, setKpiLoading] = useState(false);
@@ -99,7 +100,7 @@ const AdminServiceRequestsPage = () => {
                     ? requestsData
                     : (requestsData?.items || []);
 
-                setServiceRequests(requestsArray);
+                setAllServiceRequests(requestsArray);
 
                 // Handle pagination
                 if (requestsData?.pagination) {
@@ -195,23 +196,9 @@ const AdminServiceRequestsPage = () => {
         setAssignDialogOpen(true);
     };
 
-    // Get next valid status options for update dialog
-    const getNextStatusOptions = (current: ServiceStatus): Option[] => {
-        if (current === "pending") return [{ value: "in_progress", label: "In Progress" }];
-        if (current === "in_progress") return [{ value: "completed", label: "Completed" }];
-        return [];
-    };
-
     // Handle status update submit
     const onStatusSubmit = async (data: { status: ServiceStatus }) => {
         if (!selectedRequest) return;
-
-        // Only allow valid transitions
-        const validNext = getNextStatusOptions(selectedRequest.status).map(opt => opt.value);
-        if (!validNext.includes(data.status)) {
-            toast.error("Invalid status transition");
-            return;
-        }
 
         try {
             setStatusLoading(true);
@@ -325,16 +312,33 @@ const AdminServiceRequestsPage = () => {
         maintenance: "Maintenance",
     };
 
-    // Status options
+    // Status options for form
     const statusOptions: Option[] = [
         { value: "pending", label: "Pending" },
         { value: "in_progress", label: "In Progress" },
         { value: "completed", label: "Completed" },
     ];
+
+    // Status filter options
     const statusFilterOptions: Option[] = [
-        { value: "all", label: "All" },
-        ...statusOptions,
+        { value: "all", label: "All Requests" },
+        { value: "pending", label: "Pending" },
+        { value: "in_progress", label: "In Progress" },
+        { value: "completed", label: "Completed" },
     ];
+
+    // Filter service requests based on status filter (client-side)
+    const filteredServiceRequests = useMemo(() => {
+        if (statusFilter === "all") {
+            return allServiceRequests;
+        }
+        return allServiceRequests.filter((request) => request.status === statusFilter);
+    }, [allServiceRequests, statusFilter]);
+
+    // Update total items when filtered requests change
+    useEffect(() => {
+        setTotalItems(filteredServiceRequests.length);
+    }, [filteredServiceRequests]);
 
     // Define columns
     const columns = [
@@ -471,20 +475,23 @@ const AdminServiceRequestsPage = () => {
 
             {/* Table */}
             <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
-                <div className="flex justify-between items-center">
+
+                <div className="flex md:flex-row flex-col gap-5 md:items-center justify-between w-full">
                     <div>
                         <h1 className="text-2xl font-semibold">Service Requests</h1>
                         <p className="text-sm text-gray-400 mt-1">
                             View and manage all service requests
                         </p>
                     </div>
-                    <div className="flex gap-3 items-center">
+
+                    <div className="flex lg:flex-row flex-col gap-5 w-full justify-end md:w-auto">
                         <SelectField
-                            name="serviceStatusFilter"
+                            name="statusFilter"
                             options={statusFilterOptions}
                             value={statusFilter}
                             onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
-                            label={undefined}
+                            width="md:w-[250px]"
+                            className="text-xs md:text-sm h-11!"
                         />
                         <DateRangePicker
                             value={dateRange}
@@ -495,7 +502,7 @@ const AdminServiceRequestsPage = () => {
                 </div>
                 <DataTable
                     columns={columns}
-                    data={serviceRequests.filter(s => statusFilter === 'all' ? true : s.status === statusFilter)}
+                    data={filteredServiceRequests}
                     loading={loading}
                     emptyMessage="No service requests found."
                     pagination={{
@@ -649,14 +656,15 @@ const AdminServiceRequestsPage = () => {
                     <form onSubmit={(e) => { e.preventDefault(); handleStatusSubmit(onStatusSubmit)(e); }} className="space-y-4 py-4">
                         <SelectField
                             name="status"
-                            options={selectedRequest ? getNextStatusOptions(selectedRequest.status) : []}
+                            label="Service Request Status *"
+                            options={statusOptions}
                             control={statusControl}
                             required
                             error={statusErrors.status}
                         />
-                        {selectedRequest && getNextStatusOptions(selectedRequest.status).length === 0 && (
-                            <p className="text-xs text-gray-400">No further status changes allowed.</p>
-                        )}
+                        <p className="text-xs text-gray-400">
+                            Update the status to reflect the current state of the service request.
+                        </p>
                     </form>
                 </DialogBox>
             </div>

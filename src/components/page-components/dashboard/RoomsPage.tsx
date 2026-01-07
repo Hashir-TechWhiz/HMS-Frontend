@@ -3,7 +3,8 @@
 import {
     useState,
     useEffect,
-    useCallback
+    useCallback,
+    useMemo
 } from "react";
 
 import Image from "next/image";
@@ -39,12 +40,12 @@ const RoomsPage = () => {
     const { role, loading: authLoading } = useAuth();
     const { edgestore } = useEdgeStore();
 
-    const [rooms, setRooms] = useState<IRoom[]>([]);
-    const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [allRooms, setAllRooms] = useState<IRoom[]>([]); // Store all unfiltered rooms
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
+    const [statusFilter, setStatusFilter] = useState<string>("all");
 
     // KPI states
     const [kpiLoading, setKpiLoading] = useState(false);
@@ -76,7 +77,7 @@ const RoomsPage = () => {
         description: string;
     }>();
 
-    // Fetch rooms
+    // Fetch rooms (without filtering)
     const fetchRooms = useCallback(async () => {
         if (!role || authLoading) return;
 
@@ -88,9 +89,9 @@ const RoomsPage = () => {
                 const roomsData: any = response.data;
                 const roomsArray = Array.isArray(roomsData) ? roomsData : (roomsData?.items || []);
 
-                setRooms(roomsArray);
+                // Store all rooms without filtering
+                setAllRooms(roomsArray);
                 setTotalPages(1);
-                setTotalItems(roomsArray.length);
             } else {
                 toast.error(response.message || "Failed to fetch rooms");
             }
@@ -100,6 +101,19 @@ const RoomsPage = () => {
             setLoading(false);
         }
     }, [role, authLoading]);
+
+    // Filter rooms based on status filter (client-side, no refetch)
+    const filteredRooms = useMemo(() => {
+        if (statusFilter === "all") {
+            return allRooms;
+        }
+        return allRooms.filter((room) => room.status === statusFilter);
+    }, [allRooms, statusFilter]);
+
+    // Update total items when filtered rooms change
+    useEffect(() => {
+        setTotalItems(filteredRooms.length);
+    }, [filteredRooms]);
 
     // Fetch room statistics
     const fetchRoomStats = useCallback(async () => {
@@ -341,16 +355,19 @@ const RoomsPage = () => {
         { value: "Presidential", label: "Presidential" },
     ];
 
-    // Status options
+    // Status options for room form
     const statusOptions: Option[] = [
         { value: "available", label: "Available" },
         { value: "unavailable", label: "Unavailable" },
         { value: "maintenance", label: "Maintenance" },
     ];
 
+    // Status filter options for filtering rooms
     const statusFilterOptions: Option[] = [
-        { value: "all", label: "All" },
-        ...statusOptions,
+        { value: "all", label: "All Rooms" },
+        { value: "available", label: "Available" },
+        { value: "unavailable", label: "Unavailable" },
+        { value: "maintenance", label: "Maintenance" },
     ];
 
     // Define columns
@@ -505,7 +522,6 @@ const RoomsPage = () => {
                     </div>
 
                     <div className="flex lg:flex-row flex-col gap-5 w-full justify-end md:w-auto">
-
                         <SelectField
                             name="roomStatusFilter"
                             options={statusFilterOptions}
@@ -525,7 +541,7 @@ const RoomsPage = () => {
 
                 <DataTable
                     columns={columns}
-                    data={rooms.filter(r => statusFilter === 'all' ? true : r.status === statusFilter)}
+                    data={filteredRooms}
                     loading={loading}
                     emptyMessage="No rooms found."
                     pagination={{

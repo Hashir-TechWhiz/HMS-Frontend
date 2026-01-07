@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAllBookings, getMyBookings, cancelBooking, confirmBooking, updateBooking, getAvailableRooms } from "@/services/bookingService";
 import { getBookingsReport } from "@/services/reportService";
@@ -8,13 +8,13 @@ import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
 import CancellationPenaltyDialog from "./CancellationPenaltyDialog";
 import StatCard from "@/components/common/StatCard";
+import SelectField from "@/components/forms/SelectField";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Eye, XCircle, CheckCircle, ClipboardList, CheckCircle2, Clock, Pencil } from "lucide-react";
 import { formatDateTime, normalizeDateRange } from "@/lib/utils";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { DateRange } from "react-day-picker";
-import SelectField from "@/components/forms/SelectField";
 import {
     Tooltip,
     TooltipContent,
@@ -25,7 +25,7 @@ import {
 const BookingsPage = () => {
     const { role, loading: authLoading } = useAuth();
 
-    const [bookings, setBookings] = useState<IBooking[]>([]);
+    const [allBookings, setAllBookings] = useState<IBooking[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
@@ -85,7 +85,7 @@ const BookingsPage = () => {
                     ? bookingsData
                     : (bookingsData?.items || bookingsData?.data || []);
 
-                setBookings(bookingsArray);
+                setAllBookings(bookingsArray);
 
                 // Pagination is at the response level, not nested in data
                 const paginationData: any = response;
@@ -370,14 +370,28 @@ const BookingsPage = () => {
         );
     };
 
-    const statusOptions: Option[] = [
-        { value: "all", label: "All" },
+    // Status filter options
+    const statusFilterOptions: Option[] = [
+        { value: "all", label: "All Bookings" },
         { value: "pending", label: "Pending" },
         { value: "confirmed", label: "Confirmed" },
         { value: "checkedin", label: "Checked In" },
         { value: "completed", label: "Completed" },
         { value: "cancelled", label: "Cancelled" },
     ];
+
+    // Filter bookings based on status filter (client-side)
+    const filteredBookings = useMemo(() => {
+        if (statusFilter === "all") {
+            return allBookings;
+        }
+        return allBookings.filter((booking) => booking.status === statusFilter);
+    }, [allBookings, statusFilter]);
+
+    // Update total items when filtered bookings change
+    useEffect(() => {
+        setTotalItems(filteredBookings.length);
+    }, [filteredBookings]);
 
     // Define columns based on role
     const guestColumns = [
@@ -433,12 +447,7 @@ const BookingsPage = () => {
                                         size="sm"
                                         variant="destructive"
                                         onClick={() => handleCancelClick(booking)}
-                                        disabled={
-                                            booking.status === "cancelled" ||
-                                            booking.status === "confirmed" ||
-                                            booking.status === "checkedin" ||
-                                            booking.status === "completed"
-                                        }
+                                        disabled={booking.status !== "pending"}
                                         className="h-8 px-2"
                                     >
                                         <XCircle className="h-4 w-4" />
@@ -631,7 +640,7 @@ const BookingsPage = () => {
                         size="sm"
                         variant="destructive"
                         onClick={() => handleCancelClick(booking)}
-                        disabled={booking.status === "cancelled" || booking.status === "checkedin" || booking.status === "completed"}
+                        disabled={["cancelled", "checkedin", "completed"].includes(booking.status)}
                         className="h-8 px-2"
                         title="Cancel Booking"
                     >
@@ -703,7 +712,7 @@ const BookingsPage = () => {
                 </div>
             )}
             <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
-                <div className="flex flex-col md:flex-row gap-4 md:gap-0 justify-between md:items-center">
+                <div className="flex md:flex-row flex-col gap-5 md:items-center justify-between w-full">
                     <div>
                         <h1 className="text-2xl font-bold text-white">{pageTitle}</h1>
                         <p className="text-sm text-gray-400 mt-1">
@@ -712,25 +721,31 @@ const BookingsPage = () => {
                                 : "View and manage all hotel bookings"}
                         </p>
                     </div>
-                    <div className="flex items-center gap-3 flex-col md:flex-row">
-                        <SelectField
-                            name="bookingStatusFilter"
-                            options={statusOptions}
-                            value={statusFilter}
-                            onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
-                            className="w-full md:w-[150px] search-gradient"
-                        />
+
+                    <div className="flex lg:flex-row flex-col gap-5 w-full justify-end md:w-auto">
+                        {(role === "admin" || role === "receptionist") && (
+                            <div>
+                                <SelectField
+                                    name="statusFilter"
+                                    options={statusFilterOptions}
+                                    value={statusFilter}
+                                    onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+                                    width="md:w-[150px]"
+                                    className="text-xs md:text-sm h-11!"
+                                />
+                            </div>
+                        )}
                         <DateRangePicker
                             value={dateRange}
                             onChange={handleDateRangeChange}
-                            className="w-full"
+                            className="w-full md:max-w-sm"
                         />
                     </div>
                 </div>
 
                 <DataTable
                     columns={columns}
-                    data={bookings.filter(b => statusFilter === 'all' ? true : b.status === statusFilter)}
+                    data={filteredBookings}
                     loading={loading}
                     emptyMessage="No bookings found."
                     pagination={{

@@ -1,28 +1,28 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAllServiceRequests } from "@/services/serviceRequestService";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
+import SelectField from "@/components/forms/SelectField";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Eye } from "lucide-react";
 import { formatDateTime, normalizeDateRange } from "@/lib/utils";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { DateRange } from "react-day-picker";
-import SelectField from "@/components/forms/SelectField";
 
 const ReceptionistServiceRequestsPage = () => {
     const { role, loading: authLoading } = useAuth();
 
-    const [serviceRequests, setServiceRequests] = useState<IServiceRequest[]>([]);
-    const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [allServiceRequests, setAllServiceRequests] = useState<IServiceRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+    const [statusFilter, setStatusFilter] = useState<string>("all");
 
     // Dialog states
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -49,7 +49,7 @@ const ReceptionistServiceRequestsPage = () => {
                     ? requestsData
                     : (requestsData?.items || []);
 
-                setServiceRequests(requestsArray);
+                setAllServiceRequests(requestsArray);
 
                 // Handle pagination
                 if (requestsData?.pagination) {
@@ -160,12 +160,26 @@ const ReceptionistServiceRequestsPage = () => {
         maintenance: "Maintenance",
     };
 
-    const statusOptions: Option[] = [
-        { value: "all", label: "All" },
+    // Status filter options
+    const statusFilterOptions: Option[] = [
+        { value: "all", label: "All Requests" },
         { value: "pending", label: "Pending" },
         { value: "in_progress", label: "In Progress" },
         { value: "completed", label: "Completed" },
     ];
+
+    // Filter service requests based on status filter (client-side)
+    const filteredServiceRequests = useMemo(() => {
+        if (statusFilter === "all") {
+            return allServiceRequests;
+        }
+        return allServiceRequests.filter((request) => request.status === statusFilter);
+    }, [allServiceRequests, statusFilter]);
+
+    // Update total items when filtered requests change
+    useEffect(() => {
+        setTotalItems(filteredServiceRequests.length);
+    }, [filteredServiceRequests]);
 
     // Define columns
     const columns = [
@@ -247,15 +261,14 @@ const ReceptionistServiceRequestsPage = () => {
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <div className="w-full max-w-sm">
-                        <SelectField
-                            name="serviceStatusFilter"
-                            options={statusOptions}
-                            value={statusFilter}
-                            onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
-                            label={undefined}
-                        />
-                    </div>
+                    <SelectField
+                        name="statusFilter"
+                        options={statusFilterOptions}
+                        value={statusFilter}
+                        onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+                        width="md:w-[150px]"
+                        className="bg-black-500! border border-white/50 focus:ring-1! focus:ring-primary-800! text-xs md:text-sm h-10!"
+                    />
                     <DateRangePicker
                         value={dateRange}
                         onChange={handleDateRangeChange}
@@ -266,7 +279,7 @@ const ReceptionistServiceRequestsPage = () => {
 
             <DataTable
                 columns={columns}
-                data={serviceRequests.filter(s => statusFilter === 'all' ? true : s.status === statusFilter)}
+                data={filteredServiceRequests}
                 loading={loading}
                 emptyMessage="No service requests found."
                 pagination={{

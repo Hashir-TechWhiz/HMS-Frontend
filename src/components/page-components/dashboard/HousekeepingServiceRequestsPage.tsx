@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAssignedServiceRequests, updateServiceRequestStatus } from "@/services/serviceRequestService";
 import DataTable from "@/components/common/DataTable";
@@ -13,14 +13,14 @@ import { useForm } from "react-hook-form";
 import { formatDateTime } from "@/lib/utils";
 
 const HousekeepingServiceRequestsPage = () => {
-    const { role, user, loading: authLoading } = useAuth();
+    const { role, loading: authLoading } = useAuth();
 
-    const [serviceRequests, setServiceRequests] = useState<IServiceRequest[]>([]);
-    const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [allServiceRequests, setAllServiceRequests] = useState<IServiceRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
+    const [statusFilter, setStatusFilter] = useState<string>("all");
 
     // Dialog states
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -53,7 +53,7 @@ const HousekeepingServiceRequestsPage = () => {
                     ? requestsData
                     : (requestsData?.items || []);
 
-                setServiceRequests(requestsArray);
+                setAllServiceRequests(requestsArray);
 
                 // Handle pagination
                 const paginationData: any = response;
@@ -187,17 +187,33 @@ const HousekeepingServiceRequestsPage = () => {
         maintenance: "Maintenance",
     };
 
-    // Status options
+    // Status options for form
     const statusOptions: Option[] = [
         { value: "pending", label: "Pending" },
         { value: "in_progress", label: "In Progress" },
         { value: "completed", label: "Completed" },
     ];
 
+    // Status filter options
     const statusFilterOptions: Option[] = [
-        { value: "all", label: "All" },
-        ...statusOptions,
+        { value: "all", label: "All Requests" },
+        { value: "pending", label: "Pending" },
+        { value: "in_progress", label: "In Progress" },
+        { value: "completed", label: "Completed" },
     ];
+
+    // Filter service requests based on status filter (client-side)
+    const filteredServiceRequests = useMemo(() => {
+        if (statusFilter === "all") {
+            return allServiceRequests;
+        }
+        return allServiceRequests.filter((request) => request.status === statusFilter);
+    }, [allServiceRequests, statusFilter]);
+
+    // Update total items when filtered requests change
+    useEffect(() => {
+        setTotalItems(filteredServiceRequests.length);
+    }, [filteredServiceRequests]);
 
     // Define columns
     const columns = [
@@ -272,20 +288,19 @@ const HousekeepingServiceRequestsPage = () => {
                         View and manage service requests assigned to housekeeping
                     </p>
                 </div>
-            </div>
-
-            <div className="mb-4 w-full max-w-sm">
                 <SelectField
-                    name="serviceStatusFilter"
+                    name="statusFilter"
                     options={statusFilterOptions}
                     value={statusFilter}
                     onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+                    width="md:w-[250px]"
+                    className="text-xs md:text-sm h-11!"
                 />
             </div>
 
             <DataTable
                 columns={columns}
-                data={serviceRequests.filter(s => statusFilter === 'all' ? true : s.status === statusFilter)}
+                data={filteredServiceRequests}
                 loading={loading}
                 emptyMessage="No assigned service requests found."
                 pagination={{

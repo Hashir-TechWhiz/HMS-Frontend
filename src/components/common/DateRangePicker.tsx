@@ -59,7 +59,7 @@ export function DateRangePicker({
                     <button
                         type="button"
                         className={cn(
-                            "relative w-full h-11 rounded-md border px-3 search-gradient font-normal flex items-center",
+                            "relative w-full h-11 rounded-md border border-white/20 px-3 search-gradient font-normal flex items-center",
                             !hasValue && "text-muted-foreground"
                         )}
                     >
