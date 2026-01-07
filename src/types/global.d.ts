@@ -139,7 +139,7 @@ declare global {
     }
 
     // Booking Types
-    type BookingStatus = 'pending' | 'confirmed' | 'checkedin' | 'completed' | 'cancelled';
+    type BookingStatus = 'pending' | 'confirmed' | 'cancelled';
 
     interface IBooking {
         _id: string;

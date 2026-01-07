@@ -3,7 +3,8 @@
 import {
     useState,
     useEffect,
-    useCallback
+    useCallback,
+    useMemo
 } from "react";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,12 +33,12 @@ import { Eye, Pencil, UserCheck, UserX, Plus, Users, CheckCircle2, Ban } from "l
 const UsersPage = () => {
     const { role, loading: authLoading, user: currentUser } = useAuth();
 
-    const [users, setUsers] = useState<IUser[]>([]);
-    const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [allUsers, setAllUsers] = useState<IUser[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
+    const [statusFilter, setStatusFilter] = useState<string>("all");
 
     // KPI states
     const [kpiLoading, setKpiLoading] = useState(false);
@@ -81,9 +82,8 @@ const UsersPage = () => {
                 // Filter out guest users - they are managed in a separate guest management page
                 const systemUsers = usersArray.filter((user: IUser) => user.role !== "guest");
 
-                setUsers(systemUsers);
+                setAllUsers(systemUsers);
                 setTotalPages(1);
-                setTotalItems(systemUsers.length);
             } else {
                 toast.error(response.message || "Failed to fetch users");
             }
@@ -296,11 +296,31 @@ const UsersPage = () => {
         { value: "admin", label: "Admin" },
     ];
 
-    const statusOptions: Option[] = [
-        { value: "all", label: "All" },
+    // Status filter options
+    const statusFilterOptions: Option[] = [
+        { value: "all", label: "All Users" },
         { value: "active", label: "Active" },
         { value: "inactive", label: "Inactive" },
     ];
+
+    // Filter users based on status filter (client-side)
+    const filteredUsers = useMemo(() => {
+        if (statusFilter === "all") {
+            return allUsers;
+        }
+        if (statusFilter === "active") {
+            return allUsers.filter((user) => user.isActive);
+        }
+        if (statusFilter === "inactive") {
+            return allUsers.filter((user) => !user.isActive);
+        }
+        return allUsers;
+    }, [allUsers, statusFilter]);
+
+    // Update total items when filtered users change
+    useEffect(() => {
+        setTotalItems(filteredUsers.length);
+    }, [filteredUsers]);
 
     // Define columns
     const columns = [
@@ -394,7 +414,7 @@ const UsersPage = () => {
                     (userStats.byRole.receptionist || 0) +
                     (userStats.byRole.housekeeping || 0);
 
-                const activeSystemUsers = users.filter(u => u.isActive).length;
+                const activeSystemUsers = allUsers.filter(u => u.isActive).length;
 
                 const inactiveSystemUsers = Math.max(
                     totalSystemUsers - activeSystemUsers,
@@ -443,26 +463,25 @@ const UsersPage = () => {
                             View and manage all system users
                         </p>
                     </div>
-                    <Button onClick={handleAddClick} className="flex items-center gap-2 main-button-gradient">
-                        <Plus className="h-4 w-4" />
-                        Add User
-                    </Button>
-                </div>
-
-                <div className="mb-4 flex items-center justify-between gap-4">
-                    <div className="w-full max-w-sm">
+                    <div className="flex items-center gap-3">
                         <SelectField
                             name="statusFilter"
-                            options={statusOptions}
+                            options={statusFilterOptions}
                             value={statusFilter}
                             onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+                            width="md:w-[150px]"
+                            className="bg-black-500! border border-white/50 focus:ring-1! focus:ring-primary-800! text-xs md:text-sm h-10!"
                         />
+                        <Button onClick={handleAddClick} className="flex items-center gap-2 main-button-gradient">
+                            <Plus className="h-4 w-4" />
+                            Add User
+                        </Button>
                     </div>
                 </div>
 
                 <DataTable
                     columns={columns}
-                    data={users.filter(u => statusFilter === 'all' ? true : (statusFilter === 'active' ? u.isActive : !u.isActive))}
+                    data={filteredUsers}
                     loading={loading}
                     emptyMessage="No users found."
                     pagination={{
