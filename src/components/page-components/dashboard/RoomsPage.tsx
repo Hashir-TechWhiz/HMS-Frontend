@@ -40,6 +40,7 @@ const RoomsPage = () => {
     const { edgestore } = useEdgeStore();
 
     const [rooms, setRooms] = useState<IRoom[]>([]);
+    const [statusFilter, setStatusFilter] = useState<string>("all");
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
@@ -347,6 +348,11 @@ const RoomsPage = () => {
         { value: "maintenance", label: "Maintenance" },
     ];
 
+    const statusFilterOptions: Option[] = [
+        { value: "all", label: "All" },
+        ...statusOptions,
+    ];
+
     // Define columns
     const columns = [
         {
@@ -502,9 +508,18 @@ const RoomsPage = () => {
                     </Button>
                 </div>
 
+                <div className="mb-4 w-full max-w-sm">
+                    <SelectField
+                        name="roomStatusFilter"
+                        options={statusFilterOptions}
+                        value={statusFilter}
+                        onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+                    />
+                </div>
+
                 <DataTable
                     columns={columns}
-                    data={rooms}
+                    data={rooms.filter(r => statusFilter === 'all' ? true : r.status === statusFilter)}
                     loading={loading}
                     emptyMessage="No rooms found."
                     pagination={{

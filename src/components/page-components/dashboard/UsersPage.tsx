@@ -33,6 +33,7 @@ const UsersPage = () => {
     const { role, loading: authLoading, user: currentUser } = useAuth();
 
     const [users, setUsers] = useState<IUser[]>([]);
+    const [statusFilter, setStatusFilter] = useState<string>("all");
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
@@ -295,6 +296,12 @@ const UsersPage = () => {
         { value: "admin", label: "Admin" },
     ];
 
+    const statusOptions: Option[] = [
+        { value: "all", label: "All" },
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" },
+    ];
+
     // Define columns
     const columns = [
         {
@@ -442,9 +449,20 @@ const UsersPage = () => {
                     </Button>
                 </div>
 
+                <div className="mb-4 flex items-center justify-between gap-4">
+                    <div className="w-full max-w-sm">
+                        <SelectField
+                            name="statusFilter"
+                            options={statusOptions}
+                            value={statusFilter}
+                            onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+                        />
+                    </div>
+                </div>
+
                 <DataTable
                     columns={columns}
-                    data={users}
+                    data={users.filter(u => statusFilter === 'all' ? true : (statusFilter === 'active' ? u.isActive : !u.isActive))}
                     loading={loading}
                     emptyMessage="No users found."
                     pagination={{

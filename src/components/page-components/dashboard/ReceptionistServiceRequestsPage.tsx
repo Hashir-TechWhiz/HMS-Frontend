@@ -11,11 +11,13 @@ import { Eye } from "lucide-react";
 import { formatDateTime, normalizeDateRange } from "@/lib/utils";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { DateRange } from "react-day-picker";
+import SelectField from "@/components/forms/SelectField";
 
 const ReceptionistServiceRequestsPage = () => {
     const { role, loading: authLoading } = useAuth();
 
     const [serviceRequests, setServiceRequests] = useState<IServiceRequest[]>([]);
+    const [statusFilter, setStatusFilter] = useState<string>("all");
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
@@ -158,6 +160,13 @@ const ReceptionistServiceRequestsPage = () => {
         maintenance: "Maintenance",
     };
 
+    const statusOptions: Option[] = [
+        { value: "all", label: "All" },
+        { value: "pending", label: "Pending" },
+        { value: "in_progress", label: "In Progress" },
+        { value: "completed", label: "Completed" },
+    ];
+
     // Define columns
     const columns = [
         {
@@ -237,16 +246,27 @@ const ReceptionistServiceRequestsPage = () => {
                         View all service requests from guests
                     </p>
                 </div>
-                <DateRangePicker
-                    value={dateRange}
-                    onChange={handleDateRangeChange}
-                    className="w-full max-w-sm"
-                />
+                <div className="flex items-center gap-3">
+                    <div className="w-full max-w-sm">
+                        <SelectField
+                            name="serviceStatusFilter"
+                            options={statusOptions}
+                            value={statusFilter}
+                            onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+                            label={undefined}
+                        />
+                    </div>
+                    <DateRangePicker
+                        value={dateRange}
+                        onChange={handleDateRangeChange}
+                        className="w-full max-w-sm"
+                    />
+                </div>
             </div>
 
             <DataTable
                 columns={columns}
-                data={serviceRequests}
+                data={serviceRequests.filter(s => statusFilter === 'all' ? true : s.status === statusFilter)}
                 loading={loading}
                 emptyMessage="No service requests found."
                 pagination={{
