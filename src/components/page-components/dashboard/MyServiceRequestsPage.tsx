@@ -20,6 +20,7 @@ const MyServiceRequestsPage = () => {
     const { role, loading: authLoading } = useAuth();
 
     const [serviceRequests, setServiceRequests] = useState<IServiceRequest[]>([]);
+    const [statusFilter, setStatusFilter] = useState<string>("all");
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
@@ -48,6 +49,13 @@ const MyServiceRequestsPage = () => {
         serviceType: ServiceType;
         notes: string;
     }>();
+
+    const statusOptions: Option[] = [
+        { value: "all", label: "All" },
+        { value: "pending", label: "Pending" },
+        { value: "in_progress", label: "In Progress" },
+        { value: "completed", label: "Completed" },
+    ];
 
     // Fetch service requests
     const fetchServiceRequests = useCallback(async (page: number = 1) => {
@@ -278,15 +286,34 @@ const MyServiceRequestsPage = () => {
         { value: "maintenance", label: "Maintenance" },
     ];
 
-    // Booking options
-    const bookingOptions: Option[] = bookings.map((booking) => {
-        const roomNumber = typeof booking.room === "object" ? booking.room.roomNumber : "N/A";
-        const checkIn = formatDateTime(booking.checkInDate);
-        return {
-            value: booking._id,
-            label: `Room ${roomNumber} - Check-in: ${checkIn}`,
-        };
-    });
+    // Booking options: Only show bookings with checkout today or in the future, and no in_progress request for that booking/service type
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const bookingOptions: Option[] = bookings
+        .filter((booking) => {
+            // Only allow if checkout is today or in the future
+            const checkout = new Date(booking.checkOutDate);
+            checkout.setHours(0, 0, 0, 0);
+            return checkout >= today;
+        })
+        .filter((booking) => {
+            // Only allow if there is NO in_progress request for this booking and selected service type
+            // If serviceType is not yet selected, allow all
+            const selectedServiceType = control._formValues?.serviceType;
+            if (!selectedServiceType) return true;
+            return !serviceRequests.some((req) => {
+                const reqBookingId = typeof req.booking === "object" ? req.booking._id : req.booking;
+                return reqBookingId === booking._id && req.serviceType === selectedServiceType && req.status === "in_progress";
+            });
+        })
+        .map((booking) => {
+            const roomNumber = typeof booking.room === "object" ? booking.room.roomNumber : "N/A";
+            const checkIn = formatDateTime(booking.checkInDate);
+            return {
+                value: booking._id,
+                label: `Room ${roomNumber} - Check-in: ${checkIn}`,
+            };
+        });
 
     // Define columns
     const columns = [
@@ -356,6 +383,15 @@ const MyServiceRequestsPage = () => {
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
+                    <div className="w-full max-w-sm">
+                        <SelectField
+                            name="serviceStatusFilter"
+                            options={statusOptions}
+                            value={statusFilter}
+                            onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+                            label={undefined}
+                        />
+                    </div>
                     <DateRangePicker
                         value={dateRange}
                         onChange={handleDateRangeChange}
@@ -370,7 +406,7 @@ const MyServiceRequestsPage = () => {
 
             <DataTable
                 columns={columns}
-                data={serviceRequests}
+                data={serviceRequests.filter(s => statusFilter === 'all' ? true : s.status === statusFilter)}
                 loading={loading}
                 emptyMessage="No service requests found."
                 pagination={{

@@ -16,6 +16,7 @@ const HousekeepingServiceRequestsPage = () => {
     const { role, user, loading: authLoading } = useAuth();
 
     const [serviceRequests, setServiceRequests] = useState<IServiceRequest[]>([]);
+    const [statusFilter, setStatusFilter] = useState<string>("all");
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
@@ -193,6 +194,11 @@ const HousekeepingServiceRequestsPage = () => {
         { value: "completed", label: "Completed" },
     ];
 
+    const statusFilterOptions: Option[] = [
+        { value: "all", label: "All" },
+        ...statusOptions,
+    ];
+
     // Define columns
     const columns = [
         {
@@ -268,9 +274,18 @@ const HousekeepingServiceRequestsPage = () => {
                 </div>
             </div>
 
+            <div className="mb-4 w-full max-w-sm">
+                <SelectField
+                    name="serviceStatusFilter"
+                    options={statusFilterOptions}
+                    value={statusFilter}
+                    onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+                />
+            </div>
+
             <DataTable
                 columns={columns}
-                data={serviceRequests}
+                data={serviceRequests.filter(s => statusFilter === 'all' ? true : s.status === statusFilter)}
                 loading={loading}
                 emptyMessage="No assigned service requests found."
                 pagination={{

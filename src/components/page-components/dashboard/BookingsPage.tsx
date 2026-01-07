@@ -14,6 +14,7 @@ import { Eye, XCircle, CheckCircle, ClipboardList, CheckCircle2, Clock } from "l
 import { formatDateTime, normalizeDateRange } from "@/lib/utils";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { DateRange } from "react-day-picker";
+import SelectField from "@/components/forms/SelectField";
 import {
     Tooltip,
     TooltipContent,
@@ -30,6 +31,7 @@ const BookingsPage = () => {
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+    const [statusFilter, setStatusFilter] = useState<string>("all");
 
     // KPI states
     const [kpiLoading, setKpiLoading] = useState(false);
@@ -345,15 +347,23 @@ const BookingsPage = () => {
         const colors = {
             pending: "bg-yellow-500/20 text-yellow-400 border-yellow-500/50",
             confirmed: "bg-green-500/20 text-green-400 border-green-500/50",
+            completed: "bg-blue-500/20 text-blue-400 border-blue-500/50",
             cancelled: "bg-red-500/20 text-red-400 border-red-500/50",
         };
-
         return (
-            <span className={`px-2 py-1 rounded-md text-xs font-medium border ${colors[status]}`}>
+            <span className={`px-2 py-1 rounded-md text-xs font-medium border ${colors[status] || ''}`}>
                 {status.charAt(0).toUpperCase() + status.slice(1)}
             </span>
         );
     };
+
+    const statusOptions: Option[] = [
+        { value: "all", label: "All" },
+        { value: "pending", label: "Pending" },
+        { value: "confirmed", label: "Confirmed" },
+        { value: "completed", label: "Completed" },
+        { value: "cancelled", label: "Cancelled" },
+    ];
 
     // Define columns based on role
     const guestColumns = [
@@ -411,7 +421,8 @@ const BookingsPage = () => {
                                         onClick={() => handleCancelClick(booking)}
                                         disabled={
                                             booking.status === "cancelled" ||
-                                            booking.status === "confirmed"
+                                            booking.status === "confirmed" ||
+                                            (booking.status !== "pending" && booking.status !== "completed")
                                         }
                                         className="h-8 px-2"
                                     >
@@ -419,15 +430,15 @@ const BookingsPage = () => {
                                     </Button>
                                 </span>
                             </TooltipTrigger>
-
-                            {(booking.status === "cancelled" ||
-                                booking.status === "confirmed") && (
-                                    <TooltipContent side="bottom">
-                                        {booking.status === "cancelled"
-                                            ? "Booking already cancelled"
-                                            : "Cannot cancel confirmed bookings. Contact hotel for assistance."}
-                                    </TooltipContent>
-                                )}
+                            {(booking.status === "cancelled" || booking.status === "confirmed" || (booking.status !== "pending" && booking.status !== "completed")) && (
+                                <TooltipContent side="bottom">
+                                    {booking.status === "cancelled"
+                                        ? "Booking already cancelled"
+                                        : booking.status === "confirmed"
+                                            ? "Cannot cancel confirmed bookings. Contact hotel for assistance."
+                                            : "Can only cancel pending or completed bookings."}
+                                </TooltipContent>
+                            )}
                         </Tooltip>
                     </TooltipProvider>
                 </div>
@@ -512,7 +523,7 @@ const BookingsPage = () => {
                         size="sm"
                         variant="destructive"
                         onClick={() => handleCancelClick(booking)}
-                        disabled={booking.status === "cancelled"}
+                        disabled={booking.status === "cancelled" || booking.status === "confirmed" || (booking.status !== "pending" && booking.status !== "completed")}
                         className="h-8 px-2"
                         title="Cancel Booking"
                     >
@@ -593,16 +604,25 @@ const BookingsPage = () => {
                                 : "View and manage all hotel bookings"}
                         </p>
                     </div>
-                    <DateRangePicker
-                        value={dateRange}
-                        onChange={handleDateRangeChange}
-                        className="w-full max-w-sm"
-                    />
+                    <div className="flex items-center gap-3">
+                        <SelectField
+                            name="bookingStatusFilter"
+                            options={statusOptions}
+                            value={statusFilter}
+                            onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+                            className="w-full"
+                        />
+                        <DateRangePicker
+                            value={dateRange}
+                            onChange={handleDateRangeChange}
+                            className="w-full max-w-sm"
+                        />
+                    </div>
                 </div>
 
                 <DataTable
                     columns={columns}
-                    data={bookings}
+                    data={bookings.filter(b => statusFilter === 'all' ? true : b.status === statusFilter)}
                     loading={loading}
                     emptyMessage="No bookings found."
                     pagination={{
