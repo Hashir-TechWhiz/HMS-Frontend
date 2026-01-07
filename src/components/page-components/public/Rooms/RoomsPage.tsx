@@ -105,7 +105,7 @@ const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
     return (
         <div className="min-h-screen bg-background">
             {/* Page Header */}
-            <div className="relative text-white py-12 pt-28">
+            <div className="relative py-12 pt-38">
                 {/* Background Image */}
                 <Image
                     src="/images/LuxuryRoom.jpg"
@@ -132,58 +132,73 @@ const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
             </div>
 
             {/* Main Content */}
-            <div className="container mx-auto px-4 py-8">
-                <div className="max-w-7xl mx-auto">
-                    {/* Search Form Toggle */}
-                    <div className="mb-6">
-                        <button
-                            onClick={() => setShowSearchForm(!showSearchForm)}
-                            className="text-primary hover:text-primary/90 font-medium text-sm flex items-center gap-2"
-                        >
-                            {showSearchForm ? "Hide" : "Modify"} Search
-                            <span className="text-xs">
-                                {showSearchForm ? "▲" : "▼"}
-                            </span>
-                        </button>
-                    </div>
+            <div className="relative min-h-screen">
+                {/* Background Image */}
+                <Image
+                    src="/images/LuxuryRoomBg.jpg"
+                    alt="Luxury background"
+                    fill
+                    className="object-cover"
+                    priority={false}
+                />
 
-                    {/* Collapsible Search Form */}
-                    {showSearchForm && (
-                        <div className="mb-6 animate-in fade-in slide-in-from-top-2 duration-300">
-                            <RoomSearchForm variant="compact" onSearch={handleSearch} />
+                {/* Dark overlay for better readability */}
+                <div className="absolute inset-0 bg-black/40" />
+
+                {/* Content */}
+                <div className="relative container mx-auto px-4 py-8">
+                    <div className="max-w-7xl mx-auto">
+                        {/* Search Form Toggle */}
+                        <div className="mb-6">
+                            <button
+                                onClick={() => setShowSearchForm(!showSearchForm)}
+                                className="text-primary hover:text-primary/90 font-medium text-sm flex items-center gap-2"
+                            >
+                                {showSearchForm ? "Hide" : "Modify"} Search
+                                <span className="text-xs">
+                                    {showSearchForm ? "▲" : "▼"}
+                                </span>
+                            </button>
                         </div>
-                    )}
 
-                    {/* Search Summary */}
-                    <SearchSummary
-                        checkIn={checkInDate ? format(checkInDate, "MMM dd, yyyy") : null}
-                        checkOut={checkOutDate ? format(checkOutDate, "MMM dd, yyyy") : null}
-                        guests={guests}
-                        resultsCount={filteredRoomsCount}
-                    />
-
-                    {/* Filters and Results Grid */}
-                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                        {/* Filters Sidebar */}
-                        <div className="lg:col-span-1">
-                            <div className="sticky top-24">
-                                <RoomsFilters onFilterChange={handleFilterChange} />
+                        {/* Collapsible Search Form */}
+                        {showSearchForm && (
+                            <div className="mb-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <RoomSearchForm variant="compact" onSearch={handleSearch} />
                             </div>
-                        </div>
+                        )}
+
+                        {/* Search Summary */}
+                        <SearchSummary
+                            checkIn={checkInDate ? format(checkInDate, "MMM dd, yyyy") : null}
+                            checkOut={checkOutDate ? format(checkOutDate, "MMM dd, yyyy") : null}
+                            guests={guests}
+                            resultsCount={filteredRoomsCount}
+                        />
+
+                        {/* Filters and Results Grid */}
+                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                            {/* Filters Sidebar */}
+                            <div className="lg:col-span-1">
+                                <div className="sticky top-24">
+                                    <RoomsFilters onFilterChange={handleFilterChange} />
+                                </div>
+                            </div>
 
 
-                        {/* Rooms List */}
-                        <div className="lg:col-span-3">
-                            <RoomsList
-                                rooms={rooms}
-                                loading={loading}
-                                error={error}
-                                userRole={userRole}
-                                onRoomSelect={handleRoomSelect}
-                                clientRoomTypeFilter={clientRoomTypes}
-                                guestsFilter={guests}
-                                onFilteredCountChange={setFilteredRoomsCount}
-                            />
+                            {/* Rooms List */}
+                            <div className="lg:col-span-3">
+                                <RoomsList
+                                    rooms={rooms}
+                                    loading={loading}
+                                    error={error}
+                                    userRole={userRole}
+                                    onRoomSelect={handleRoomSelect}
+                                    clientRoomTypeFilter={clientRoomTypes}
+                                    guestsFilter={guests}
+                                    onFilteredCountChange={setFilteredRoomsCount}
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>

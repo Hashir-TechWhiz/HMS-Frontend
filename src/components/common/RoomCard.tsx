@@ -68,7 +68,7 @@ const RoomCard: FC<RoomCardProps> = ({
   };
 
   return (
-    <Card className="overflow-hidden transition-all duration-500 group p-0 table-bg-gradient border border-white/20 relative h-full flex flex-col">
+    <Card className="overflow-hidden transition-all duration-500 group p-0 bg-primary-500/10 border border-white/20 relative h-full flex flex-col">
       {/* Glow effect on hover */}
       <div className="absolute inset-0 bg-linear-to-br from-primary/0 via-primary/0 to-primary/0 group-hover:from-primary/5 group-hover:via-primary/0 group-hover:to-primary/5 transition-all duration-500 pointer-events-none rounded-lg" />
 
@@ -98,7 +98,7 @@ const RoomCard: FC<RoomCardProps> = ({
       </div>
 
       {/* Room Details - Compact */}
-      <CardContent className="p-4 relative z-10 flex flex-col">
+      <CardContent className="p-4 relative z-10 flex flex-col pt-0">
         <h3 className="text-lg font-semibold text-foreground mb-2 group-hover:text-primary transition-colors duration-300 line-clamp-1">
           {name}
         </h3>
