@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarIcon, Loader2, AlertCircle, Sparkles, CalendarDays, Clock, DollarSign, ArrowLeft } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { getRoomById } from "@/services/roomService";
-import { createBooking, CreateBookingData, cancelBooking } from "@/services/bookingService";
+import { createBooking, CreateBookingData, checkAvailability } from "@/services/bookingService";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import InputField from "@/components/forms/InputField";
@@ -41,7 +41,6 @@ const BookingPage: FC = () => {
     const [showPaymentDialog, setShowPaymentDialog] = useState(false);
     const [showWalkInPaymentDialog, setShowWalkInPaymentDialog] = useState(false);
     const [pendingBookingData, setPendingBookingData] = useState<BookingFormData | null>(null);
-    const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
 
     // Check if user is receptionist or admin (can book for walk-in customers)
     const isReceptionistOrAdmin = role === "receptionist" || role === "admin";
@@ -192,115 +191,164 @@ const BookingPage: FC = () => {
             return;
         }
 
-        // Check availability by creating pending booking BEFORE showing payment dialog
+        // Check availability BEFORE showing payment dialog
+        // Booking will be created AFTER payment succeeds
         setSubmitting(true);
 
         try {
-            // Prepare booking data
-            const bookingData: CreateBookingData = {
-                roomId,
-                checkInDate: checkIn.toISOString(),
-                checkOutDate: checkOut.toISOString(),
-            };
+            // Check if room is available for selected dates
+            const availabilityResponse = await checkAvailability(
+                roomId!,
+                checkIn.toISOString(),
+                checkOut.toISOString()
+            );
 
-            // For receptionist/admin walk-in bookings, include customerDetails
-            if (isReceptionistOrAdmin && data.customerName && data.customerPhone) {
-                bookingData.customerDetails = {
-                    name: data.customerName,
-                    phone: data.customerPhone,
-                    ...(data.customerEmail && { email: data.customerEmail }),
-                };
+            if (!availabilityResponse.success) {
+                // Availability check failed (validation error)
+                toast.error(availabilityResponse.message || "Failed to check availability");
+                setSubmitting(false);
+                return;
             }
 
-            // Create pending booking to check availability
-            const response = await createBooking(bookingData);
+            if (!availabilityResponse.data?.available) {
+                // Room is not available for selected dates
+                toast.error("Room is not available for the selected dates. Please choose different dates.");
+                setSubmitting(false);
+                return;
+            }
 
-            if (response.success && response.data) {
-                // Availability check passed - store booking and show payment dialog
-                setPendingBookingId(response.data._id);
-                setPendingBookingData(data);
+            // Room is available - store the form data for later booking creation
+            setPendingBookingData(data);
 
-                // Open appropriate payment dialog based on user role
-                if (!isReceptionistOrAdmin) {
-                    setShowPaymentDialog(true);
-                } else {
-                    setShowWalkInPaymentDialog(true);
-                }
+            // Open appropriate payment dialog based on user role
+            // Note: Booking is NOT created yet - it will be created after successful payment
+            if (!isReceptionistOrAdmin) {
+                setShowPaymentDialog(true);
             } else {
-                // Availability check failed - show error
-                toast.error(response.message || "Room is not available for the selected dates");
+                setShowWalkInPaymentDialog(true);
             }
         } catch (err) {
             console.error("Error checking availability:", err);
-            toast.error("An unexpected error occurred. Please try again.");
+            toast.error("An unexpected error occurred while checking availability. Please try again.");
         } finally {
             setSubmitting(false);
         }
     };
 
-    const handlePaymentSuccess = () => {
+    const handlePaymentSuccess = async () => {
         setShowPaymentDialog(false);
 
-        // Payment successful - redirect to dashboard
-        // Guest bookings remain "pending" (awaiting staff confirmation)
-        // Walk-in bookings are already "confirmed" (created by staff)
-        const customerName = pendingBookingData?.customerName;
-        const successMessage = customerName
-            ? `Booking created successfully for ${customerName}!`
-            : isReceptionistOrAdmin
-                ? "Walk-in booking created successfully!"
-                : "Booking request submitted successfully! Awaiting confirmation.";
+        // Payment successful - NOW create the booking
+        if (!pendingBookingData || !roomId) {
+            toast.error("Booking data not found");
+            return;
+        }
 
-        toast.success(successMessage);
-        router.push("/dashboard");
+        try {
+            setSubmitting(true);
+
+            // Prepare booking data
+            const bookingData: CreateBookingData = {
+                roomId,
+                checkInDate: new Date(pendingBookingData.checkInDate).toISOString(),
+                checkOutDate: new Date(pendingBookingData.checkOutDate).toISOString(),
+            };
+
+            // Create the booking (payment already processed)
+            const response = await createBooking(bookingData);
+
+            if (response.success && response.data) {
+                // Booking created successfully after payment
+                const successMessage = "Booking request submitted successfully! Awaiting confirmation.";
+                toast.success(successMessage);
+
+                // Clear temporary data
+                setPendingBookingData(null);
+
+                router.push("/dashboard");
+            } else {
+                // Booking creation failed (e.g., room unavailable due to race condition)
+                toast.error(response.message || "Failed to create booking. Please contact support as payment was processed.");
+                // Note: In production, this would require refund handling
+            }
+        } catch (err) {
+            console.error("Error creating booking after payment:", err);
+            toast.error("Failed to create booking. Please contact support as payment was processed.");
+        } finally {
+            setSubmitting(false);
+        }
     };
 
-    const handlePaymentCancel = async () => {
+    const handlePaymentCancel = () => {
         setShowPaymentDialog(false);
 
-        // Cancel the pending booking
-        if (pendingBookingId) {
-            try {
-                await cancelBooking(pendingBookingId);
-            } catch (err) {
-                console.error("Error cancelling pending booking:", err);
-            }
-        }
-
+        // Clear temporary booking data
+        // Note: No booking was created yet, so nothing to cancel in the database
         setPendingBookingData(null);
-        setPendingBookingId(null);
-        toast.info("Booking cancelled. Payment was not processed.");
+
+        toast.info("Payment cancelled. No booking was created.");
     };
 
-    const handleWalkInPaymentSuccess = (paymentMethod: "card" | "cash") => {
+    const handleWalkInPaymentSuccess = async (paymentMethod: "card" | "cash") => {
         setShowWalkInPaymentDialog(false);
 
-        // Payment successful - redirect to dashboard
-        // Walk-in bookings are already "confirmed" (created by staff)
-        const customerName = pendingBookingData?.customerName;
-        const successMessage = customerName
-            ? `Walk-in booking created successfully for ${customerName}!`
-            : "Walk-in booking created successfully!";
-
-        toast.success(`${paymentMethod === "card" ? "Card" : "Cash"} payment confirmed. ${successMessage}`);
-        router.push("/dashboard");
-    };
-
-    const handleWalkInPaymentCancel = async () => {
-        setShowWalkInPaymentDialog(false);
-
-        // Cancel the pending booking
-        if (pendingBookingId) {
-            try {
-                await cancelBooking(pendingBookingId);
-            } catch (err) {
-                console.error("Error cancelling pending booking:", err);
-            }
+        // Payment successful - NOW create the walk-in booking
+        if (!pendingBookingData || !roomId) {
+            toast.error("Booking data not found");
+            return;
         }
 
+        try {
+            setSubmitting(true);
+
+            // Prepare booking data for walk-in
+            const bookingData: CreateBookingData = {
+                roomId,
+                checkInDate: new Date(pendingBookingData.checkInDate).toISOString(),
+                checkOutDate: new Date(pendingBookingData.checkOutDate).toISOString(),
+                customerDetails: {
+                    name: pendingBookingData.customerName!,
+                    phone: pendingBookingData.customerPhone!,
+                    ...(pendingBookingData.customerEmail && { email: pendingBookingData.customerEmail }),
+                },
+            };
+
+            // Create the walk-in booking (payment already processed)
+            const response = await createBooking(bookingData);
+
+            if (response.success && response.data) {
+                // Walk-in booking created successfully after payment
+                const customerName = pendingBookingData.customerName;
+                const successMessage = customerName
+                    ? `Walk-in booking created successfully for ${customerName}!`
+                    : "Walk-in booking created successfully!";
+
+                toast.success(`${paymentMethod === "card" ? "Card" : "Cash"} payment confirmed. ${successMessage}`);
+
+                // Clear temporary data
+                setPendingBookingData(null);
+
+                router.push("/dashboard");
+            } else {
+                // Booking creation failed
+                toast.error(response.message || "Failed to create walk-in booking. Please contact support as payment was processed.");
+            }
+        } catch (err) {
+            console.error("Error creating walk-in booking after payment:", err);
+            toast.error("Failed to create booking. Please contact support as payment was processed.");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleWalkInPaymentCancel = () => {
+        setShowWalkInPaymentDialog(false);
+
+        // Clear temporary booking data
+        // Note: No booking was created yet, so nothing to cancel in the database
         setPendingBookingData(null);
-        setPendingBookingId(null);
-        toast.info("Walk-in booking cancelled. Payment was not processed.");
+
+        toast.info("Payment cancelled. No booking was created.");
     };
 
     // Loading state
@@ -639,7 +687,7 @@ const BookingPage: FC = () => {
                                         <div className="space-y-3 mb-4">
                                             <div className="p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/30 transition-all duration-300">
                                                 <p className="text-xs text-muted-foreground mb-1">Room</p>
-                                                <p className="font-semibold text-foreground text-sm break-words">
+                                                <p className="font-semibold text-foreground text-sm wrap-break-words">
                                                     {room.roomType} Room {room.roomNumber}
                                                 </p>
                                             </div>
@@ -650,7 +698,7 @@ const BookingPage: FC = () => {
                                                         <CalendarDays className="h-3.5 w-3.5 text-primary shrink-0" />
                                                         <div className="min-w-0 flex-1">
                                                             <p className="text-xs text-muted-foreground">Check-in</p>
-                                                            <p className="font-medium text-foreground text-sm break-words">
+                                                            <p className="font-medium text-foreground text-sm wrao-break-words">
                                                                 {format(checkInDate, "MMM dd, yyyy")}
                                                             </p>
                                                         </div>
@@ -659,7 +707,7 @@ const BookingPage: FC = () => {
                                                         <CalendarDays className="h-3.5 w-3.5 text-primary shrink-0" />
                                                         <div className="min-w-0 flex-1">
                                                             <p className="text-xs text-muted-foreground">Check-out</p>
-                                                            <p className="font-medium text-foreground text-sm break-words">
+                                                            <p className="font-medium text-foreground text-sm wrap-break-words">
                                                                 {format(checkOutDate, "MMM dd, yyyy")}
                                                             </p>
                                                         </div>

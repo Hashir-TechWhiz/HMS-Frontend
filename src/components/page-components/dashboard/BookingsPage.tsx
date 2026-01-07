@@ -347,12 +347,20 @@ const BookingsPage = () => {
         const colors = {
             pending: "bg-yellow-500/20 text-yellow-400 border-yellow-500/50",
             confirmed: "bg-green-500/20 text-green-400 border-green-500/50",
+            checkedin: "bg-purple-500/20 text-purple-400 border-purple-500/50",
             completed: "bg-blue-500/20 text-blue-400 border-blue-500/50",
             cancelled: "bg-red-500/20 text-red-400 border-red-500/50",
         };
+        const labels = {
+            pending: "Pending",
+            confirmed: "Confirmed",
+            checkedin: "Checked In",
+            completed: "Completed",
+            cancelled: "Cancelled",
+        };
         return (
             <span className={`px-2 py-1 rounded-md text-xs font-medium border ${colors[status] || ''}`}>
-                {status.charAt(0).toUpperCase() + status.slice(1)}
+                {labels[status] || status}
             </span>
         );
     };
@@ -361,6 +369,7 @@ const BookingsPage = () => {
         { value: "all", label: "All" },
         { value: "pending", label: "Pending" },
         { value: "confirmed", label: "Confirmed" },
+        { value: "checkedin", label: "Checked In" },
         { value: "completed", label: "Completed" },
         { value: "cancelled", label: "Cancelled" },
     ];
@@ -422,7 +431,8 @@ const BookingsPage = () => {
                                         disabled={
                                             booking.status === "cancelled" ||
                                             booking.status === "confirmed" ||
-                                            (booking.status !== "pending" && booking.status !== "completed")
+                                            booking.status === "checkedin" ||
+                                            booking.status === "completed"
                                         }
                                         className="h-8 px-2"
                                     >
@@ -430,13 +440,15 @@ const BookingsPage = () => {
                                     </Button>
                                 </span>
                             </TooltipTrigger>
-                            {(booking.status === "cancelled" || booking.status === "confirmed" || (booking.status !== "pending" && booking.status !== "completed")) && (
+                            {(booking.status !== "pending") && (
                                 <TooltipContent side="bottom">
                                     {booking.status === "cancelled"
                                         ? "Booking already cancelled"
                                         : booking.status === "confirmed"
                                             ? "Cannot cancel confirmed bookings. Contact hotel for assistance."
-                                            : "Can only cancel pending or completed bookings."}
+                                            : booking.status === "checkedin"
+                                                ? "Cannot cancel checked-in bookings."
+                                                : "Cannot cancel completed bookings."}
                                 </TooltipContent>
                             )}
                         </Tooltip>
@@ -523,7 +535,7 @@ const BookingsPage = () => {
                         size="sm"
                         variant="destructive"
                         onClick={() => handleCancelClick(booking)}
-                        disabled={booking.status === "cancelled" || booking.status === "confirmed" || (booking.status !== "pending" && booking.status !== "completed")}
+                        disabled={booking.status === "cancelled" || booking.status === "checkedin" || booking.status === "completed"}
                         className="h-8 px-2"
                         title="Cancel Booking"
                     >
@@ -595,7 +607,7 @@ const BookingsPage = () => {
                 </div>
             )}
             <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col md:flex-row gap-4 md:gap-0 justify-between md:items-center">
                     <div>
                         <h1 className="text-2xl font-bold text-white">{pageTitle}</h1>
                         <p className="text-sm text-gray-400 mt-1">
@@ -604,18 +616,18 @@ const BookingsPage = () => {
                                 : "View and manage all hotel bookings"}
                         </p>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-col md:flex-row">
                         <SelectField
                             name="bookingStatusFilter"
                             options={statusOptions}
                             value={statusFilter}
                             onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
-                            className="w-full"
+                            className="w-full md:w-[150px] search-gradient"
                         />
                         <DateRangePicker
                             value={dateRange}
                             onChange={handleDateRangeChange}
-                            className="w-full max-w-sm"
+                            className="w-full"
                         />
                     </div>
                 </div>

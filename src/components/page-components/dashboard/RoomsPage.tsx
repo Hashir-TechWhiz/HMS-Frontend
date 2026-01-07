@@ -495,27 +495,33 @@ const RoomsPage = () => {
 
             {/* Table */}
             <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
-                <div className="flex justify-between items-center">
+
+                <div className="flex md:flex-row flex-col gap-5 items-center justify-between w-full">
                     <div>
                         <h1 className="text-2xl font-bold text-white">Room Management</h1>
                         <p className="text-sm text-gray-400 mt-1">
                             View and manage all hotel rooms
                         </p>
                     </div>
-                    <Button onClick={handleAddClick} className="flex items-center gap-2 main-button-gradient">
-                        <Plus className="h-4 w-4" />
-                        Add Room
-                    </Button>
+
+                    <div className="flex lg:flex-row flex-col gap-5 w-full justify-end md:w-auto">
+
+                        <SelectField
+                            name="roomStatusFilter"
+                            options={statusFilterOptions}
+                            value={statusFilter}
+                            onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+                            width="md:w-[150px]"
+                            className="bg-black-500! border border-white/50 focus:ring-1! focus:ring-primary-800! text-xs md:text-sm h-10!"
+                        />
+
+                        <Button onClick={handleAddClick} className="main-button-gradient w-full md:w-[150px]">
+                            <Plus className="h-4 w-4" />
+                            Add Room
+                        </Button>
+                    </div>
                 </div>
 
-                <div className="mb-4 w-full max-w-sm">
-                    <SelectField
-                        name="roomStatusFilter"
-                        options={statusFilterOptions}
-                        value={statusFilter}
-                        onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
-                    />
-                </div>
 
                 <DataTable
                     columns={columns}
