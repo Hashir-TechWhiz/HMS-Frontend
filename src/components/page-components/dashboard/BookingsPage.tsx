@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getAllBookings, getMyBookings, cancelBooking, confirmBooking } from "@/services/bookingService";
+import { getAllBookings, getMyBookings, cancelBooking, confirmBooking, updateBooking, getAvailableRooms } from "@/services/bookingService";
 import { getBookingsReport } from "@/services/reportService";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
@@ -10,7 +10,7 @@ import CancellationPenaltyDialog from "./CancellationPenaltyDialog";
 import StatCard from "@/components/common/StatCard";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Eye, XCircle, CheckCircle, ClipboardList, CheckCircle2, Clock } from "lucide-react";
+import { Eye, XCircle, CheckCircle, ClipboardList, CheckCircle2, Clock, Pencil } from "lucide-react";
 import { formatDateTime, normalizeDateRange } from "@/lib/utils";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { DateRange } from "react-day-picker";
@@ -42,7 +42,12 @@ const BookingsPage = () => {
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
     const [penaltyDialogOpen, setPenaltyDialogOpen] = useState(false);
     const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState<IBooking | null>(null);
+    const [editForm, setEditForm] = useState<{ checkInDate: string; checkOutDate: string; roomId: string }>({ checkInDate: '', checkOutDate: '', roomId: '' });
+    const [availableRooms, setAvailableRooms] = useState<IRoom[]>([]);
+    const [roomsLoading, setRoomsLoading] = useState(false);
+    const [editLoading, setEditLoading] = useState(false);
     const [cancelLoading, setCancelLoading] = useState(false);
     const [confirmLoading, setConfirmLoading] = useState(false);
 
@@ -458,6 +463,85 @@ const BookingsPage = () => {
         },
     ];
 
+    const handleEditClick = (booking: IBooking) => {
+        setSelectedBooking(booking);
+        const roomId = typeof booking.room === 'string' ? booking.room : booking.room._id;
+        setEditForm({
+            checkInDate: booking.checkInDate,
+            checkOutDate: booking.checkOutDate,
+            roomId: roomId,
+        });
+        setEditDialogOpen(true);
+    };
+
+    // Fetch available rooms when dates change in edit form
+    useEffect(() => {
+        const fetchAvailableRooms = async () => {
+            if (!editDialogOpen || !editForm.checkInDate || !editForm.checkOutDate) return;
+
+            // Basic validation
+            const start = new Date(editForm.checkInDate);
+            const end = new Date(editForm.checkOutDate);
+            if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) {
+                setAvailableRooms([]);
+                return;
+            }
+
+            try {
+                setRoomsLoading(true);
+                const response = await getAvailableRooms(editForm.checkInDate, editForm.checkOutDate, selectedBooking?._id);
+                if (response.success) {
+                    // Include the currently booked room in the list if it's not already there
+                    const currentRoom = selectedBooking?.room as IRoom;
+                    let rooms = response.data;
+                    if (currentRoom && !rooms.find(r => r._id === currentRoom._id)) {
+                        rooms = [currentRoom, ...rooms];
+                    }
+                    setAvailableRooms(rooms);
+                } else {
+                    toast.error(response.message || "Failed to fetch available rooms");
+                }
+            } catch (error) {
+                console.error("Error fetching available rooms:", error);
+            } finally {
+                setRoomsLoading(false);
+            }
+        };
+
+        fetchAvailableRooms();
+    }, [editForm.checkInDate, editForm.checkOutDate, editDialogOpen, selectedBooking?.room]);
+
+    const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setEditForm((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const handleEditFormSubmit = async () => {
+        if (!selectedBooking) return;
+        setEditLoading(true);
+        try {
+            const response = await updateBooking(selectedBooking._id, {
+                checkInDate: editForm.checkInDate,
+                checkOutDate: editForm.checkOutDate,
+                room: editForm.roomId,
+            });
+
+            if (response.success) {
+                toast.success('Booking updated successfully');
+                setEditDialogOpen(false);
+                setSelectedBooking(null);
+                fetchBookings(currentPage);
+                fetchBookingStats();
+            } else {
+                toast.error(response.message || 'Failed to update booking');
+            }
+        } catch {
+            toast.error('Failed to update booking');
+        } finally {
+            setEditLoading(false);
+        }
+    };
+
     const staffColumns = [
         {
             key: "customer",
@@ -520,6 +604,18 @@ const BookingsPage = () => {
                     >
                         <Eye className="h-4 w-4" />
                     </Button>
+                    {/* Show edit icon for admin and receptionist, only for confirmed bookings */}
+                    {(role === "admin" || role === "receptionist") && booking.status === "confirmed" && (
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleEditClick(booking)}
+                            className="h-8 px-2"
+                            title="Edit Booking"
+                        >
+                            <Pencil className="h-4 w-4" />
+                        </Button>
+                    )}
                     {booking.status === "pending" && (
                         <Button
                             size="sm"
@@ -766,6 +862,69 @@ const BookingsPage = () => {
                     confirmLoading={confirmLoading}
                     variant="success"
                 />
+                {/* Edit Booking Dialog */}
+                <DialogBox
+                    open={editDialogOpen}
+                    onOpenChange={setEditDialogOpen}
+                    title="Edit Booking"
+                    showFooter
+                    confirmText="Save Changes"
+                    cancelText="Cancel"
+                    onConfirm={handleEditFormSubmit}
+                    onCancel={() => setEditDialogOpen(false)}
+                    confirmLoading={editLoading}
+                >
+                    <div className="space-y-4 py-2">
+                        <div>
+                            <p className="text-sm text-gray-400 mb-2">Customer: <span className="text-white font-medium">{selectedBooking ? getCustomerName(selectedBooking) : ''}</span></p>
+                            <p className="text-xs text-yellow-500/80 mb-4">* Customer cannot be changed during booking modification.</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm text-gray-400 mb-1">Check-in Date</label>
+                                <input
+                                    type="date"
+                                    name="checkInDate"
+                                    value={editForm.checkInDate?.slice(0, 10) || ''}
+                                    onChange={handleEditFormChange}
+                                    className="w-full rounded border border-gray-600 bg-gray-800/50 text-white px-3 py-2 focus:border-primary-500 focus:outline-none transition-colors"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm text-gray-400 mb-1">Check-out Date</label>
+                                <input
+                                    type="date"
+                                    name="checkOutDate"
+                                    value={editForm.checkOutDate?.slice(0, 10) || ''}
+                                    onChange={handleEditFormChange}
+                                    className="w-full rounded border border-gray-600 bg-gray-800/50 text-white px-3 py-2 focus:border-primary-500 focus:outline-none transition-colors"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm text-gray-400 mb-1">Select Room</label>
+                            <select
+                                name="roomId"
+                                value={editForm.roomId}
+                                onChange={handleEditFormChange}
+                                disabled={roomsLoading}
+                                className="w-full rounded border border-gray-600 bg-gray-800/50 text-white px-3 py-2 focus:border-primary-500 focus:outline-none transition-colors disabled:opacity-50"
+                            >
+                                <option value="" disabled>Select a room</option>
+                                {availableRooms.map((room) => (
+                                    <option key={room._id} value={room._id}>
+                                        Room {room.roomNumber} - {room.roomType} (LKR {room.pricePerNight})
+                                        {selectedBooking && (typeof selectedBooking.room === 'string' ? selectedBooking.room === room._id : selectedBooking.room._id === room._id) ? ' [CURRENT]' : ''}
+                                    </option>
+                                ))}
+                            </select>
+                            {roomsLoading && <p className="text-xs text-gray-400 mt-1">Checking room availability...</p>}
+                            {!roomsLoading && availableRooms.length === 0 && editForm.checkInDate && editForm.checkOutDate && (
+                                <p className="text-xs text-red-400 mt-1">No rooms available for selected dates.</p>
+                            )}
+                        </div>
+                    </div>
+                </DialogBox>
             </div>
         </div>
     );
