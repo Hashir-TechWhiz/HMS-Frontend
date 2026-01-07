@@ -210,3 +210,59 @@ export const confirmBooking = async (bookingId: string): Promise<ApiResponse<IBo
     }
 };
 
+/**
+ * Edit a booking
+ * PUT /api/bookings/:id
+ * 
+ * @param bookingId - The ID of the booking to edit
+ * @param data - The data to update (room, checkInDate, checkOutDate, status)
+ * @returns Promise with updated booking data
+ */
+export const updateBooking = async (
+    bookingId: string,
+    data: { room?: string; checkInDate?: string; checkOutDate?: string; status?: string }
+): Promise<ApiResponse<IBooking>> => {
+    try {
+        const response = await api.put<ApiResponse<IBooking>>(`/bookings/${bookingId}`, data);
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data) {
+            return error.response.data as ApiErrorResponse;
+        }
+        return {
+            success: false,
+            message: error instanceof AxiosError
+                ? error.message || 'Network error occurred'
+                : 'An unexpected error occurred'
+        };
+    }
+};
+
+/**
+ * Get available rooms for given check-in and check-out dates
+ * GET /api/bookings/rooms/available
+ * 
+ * @param checkInDate - ISO date string
+ * @param checkOutDate - ISO date string
+ * @param excludeBookingId - Optional booking ID to exclude
+ * @returns Promise with available rooms
+ */
+export const getAvailableRooms = async (checkInDate: string, checkOutDate: string, excludeBookingId?: string): Promise<ApiResponse<IRoom[]>> => {
+    try {
+        const response = await api.get<ApiResponse<IRoom[]>>('/bookings/rooms/available', {
+            params: { checkInDate, checkOutDate, excludeBookingId }
+        });
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data) {
+            return error.response.data as ApiErrorResponse;
+        }
+        return {
+            success: false,
+            message: error instanceof AxiosError
+                ? error.message || 'Network error occurred'
+                : 'An unexpected error occurred'
+        };
+    }
+};
+
