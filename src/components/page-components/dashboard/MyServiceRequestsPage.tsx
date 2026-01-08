@@ -95,7 +95,7 @@ const MyServiceRequestsPage = () => {
 
         try {
             setBookingsLoading(true);
-            // Fetch all guest bookings (only active/confirmed ones)
+            // Fetch all guest bookings (only checked-in ones for active stays)
             const response = await getMyBookings(1, 100);
 
             if (response.success) {
@@ -104,9 +104,10 @@ const MyServiceRequestsPage = () => {
                     ? bookingsData
                     : (bookingsData?.items || []);
 
-                // Filter for confirmed bookings only
+                // Filter for checked-in bookings only (active stays)
+                // Service requests are only allowed during an active stay
                 const eligibleBookings = bookingsArray.filter(
-                    (booking: IBooking) => booking.status === "confirmed"
+                    (booking: IBooking) => booking.status === "checkedin"
                 );
 
                 setBookings(eligibleBookings);
@@ -170,16 +171,9 @@ const MyServiceRequestsPage = () => {
                 return;
             }
 
-            // Validation 1: Check if current date is before check-in date
-            const currentDate = new Date();
-            const checkInDate = new Date(selectedBooking.checkInDate);
-
-            // Reset time to compare dates only
-            currentDate.setHours(0, 0, 0, 0);
-            checkInDate.setHours(0, 0, 0, 0);
-
-            if (currentDate < checkInDate) {
-                toast.error("Service requests can only be made after check-in date");
+            // Validation 1: Ensure booking is checked-in (manual check-in is source of truth)
+            if (selectedBooking.status !== "checkedin") {
+                toast.error("Service requests are only available during an active stay (after check-in)");
                 return;
             }
 
@@ -518,7 +512,7 @@ const MyServiceRequestsPage = () => {
                     ) : bookings.length === 0 ? (
                         <div className="text-center py-4">
                             <p className="text-sm text-gray-400">
-                                No confirmed bookings found. You need a confirmed booking to create a service request.
+                                Service requests are available only during an active stay. Please check in first to create service requests.
                             </p>
                         </div>
                     ) : (

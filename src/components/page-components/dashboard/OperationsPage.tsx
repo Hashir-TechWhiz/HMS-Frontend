@@ -265,7 +265,7 @@ const OperationsPage = () => {
                     <Button
                         size="sm"
                         onClick={() => handleCheckInClick(booking)}
-                        className="h-8 px-3 flex-1 bg-blue-600 hover:bg-blue-700 text-xs"
+                        className="h-8 px-3 flex-1 bg-blue-600 hover:bg-blue-700 text-xs text-white"
                     >
                         <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
                         Check In
@@ -276,7 +276,7 @@ const OperationsPage = () => {
                     <Button
                         size="sm"
                         onClick={() => handleCheckOutClick(booking)}
-                        className="h-8 px-3 flex-1 bg-purple-600 hover:bg-purple-700 text-xs"
+                        className="h-8 px-3 flex-1 bg-purple-600 hover:bg-purple-700 text-xs text-white"
                     >
                         <LogOut className="h-3.5 w-3.5 mr-1" />
                         Check Out

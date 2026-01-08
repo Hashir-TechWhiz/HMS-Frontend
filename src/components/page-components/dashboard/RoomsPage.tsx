@@ -35,6 +35,7 @@ import TextAreaField from "@/components/forms/TextAreaField";
 import { EdgeStoreUploader } from "@/components/common/EdgeStoreUploader";
 
 import { Eye, Pencil, Trash2, Plus, Building2, CheckCircle2, Ban, Wrench } from "lucide-react";
+import ViewRoomDetails from "@/components/common/ViewRoomDetails";
 
 const RoomsPage = () => {
     const { role, loading: authLoading } = useAuth();
@@ -557,85 +558,9 @@ const RoomsPage = () => {
                     open={viewDialogOpen}
                     onOpenChange={setViewDialogOpen}
                     title="Room Details"
-                    widthClass="max-w-3xl"
+                    widthClass="md:min-w-3xl!"
                 >
-                    {selectedRoom && (
-                        <div className="space-y-4 py-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-sm text-gray-400">Room ID</p>
-                                    <p className="text-sm font-medium">{selectedRoom._id}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-400">Status</p>
-                                    <StatusBadge status={selectedRoom.status} />
-                                </div>
-                            </div>
-                            <div className="border-t border-gray-700 pt-4">
-                                <h3 className="text-sm font-semibold mb-3">Room Information</h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p className="text-sm text-gray-400">Room Number</p>
-                                        <p className="text-sm font-medium">{selectedRoom.roomNumber}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-400">Room Type</p>
-                                        <p className="text-sm font-medium">{selectedRoom.roomType}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-400">Capacity</p>
-                                        <p className="text-sm font-medium">{selectedRoom.capacity}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-400">Price Per Night</p>
-                                        <p className="text-sm font-medium">
-                                            ${selectedRoom.pricePerNight.toFixed(2)}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                            {selectedRoom.description && (
-                                <div className="border-t border-gray-700 pt-4">
-                                    <h3 className="text-sm font-semibold mb-2">Description</h3>
-                                    <p className="text-sm text-gray-300">{selectedRoom.description}</p>
-                                </div>
-                            )}
-                            <div className="border-t border-gray-700 pt-4">
-                                <h3 className="text-sm font-semibold mb-3">Images</h3>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    {selectedRoom.images.map((imageUrl, index) => (
-                                        <div
-                                            key={index}
-                                            className="relative w-full aspect-square rounded-lg overflow-hidden"
-                                        >
-                                            <Image
-                                                src={imageUrl}
-                                                alt={`Room ${selectedRoom.roomNumber} - Image ${index + 1}`}
-                                                fill
-                                                className="object-cover"
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="border-t border-gray-700 pt-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p className="text-sm text-gray-400">Created At</p>
-                                        <p className="text-sm font-medium">
-                                            {formatDateTime(selectedRoom.createdAt)}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-400">Last Updated</p>
-                                        <p className="text-sm font-medium">
-                                            {formatDateTime(selectedRoom.updatedAt)}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    <ViewRoomDetails room={selectedRoom} />
                 </DialogBox>
 
                 {/* Add/Edit Form Dialog */}
