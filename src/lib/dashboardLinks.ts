@@ -33,6 +33,12 @@ export const DASHBOARD_LINKS = {
             title: "Management",
             links: [
                 {
+                    label: "Operations Hub",
+                    href: "/dashboard/operations",
+                    icon: "/icons/Operations.svg",
+                    roles: getAllowedRoles("/dashboard/operations")!,
+                },
+                {
                     label: "Bookings",
                     href: "/dashboard/bookings",
                     icon: "/icons/Bookings.svg",
