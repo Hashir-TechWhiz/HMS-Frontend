@@ -389,6 +389,38 @@
     box-sizing: border-box;
   }
 
+  /* White color gradient for border */
+  .border-gradient-2 {
+    position: relative;
+    border-radius: 12px;
+    z-index: 0;
+    isolation: isolate;
+  }
+
+  .border-gradient-2 {
+    position: relative;
+    border-radius: 12px;
+    z-index: 0;
+  }
+
+  .border-gradient-2::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    padding: 1px;
+    background: linear-gradient(280deg,
+        rgba(255, 255, 255, 0.8) 0%,
+        rgba(255, 255, 255, 0.2) 100%);
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: destination-out;
+    mask-composite: exclude;
+    z-index: -1;
+    box-sizing: border-box;
+  }
+
 
   /* Auth */
   /* Auth */
