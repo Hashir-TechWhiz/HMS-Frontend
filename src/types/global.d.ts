@@ -235,6 +235,85 @@ declare global {
         rooms: IRoomReport;
         serviceRequests: IServiceRequestReport;
     }
+
+    // Detailed Report Types
+    interface IDetailedBookingReport {
+        _id: string;
+        guest?: {
+            _id: string;
+            name: string;
+            email: string;
+        };
+        customerDetails?: {
+            name: string;
+            phone: string;
+            email?: string;
+        };
+        createdBy?: {
+            _id: string;
+            name: string;
+        };
+        room: {
+            _id: string;
+            roomNumber: string;
+            roomType: string;
+        };
+        checkInDate: string;
+        checkOutDate: string;
+        status: BookingStatus;
+        createdAt: string;
+        updatedAt: string;
+    }
+
+    interface IPaymentReport {
+        _id: string;
+        bookingId: string;
+        guestName: string;
+        amount: number;
+        paymentMethod: string;
+        paymentStatus: string;
+        createdAt: string;
+    }
+
+    interface IRoomUtilizationReport {
+        _id: string;
+        roomNumber: string;
+        roomType: string;
+        status: string;
+        totalBookings: number;
+    }
+
+    interface IDetailedServiceRequestReport {
+        _id: string;
+        booking: string;
+        room: {
+            _id: string;
+            roomNumber: string;
+        };
+        requestedBy?: {
+            _id: string;
+            name: string;
+        };
+        serviceType: ServiceType;
+        status: ServiceStatus;
+        assignedRole?: string;
+        assignedTo?: {
+            _id: string;
+            name: string;
+        };
+        notes?: string;
+        createdAt: string;
+        updatedAt: string;
+    }
+
+    interface IGuestReport {
+        _id: string;
+        name: string;
+        email: string;
+        isActive: boolean;
+        totalBookings: number;
+        createdAt: string;
+    }
 }
 
 export { };
