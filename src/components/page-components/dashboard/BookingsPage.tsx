@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getAllBookings, getMyBookings, cancelBooking, confirmBooking } from "@/services/bookingService";
+import { getAllBookings, getMyBookings, cancelBooking, confirmBooking, checkInBooking, checkOutBooking } from "@/services/bookingService";
 import { getBookingsReport } from "@/services/reportService";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
@@ -42,9 +42,13 @@ const BookingsPage = () => {
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
     const [penaltyDialogOpen, setPenaltyDialogOpen] = useState(false);
     const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+    const [checkInDialogOpen, setCheckInDialogOpen] = useState(false);
+    const [checkOutDialogOpen, setCheckOutDialogOpen] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState<IBooking | null>(null);
     const [cancelLoading, setCancelLoading] = useState(false);
     const [confirmLoading, setConfirmLoading] = useState(false);
+    const [checkInLoading, setCheckInLoading] = useState(false);
+    const [checkOutLoading, setCheckOutLoading] = useState(false);
 
     // Penalty states
     const [penaltyAmount, setPenaltyAmount] = useState(0);
@@ -280,6 +284,7 @@ const BookingsPage = () => {
                 setConfirmDialogOpen(false);
                 setSelectedBooking(null);
                 fetchBookings(currentPage);
+                fetchBookingStats();
             } else {
                 toast.error(response.message || "Failed to confirm booking");
             }
@@ -287,6 +292,78 @@ const BookingsPage = () => {
             toast.error("An error occurred while confirming the booking");
         } finally {
             setConfirmLoading(false);
+        }
+    };
+
+    // Check if check-in is allowed (date must be today or in the past)
+    const isCheckInAllowed = (booking: IBooking): boolean => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const checkInDate = new Date(booking.checkInDate);
+        checkInDate.setHours(0, 0, 0, 0);
+        return today >= checkInDate;
+    };
+
+    // Handle check-in booking
+    const handleCheckInClick = (booking: IBooking) => {
+        // Check if check-in date has arrived
+        if (!isCheckInAllowed(booking)) {
+            toast.error("Check-in is not allowed before the scheduled check-in date");
+            return;
+        }
+        setSelectedBooking(booking);
+        setCheckInDialogOpen(true);
+    };
+
+    const handleCheckInConfirm = async () => {
+        if (!selectedBooking) return;
+
+        try {
+            setCheckInLoading(true);
+            const response = await checkInBooking(selectedBooking._id);
+
+            if (response.success) {
+                toast.success("Booking checked-in successfully!");
+                setCheckInDialogOpen(false);
+                setSelectedBooking(null);
+                fetchBookings(currentPage);
+                fetchBookingStats();
+            } else {
+                toast.error(response.message || "Failed to check-in booking");
+            }
+        } catch {
+            toast.error("An error occurred while checking-in the booking");
+        } finally {
+            setCheckInLoading(false);
+        }
+    };
+
+    // Handle check-out booking
+    const handleCheckOutClick = (booking: IBooking) => {
+        setSelectedBooking(booking);
+        setCheckOutDialogOpen(true);
+    };
+
+    const handleCheckOutConfirm = async () => {
+        if (!selectedBooking) return;
+
+        try {
+            setCheckOutLoading(true);
+            const response = await checkOutBooking(selectedBooking._id);
+
+            if (response.success) {
+                toast.success("Booking checked-out successfully!");
+                setCheckOutDialogOpen(false);
+                setSelectedBooking(null);
+                fetchBookings(currentPage);
+                fetchBookingStats();
+            } else {
+                toast.error(response.message || "Failed to check-out booking");
+            }
+        } catch {
+            toast.error("An error occurred while checking-out the booking");
+        } finally {
+            setCheckOutLoading(false);
         }
     };
 
@@ -540,6 +617,42 @@ const BookingsPage = () => {
                             <CheckCircle className="h-4 w-4" />
                         </Button>
                     )}
+                    {booking.status === "confirmed" && (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <span>
+                                        <Button
+                                            size="sm"
+                                            variant="default"
+                                            onClick={() => handleCheckInClick(booking)}
+                                            disabled={!isCheckInAllowed(booking)}
+                                            className="h-8 px-2 bg-blue-600 hover:bg-blue-700 border-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title="Check In"
+                                        >
+                                            <CheckCircle2 className="h-4 w-4" />
+                                        </Button>
+                                    </span>
+                                </TooltipTrigger>
+                                {!isCheckInAllowed(booking) && (
+                                    <TooltipContent side="bottom">
+                                        Check-in is only allowed on or after the scheduled check-in date
+                                    </TooltipContent>
+                                )}
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
+                    {booking.status === "checkedin" && (
+                        <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleCheckOutClick(booking)}
+                            className="h-8 px-2 bg-purple-600 hover:bg-purple-700 border-purple-700"
+                            title="Check Out"
+                        >
+                            <CheckCircle className="h-4 w-4" />
+                        </Button>
+                    )}
                     <Button
                         size="sm"
                         variant="destructive"
@@ -779,6 +892,34 @@ const BookingsPage = () => {
                     onConfirm={handleConfirmConfirm}
                     onCancel={() => setConfirmDialogOpen(false)}
                     confirmLoading={confirmLoading}
+                    variant="success"
+                />
+                {/* Check In Dialog */}
+                <DialogBox
+                    open={checkInDialogOpen}
+                    onOpenChange={setCheckInDialogOpen}
+                    title="Check In Booking"
+                    description="Are you sure you want to check-in this booking? This action confirms that the guest has arrived and taken occupancy of the room."
+                    showFooter
+                    confirmText="Check In"
+                    cancelText="Go Back"
+                    onConfirm={handleCheckInConfirm}
+                    onCancel={() => setCheckInDialogOpen(false)}
+                    confirmLoading={checkInLoading}
+                    variant="success"
+                />
+                {/* Check Out Dialog */}
+                <DialogBox
+                    open={checkOutDialogOpen}
+                    onOpenChange={setCheckOutDialogOpen}
+                    title="Check Out Booking"
+                    description="Are you sure you want to check-out this booking? This action confirms that the guest has vacated the room and the booking is complete."
+                    showFooter
+                    confirmText="Check Out"
+                    cancelText="Go Back"
+                    onConfirm={handleCheckOutConfirm}
+                    onCancel={() => setCheckOutDialogOpen(false)}
+                    confirmLoading={checkOutLoading}
                     variant="success"
                 />
             </div>

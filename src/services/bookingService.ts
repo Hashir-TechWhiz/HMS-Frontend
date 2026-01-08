@@ -257,3 +257,52 @@ export const confirmBooking = async (bookingId: string): Promise<ApiResponse<IBo
     }
 };
 
+/**
+ * Check-in a booking (manual action by staff)
+ * PATCH /api/bookings/:id/check-in
+ * 
+ * @param bookingId - The ID of the booking to check-in
+ * @returns Promise with updated booking data
+ */
+export const checkInBooking = async (bookingId: string): Promise<ApiResponse<IBooking>> => {
+    try {
+        const response = await api.patch<ApiResponse<IBooking>>(`/bookings/${bookingId}/check-in`);
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data) {
+            return error.response.data as ApiErrorResponse;
+        }
+        // Handle network errors, auth errors, or any other errors gracefully
+        return {
+            success: false,
+            message: error instanceof AxiosError
+                ? error.message || 'Network error occurred'
+                : 'An unexpected error occurred'
+        };
+    }
+};
+
+/**
+ * Check-out a booking (manual action by staff)
+ * PATCH /api/bookings/:id/check-out
+ * 
+ * @param bookingId - The ID of the booking to check-out
+ * @returns Promise with updated booking data
+ */
+export const checkOutBooking = async (bookingId: string): Promise<ApiResponse<IBooking>> => {
+    try {
+        const response = await api.patch<ApiResponse<IBooking>>(`/bookings/${bookingId}/check-out`);
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data) {
+            return error.response.data as ApiErrorResponse;
+        }
+        // Handle network errors, auth errors, or any other errors gracefully
+        return {
+            success: false,
+            message: error instanceof AxiosError
+                ? error.message || 'Network error occurred'
+                : 'An unexpected error occurred'
+        };
+    }
+};
