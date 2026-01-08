@@ -258,24 +258,21 @@ export const confirmBooking = async (bookingId: string): Promise<ApiResponse<IBo
 };
 
 /**
- * Edit a booking
- * PUT /api/bookings/:id
+ * Check-in a booking (manual action by staff)
+ * PATCH /api/bookings/:id/check-in
  * 
- * @param bookingId - The ID of the booking to edit
- * @param data - The data to update (room, checkInDate, checkOutDate, status)
+ * @param bookingId - The ID of the booking to check-in
  * @returns Promise with updated booking data
  */
-export const updateBooking = async (
-    bookingId: string,
-    data: { room?: string; checkInDate?: string; checkOutDate?: string; status?: string }
-): Promise<ApiResponse<IBooking>> => {
+export const checkInBooking = async (bookingId: string): Promise<ApiResponse<IBooking>> => {
     try {
-        const response = await api.put<ApiResponse<IBooking>>(`/bookings/${bookingId}`, data);
+        const response = await api.patch<ApiResponse<IBooking>>(`/bookings/${bookingId}/check-in`);
         return response.data;
     } catch (error) {
         if (error instanceof AxiosError && error.response?.data) {
             return error.response.data as ApiErrorResponse;
         }
+        // Handle network errors, auth errors, or any other errors gracefully
         return {
             success: false,
             message: error instanceof AxiosError
@@ -286,24 +283,21 @@ export const updateBooking = async (
 };
 
 /**
- * Get available rooms for given check-in and check-out dates
- * GET /api/bookings/rooms/available
+ * Check-out a booking (manual action by staff)
+ * PATCH /api/bookings/:id/check-out
  * 
- * @param checkInDate - ISO date string
- * @param checkOutDate - ISO date string
- * @param excludeBookingId - Optional booking ID to exclude
- * @returns Promise with available rooms
+ * @param bookingId - The ID of the booking to check-out
+ * @returns Promise with updated booking data
  */
-export const getAvailableRooms = async (checkInDate: string, checkOutDate: string, excludeBookingId?: string): Promise<ApiResponse<IRoom[]>> => {
+export const checkOutBooking = async (bookingId: string): Promise<ApiResponse<IBooking>> => {
     try {
-        const response = await api.get<ApiResponse<IRoom[]>>('/bookings/rooms/available', {
-            params: { checkInDate, checkOutDate, excludeBookingId }
-        });
+        const response = await api.patch<ApiResponse<IBooking>>(`/bookings/${bookingId}/check-out`);
         return response.data;
     } catch (error) {
         if (error instanceof AxiosError && error.response?.data) {
             return error.response.data as ApiErrorResponse;
         }
+        // Handle network errors, auth errors, or any other errors gracefully
         return {
             success: false,
             message: error instanceof AxiosError
@@ -312,4 +306,3 @@ export const getAvailableRooms = async (checkInDate: string, checkOutDate: strin
         };
     }
 };
-
