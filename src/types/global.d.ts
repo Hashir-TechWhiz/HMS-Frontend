@@ -44,6 +44,8 @@ declare global {
         autoComplete?: string;
         height?: string;
         readonly?: boolean;
+        icon?: React.ReactNode;
+        maxLength?: number;
     };
 
     type IFormTextareaProps = {
@@ -137,7 +139,7 @@ declare global {
     }
 
     // Booking Types
-    type BookingStatus = 'pending' | 'confirmed' | 'cancelled';
+    type BookingStatus = 'pending' | 'confirmed' | 'checkedin' | 'completed' | 'cancelled';
 
     interface IBooking {
         _id: string;
@@ -154,6 +156,11 @@ declare global {
         status: BookingStatus;
         createdAt: string;
         updatedAt: string;
+        // Cancellation penalty fields (for staff-managed cancellations)
+        cancellationPenalty?: number;
+        cancelledBy?: IUser | string;
+        cancellationReason?: string;
+        cancellationDate?: string;
     }
 
     // Date filter types for API queries
@@ -195,6 +202,8 @@ declare global {
         byStatus: {
             pending: number;
             confirmed: number;
+            checkedin: number;
+            completed: number;
             cancelled: number;
         };
     }
@@ -225,6 +234,85 @@ declare global {
         bookings: IBookingReport;
         rooms: IRoomReport;
         serviceRequests: IServiceRequestReport;
+    }
+
+    // Detailed Report Types
+    interface IDetailedBookingReport {
+        _id: string;
+        guest?: {
+            _id: string;
+            name: string;
+            email: string;
+        };
+        customerDetails?: {
+            name: string;
+            phone: string;
+            email?: string;
+        };
+        createdBy?: {
+            _id: string;
+            name: string;
+        };
+        room: {
+            _id: string;
+            roomNumber: string;
+            roomType: string;
+        };
+        checkInDate: string;
+        checkOutDate: string;
+        status: BookingStatus;
+        createdAt: string;
+        updatedAt: string;
+    }
+
+    interface IPaymentReport {
+        _id: string;
+        bookingId: string;
+        guestName: string;
+        amount: number;
+        paymentMethod: string;
+        paymentStatus: string;
+        createdAt: string;
+    }
+
+    interface IRoomUtilizationReport {
+        _id: string;
+        roomNumber: string;
+        roomType: string;
+        status: string;
+        totalBookings: number;
+    }
+
+    interface IDetailedServiceRequestReport {
+        _id: string;
+        booking: string;
+        room: {
+            _id: string;
+            roomNumber: string;
+        };
+        requestedBy?: {
+            _id: string;
+            name: string;
+        };
+        serviceType: ServiceType;
+        status: ServiceStatus;
+        assignedRole?: string;
+        assignedTo?: {
+            _id: string;
+            name: string;
+        };
+        notes?: string;
+        createdAt: string;
+        updatedAt: string;
+    }
+
+    interface IGuestReport {
+        _id: string;
+        name: string;
+        email: string;
+        isActive: boolean;
+        totalBookings: number;
+        createdAt: string;
     }
 }
 

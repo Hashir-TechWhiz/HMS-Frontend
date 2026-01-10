@@ -1,28 +1,37 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getAllBookings, getMyBookings, cancelBooking, confirmBooking } from "@/services/bookingService";
+import { getAllBookings, getMyBookings, cancelBooking, confirmBooking, checkInBooking, checkOutBooking } from "@/services/bookingService";
 import { getBookingsReport } from "@/services/reportService";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
+import CancellationPenaltyDialog from "./CancellationPenaltyDialog";
 import StatCard from "@/components/common/StatCard";
+import SelectField from "@/components/forms/SelectField";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Eye, XCircle, CheckCircle, ClipboardList, CheckCircle2, Clock } from "lucide-react";
 import { formatDateTime, normalizeDateRange } from "@/lib/utils";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { DateRange } from "react-day-picker";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const BookingsPage = () => {
     const { role, loading: authLoading } = useAuth();
 
-    const [bookings, setBookings] = useState<IBooking[]>([]);
+    const [allBookings, setAllBookings] = useState<IBooking[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+    const [statusFilter, setStatusFilter] = useState<string>("all");
 
     // KPI states
     const [kpiLoading, setKpiLoading] = useState(false);
@@ -31,10 +40,19 @@ const BookingsPage = () => {
     // Dialog states
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+    const [penaltyDialogOpen, setPenaltyDialogOpen] = useState(false);
     const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+    const [checkInDialogOpen, setCheckInDialogOpen] = useState(false);
+    const [checkOutDialogOpen, setCheckOutDialogOpen] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState<IBooking | null>(null);
     const [cancelLoading, setCancelLoading] = useState(false);
     const [confirmLoading, setConfirmLoading] = useState(false);
+    const [checkInLoading, setCheckInLoading] = useState(false);
+    const [checkOutLoading, setCheckOutLoading] = useState(false);
+
+    // Penalty states
+    const [penaltyAmount, setPenaltyAmount] = useState(0);
+    const [penaltyMessage, setPenaltyMessage] = useState("");
 
     const itemsPerPage = 10;
 
@@ -66,7 +84,7 @@ const BookingsPage = () => {
                     ? bookingsData
                     : (bookingsData?.items || bookingsData?.data || []);
 
-                setBookings(bookingsArray);
+                setAllBookings(bookingsArray);
 
                 // Pagination is at the response level, not nested in data
                 const paginationData: any = response;
@@ -126,6 +144,45 @@ const BookingsPage = () => {
         setCurrentPage(newPage);
     };
 
+    // Calculate cancellation penalty based on check-in date
+    const calculateCancellationPenalty = (booking: IBooking): { amount: number; message: string } => {
+        const now = new Date();
+        const checkInDate = new Date(booking.checkInDate);
+        const checkOutDate = new Date(booking.checkOutDate);
+
+        // Calculate hours until check-in
+        const hoursUntilCheckIn = (checkInDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+        // Get room price per night
+        const room = typeof booking.room === "string" ? null : booking.room;
+        const pricePerNight = room?.pricePerNight || 0;
+
+        // Calculate number of nights
+        const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        // Apply penalty rules
+        if (hoursUntilCheckIn > 24) {
+            // More than 24 hours before check-in → no penalty
+            return {
+                amount: 0,
+                message: "No penalty applies (cancellation is more than 24 hours before check-in)"
+            };
+        } else if (hoursUntilCheckIn > 0) {
+            // 24 hours or less before check-in → 1 night charge
+            return {
+                amount: pricePerNight,
+                message: "Penalty of 1 night charge applies (cancellation within 24 hours of check-in)"
+            };
+        } else {
+            // On or after check-in date → full amount (no refund)
+            const totalAmount = pricePerNight * nights;
+            return {
+                amount: totalAmount,
+                message: "Full booking amount applies as penalty (cancellation on or after check-in date)"
+            };
+        }
+    };
+
     // Handle view details
     const handleViewDetails = (booking: IBooking) => {
         setSelectedBooking(booking);
@@ -141,7 +198,17 @@ const BookingsPage = () => {
         }
 
         setSelectedBooking(booking);
-        setCancelDialogOpen(true);
+
+        // Staff cancelling confirmed bookings → show penalty dialog
+        if ((role === "admin" || role === "receptionist") && booking.status === "confirmed") {
+            const penalty = calculateCancellationPenalty(booking);
+            setPenaltyAmount(penalty.amount);
+            setPenaltyMessage(penalty.message);
+            setPenaltyDialogOpen(true);
+        } else {
+            // Guest cancelling pending or staff cancelling pending → regular dialog
+            setCancelDialogOpen(true);
+        }
     };
 
     const handleCancelConfirm = async () => {
@@ -156,6 +223,39 @@ const BookingsPage = () => {
                 setCancelDialogOpen(false);
                 setSelectedBooking(null);
                 fetchBookings(currentPage);
+                fetchBookingStats();
+            } else {
+                toast.error(response.message || "Failed to cancel booking");
+            }
+        } catch {
+            toast.error("An error occurred while cancelling the booking");
+        } finally {
+            setCancelLoading(false);
+        }
+    };
+
+    const handlePenaltyCancelConfirm = async (reason?: string) => {
+        if (!selectedBooking) return;
+
+        try {
+            setCancelLoading(true);
+            const penaltyData = {
+                cancellationPenalty: penaltyAmount,
+                cancellationReason: reason
+            };
+
+            const response = await cancelBooking(selectedBooking._id, penaltyData);
+
+            if (response.success) {
+                if (penaltyAmount > 0) {
+                    toast.success(`Booking cancelled with penalty of LKR ${penaltyAmount.toLocaleString()}`);
+                } else {
+                    toast.success("Booking cancelled successfully (no penalty)");
+                }
+                setPenaltyDialogOpen(false);
+                setSelectedBooking(null);
+                fetchBookings(currentPage);
+                fetchBookingStats();
             } else {
                 toast.error(response.message || "Failed to cancel booking");
             }
@@ -184,6 +284,7 @@ const BookingsPage = () => {
                 setConfirmDialogOpen(false);
                 setSelectedBooking(null);
                 fetchBookings(currentPage);
+                fetchBookingStats();
             } else {
                 toast.error(response.message || "Failed to confirm booking");
             }
@@ -191,6 +292,78 @@ const BookingsPage = () => {
             toast.error("An error occurred while confirming the booking");
         } finally {
             setConfirmLoading(false);
+        }
+    };
+
+    // Check if check-in is allowed (date must be today or in the past)
+    const isCheckInAllowed = (booking: IBooking): boolean => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const checkInDate = new Date(booking.checkInDate);
+        checkInDate.setHours(0, 0, 0, 0);
+        return today >= checkInDate;
+    };
+
+    // Handle check-in booking
+    const handleCheckInClick = (booking: IBooking) => {
+        // Check if check-in date has arrived
+        if (!isCheckInAllowed(booking)) {
+            toast.error("Check-in is not allowed before the scheduled check-in date");
+            return;
+        }
+        setSelectedBooking(booking);
+        setCheckInDialogOpen(true);
+    };
+
+    const handleCheckInConfirm = async () => {
+        if (!selectedBooking) return;
+
+        try {
+            setCheckInLoading(true);
+            const response = await checkInBooking(selectedBooking._id);
+
+            if (response.success) {
+                toast.success("Booking checked-in successfully!");
+                setCheckInDialogOpen(false);
+                setSelectedBooking(null);
+                fetchBookings(currentPage);
+                fetchBookingStats();
+            } else {
+                toast.error(response.message || "Failed to check-in booking");
+            }
+        } catch {
+            toast.error("An error occurred while checking-in the booking");
+        } finally {
+            setCheckInLoading(false);
+        }
+    };
+
+    // Handle check-out booking
+    const handleCheckOutClick = (booking: IBooking) => {
+        setSelectedBooking(booking);
+        setCheckOutDialogOpen(true);
+    };
+
+    const handleCheckOutConfirm = async () => {
+        if (!selectedBooking) return;
+
+        try {
+            setCheckOutLoading(true);
+            const response = await checkOutBooking(selectedBooking._id);
+
+            if (response.success) {
+                toast.success("Booking checked-out successfully!");
+                setCheckOutDialogOpen(false);
+                setSelectedBooking(null);
+                fetchBookings(currentPage);
+                fetchBookingStats();
+            } else {
+                toast.error(response.message || "Failed to check-out booking");
+            }
+        } catch {
+            toast.error("An error occurred while checking-out the booking");
+        } finally {
+            setCheckOutLoading(false);
         }
     };
 
@@ -251,15 +424,46 @@ const BookingsPage = () => {
         const colors = {
             pending: "bg-yellow-500/20 text-yellow-400 border-yellow-500/50",
             confirmed: "bg-green-500/20 text-green-400 border-green-500/50",
+            checkedin: "bg-purple-500/20 text-purple-400 border-purple-500/50",
+            completed: "bg-blue-500/20 text-blue-400 border-blue-500/50",
             cancelled: "bg-red-500/20 text-red-400 border-red-500/50",
         };
-
+        const labels = {
+            pending: "Pending",
+            confirmed: "Confirmed",
+            checkedin: "Checked In",
+            completed: "Completed",
+            cancelled: "Cancelled",
+        };
         return (
-            <span className={`px-2 py-1 rounded-md text-xs font-medium border ${colors[status]}`}>
-                {status.charAt(0).toUpperCase() + status.slice(1)}
+            <span className={`px-2 py-1 rounded-md text-xs font-medium border ${colors[status] || ''}`}>
+                {labels[status] || status}
             </span>
         );
     };
+
+    // Status filter options
+    const statusFilterOptions: Option[] = [
+        { value: "all", label: "All Bookings" },
+        { value: "pending", label: "Pending" },
+        { value: "confirmed", label: "Confirmed" },
+        { value: "checkedin", label: "Checked In" },
+        { value: "completed", label: "Completed" },
+        { value: "cancelled", label: "Cancelled" },
+    ];
+
+    // Filter bookings based on status filter (client-side)
+    const filteredBookings = useMemo(() => {
+        if (statusFilter === "all") {
+            return allBookings;
+        }
+        return allBookings.filter((booking) => booking.status === statusFilter);
+    }, [allBookings, statusFilter]);
+
+    // Update total items when filtered bookings change
+    useEffect(() => {
+        setTotalItems(filteredBookings.length);
+    }, [filteredBookings]);
 
     // Define columns based on role
     const guestColumns = [
@@ -303,26 +507,38 @@ const BookingsPage = () => {
                         variant="outline"
                         onClick={() => handleViewDetails(booking)}
                         className="h-8 px-2"
-                        title="View Details"
                     >
                         <Eye className="h-4 w-4" />
                     </Button>
-                    <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleCancelClick(booking)}
-                        disabled={booking.status === "cancelled" || booking.status === "confirmed"}
-                        className="h-8 px-2"
-                        title={
-                            booking.status === "cancelled"
-                                ? "Booking already cancelled"
-                                : booking.status === "confirmed"
-                                    ? "Cannot cancel confirmed bookings. Contact hotel for assistance."
-                                    : "Cancel Booking"
-                        }
-                    >
-                        <XCircle className="h-4 w-4" />
-                    </Button>
+
+                    <TooltipProvider>
+                        <Tooltip >
+                            <TooltipTrigger asChild>
+                                <span>
+                                    <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={() => handleCancelClick(booking)}
+                                        disabled={booking.status !== "pending"}
+                                        className="h-8 px-2"
+                                    >
+                                        <XCircle className="h-4 w-4" />
+                                    </Button>
+                                </span>
+                            </TooltipTrigger>
+                            {(booking.status !== "pending") && (
+                                <TooltipContent side="bottom">
+                                    {booking.status === "cancelled"
+                                        ? "Booking already cancelled"
+                                        : booking.status === "confirmed"
+                                            ? "Cannot cancel confirmed bookings. Contact hotel for assistance."
+                                            : booking.status === "checkedin"
+                                                ? "Cannot cancel checked-in bookings."
+                                                : "Cannot cancel completed bookings."}
+                                </TooltipContent>
+                            )}
+                        </Tooltip>
+                    </TooltipProvider>
                 </div>
             ),
         },
@@ -401,11 +617,45 @@ const BookingsPage = () => {
                             <CheckCircle className="h-4 w-4" />
                         </Button>
                     )}
+                    {booking.status === "confirmed" && (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <span>
+                                        <Button
+                                            size="sm"
+                                            variant="default"
+                                            onClick={() => handleCheckInClick(booking)}
+                                            disabled={!isCheckInAllowed(booking)}
+                                            className="h-8 px-2 bg-blue-600 hover:bg-blue-700 border-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <CheckCircle2 className="h-4 w-4" />
+                                        </Button>
+                                    </span>
+                                </TooltipTrigger>
+                                {!isCheckInAllowed(booking) && (
+                                    <TooltipContent side="bottom">
+                                        Check-in is only allowed on or after the scheduled check-in date
+                                    </TooltipContent>
+                                )}
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
+                    {booking.status === "checkedin" && (
+                        <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleCheckOutClick(booking)}
+                            className="h-8 px-2 bg-purple-600 hover:bg-purple-700 border-purple-700"
+                        >
+                            <CheckCircle className="h-4 w-4" />
+                        </Button>
+                    )}
                     <Button
                         size="sm"
                         variant="destructive"
                         onClick={() => handleCancelClick(booking)}
-                        disabled={booking.status === "cancelled"}
+                        disabled={["cancelled", "checkedin", "completed"].includes(booking.status)}
                         className="h-8 px-2"
                         title="Cancel Booking"
                     >
@@ -477,7 +727,7 @@ const BookingsPage = () => {
                 </div>
             )}
             <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
-                <div className="flex justify-between items-center">
+                <div className="flex md:flex-row flex-col gap-5 md:items-center justify-between w-full">
                     <div>
                         <h1 className="text-2xl font-bold text-white">{pageTitle}</h1>
                         <p className="text-sm text-gray-400 mt-1">
@@ -486,16 +736,31 @@ const BookingsPage = () => {
                                 : "View and manage all hotel bookings"}
                         </p>
                     </div>
-                    <DateRangePicker
-                        value={dateRange}
-                        onChange={handleDateRangeChange}
-                        className="w-full max-w-sm"
-                    />
+
+                    <div className="flex lg:flex-row flex-col gap-5 w-full justify-end md:w-auto">
+                        {(role === "admin" || role === "receptionist") && (
+                            <div>
+                                <SelectField
+                                    name="statusFilter"
+                                    options={statusFilterOptions}
+                                    value={statusFilter}
+                                    onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+                                    width="md:w-[150px]"
+                                    className="text-xs md:text-sm h-11!"
+                                />
+                            </div>
+                        )}
+                        <DateRangePicker
+                            value={dateRange}
+                            onChange={handleDateRangeChange}
+                            className="w-full md:max-w-sm"
+                        />
+                    </div>
                 </div>
 
                 <DataTable
                     columns={columns}
-                    data={bookings}
+                    data={filteredBookings}
                     loading={loading}
                     emptyMessage="No bookings found."
                     pagination={{
@@ -603,6 +868,16 @@ const BookingsPage = () => {
                     confirmLoading={cancelLoading}
                     variant="danger"
                 />
+                {/* Cancellation Penalty Dialog (Staff Only) */}
+                <CancellationPenaltyDialog
+                    open={penaltyDialogOpen}
+                    onOpenChange={setPenaltyDialogOpen}
+                    booking={selectedBooking}
+                    penaltyAmount={penaltyAmount}
+                    penaltyMessage={penaltyMessage}
+                    onConfirm={handlePenaltyCancelConfirm}
+                    loading={cancelLoading}
+                />
                 {/* Confirm Booking Dialog */}
                 <DialogBox
                     open={confirmDialogOpen}
@@ -615,6 +890,34 @@ const BookingsPage = () => {
                     onConfirm={handleConfirmConfirm}
                     onCancel={() => setConfirmDialogOpen(false)}
                     confirmLoading={confirmLoading}
+                    variant="success"
+                />
+                {/* Check In Dialog */}
+                <DialogBox
+                    open={checkInDialogOpen}
+                    onOpenChange={setCheckInDialogOpen}
+                    title="Check In Booking"
+                    description="Are you sure you want to check-in this booking? This action confirms that the guest has arrived and taken occupancy of the room."
+                    showFooter
+                    confirmText="Check In"
+                    cancelText="Go Back"
+                    onConfirm={handleCheckInConfirm}
+                    onCancel={() => setCheckInDialogOpen(false)}
+                    confirmLoading={checkInLoading}
+                    variant="success"
+                />
+                {/* Check Out Dialog */}
+                <DialogBox
+                    open={checkOutDialogOpen}
+                    onOpenChange={setCheckOutDialogOpen}
+                    title="Check Out Booking"
+                    description="Are you sure you want to check-out this booking? This action confirms that the guest has vacated the room and the booking is complete."
+                    showFooter
+                    confirmText="Check Out"
+                    cancelText="Go Back"
+                    onConfirm={handleCheckOutConfirm}
+                    onCancel={() => setCheckOutDialogOpen(false)}
+                    confirmLoading={checkOutLoading}
                     variant="success"
                 />
             </div>

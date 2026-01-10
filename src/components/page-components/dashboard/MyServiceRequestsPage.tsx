@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getMyServiceRequests, createServiceRequest } from "@/services/serviceRequestService";
 import { getMyBookings } from "@/services/bookingService";
@@ -19,12 +19,13 @@ import { DateRange } from "react-day-picker";
 const MyServiceRequestsPage = () => {
     const { role, loading: authLoading } = useAuth();
 
-    const [serviceRequests, setServiceRequests] = useState<IServiceRequest[]>([]);
+    const [allServiceRequests, setAllServiceRequests] = useState<IServiceRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+    const [statusFilter, setStatusFilter] = useState<string>("all");
 
     // Bookings for dropdown
     const [bookings, setBookings] = useState<IBooking[]>([]);
@@ -68,7 +69,7 @@ const MyServiceRequestsPage = () => {
                     ? requestsData
                     : (requestsData?.items || []);
 
-                setServiceRequests(requestsArray);
+                setAllServiceRequests(requestsArray);
 
                 // Handle pagination
                 if (requestsData?.pagination) {
@@ -94,7 +95,7 @@ const MyServiceRequestsPage = () => {
 
         try {
             setBookingsLoading(true);
-            // Fetch all guest bookings (only active/confirmed ones)
+            // Fetch all guest bookings (only checked-in ones for active stays)
             const response = await getMyBookings(1, 100);
 
             if (response.success) {
@@ -103,9 +104,10 @@ const MyServiceRequestsPage = () => {
                     ? bookingsData
                     : (bookingsData?.items || []);
 
-                // Filter for confirmed bookings only
+                // Filter for checked-in bookings only (active stays)
+                // Service requests are only allowed during an active stay
                 const eligibleBookings = bookingsArray.filter(
-                    (booking: IBooking) => booking.status === "confirmed"
+                    (booking: IBooking) => booking.status === "checkedin"
                 );
 
                 setBookings(eligibleBookings);
@@ -169,21 +171,14 @@ const MyServiceRequestsPage = () => {
                 return;
             }
 
-            // Validation 1: Check if current date is before check-in date
-            const currentDate = new Date();
-            const checkInDate = new Date(selectedBooking.checkInDate);
-
-            // Reset time to compare dates only
-            currentDate.setHours(0, 0, 0, 0);
-            checkInDate.setHours(0, 0, 0, 0);
-
-            if (currentDate < checkInDate) {
-                toast.error("Service requests can only be made after check-in date");
+            // Validation 1: Ensure booking is checked-in (manual check-in is source of truth)
+            if (selectedBooking.status !== "checkedin") {
+                toast.error("Service requests are only available during an active stay (after check-in)");
                 return;
             }
 
             // Validation 2: Check for duplicate pending/in_progress requests
-            const existingRequest = serviceRequests.find(
+            const existingRequest = allServiceRequests.find(
                 (request: IServiceRequest) => {
                     const requestBookingId = typeof request.booking === "object"
                         ? request.booking._id
@@ -278,6 +273,27 @@ const MyServiceRequestsPage = () => {
         { value: "maintenance", label: "Maintenance" },
     ];
 
+    // Status filter options
+    const statusFilterOptions: Option[] = [
+        { value: "all", label: "All Requests" },
+        { value: "pending", label: "Pending" },
+        { value: "in_progress", label: "In Progress" },
+        { value: "completed", label: "Completed" },
+    ];
+
+    // Filter service requests based on status filter (client-side)
+    const filteredServiceRequests = useMemo(() => {
+        if (statusFilter === "all") {
+            return allServiceRequests;
+        }
+        return allServiceRequests.filter((request) => request.status === statusFilter);
+    }, [allServiceRequests, statusFilter]);
+
+    // Update total items when filtered requests change
+    useEffect(() => {
+        setTotalItems(filteredServiceRequests.length);
+    }, [filteredServiceRequests]);
+
     // Booking options
     const bookingOptions: Option[] = bookings.map((booking) => {
         const roomNumber = typeof booking.room === "object" ? booking.room.roomNumber : "N/A";
@@ -348,19 +364,32 @@ const MyServiceRequestsPage = () => {
     return (
         <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg 
             shadow-primary-900/15">
-            <div className="flex justify-between items-center">
+            <div className="flex md:flex-row flex-col gap-5 md:items-center justify-between w-full">
                 <div>
                     <h1 className="text-2xl font-bold text-white">My Service Requests</h1>
                     <p className="text-sm text-gray-400 mt-1">
                         Create and track your service requests
                     </p>
                 </div>
-                <div className="flex items-center gap-3">
+
+                <div className="flex lg:flex-row flex-col gap-5 w-full justify-end md:w-auto">
+                    <div>
+                        <SelectField
+                            name="statusFilter"
+                            options={statusFilterOptions}
+                            value={statusFilter}
+                            onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+                            width="md:w-[150px]"
+                            className="text-xs md:text-sm h-11!"
+                        />
+                    </div>
+
                     <DateRangePicker
                         value={dateRange}
                         onChange={handleDateRangeChange}
-                        className="w-full max-w-sm"
+                        className="w-full md:max-w-sm"
                     />
+
                     <Button onClick={handleAddClick} className="flex items-center gap-2 main-button-gradient">
                         <Plus className="h-4 w-4" />
                         New Service Request
@@ -370,7 +399,7 @@ const MyServiceRequestsPage = () => {
 
             <DataTable
                 columns={columns}
-                data={serviceRequests}
+                data={filteredServiceRequests}
                 loading={loading}
                 emptyMessage="No service requests found."
                 pagination={{
@@ -483,7 +512,7 @@ const MyServiceRequestsPage = () => {
                     ) : bookings.length === 0 ? (
                         <div className="text-center py-4">
                             <p className="text-sm text-gray-400">
-                                No confirmed bookings found. You need a confirmed booking to create a service request.
+                                Service requests are available only during an active stay. Please check in first to create service requests.
                             </p>
                         </div>
                     ) : (

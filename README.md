@@ -67,13 +67,13 @@ The Smart Hotel Management System frontend provides a comprehensive user interfa
 
 **Features**:
 
-- Browse available rooms with filters
-- Create bookings for selected dates
-- View booking history
-- Cancel pending bookings (before staff confirmation)
-- Create service requests after check-in date
-- View service request status
-- Update profile settings
+- Browse available rooms with filters.
+- Create bookings for selected dates.
+- View booking history.
+- Cancel pending bookings (before staff confirmation).
+- Create service requests after check-in date.
+- View service request status.
+- Update profile settings.
 
 **Restrictions**:
 
@@ -659,5 +659,6 @@ For questions or issues:
 - Check network requests in browser DevTools
 
 ---
+-------------------------------------------------------
 
 _Last Updated: December 27, 2025_

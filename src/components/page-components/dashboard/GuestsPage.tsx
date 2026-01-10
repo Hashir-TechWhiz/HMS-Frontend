@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getUsers, updateUserStatus } from "@/services/adminUserService";
 import { getAllBookings } from "@/services/bookingService";
 import DataTable from "@/components/common/DataTable";
+import SelectField from "@/components/forms/SelectField";
 import DialogBox from "@/components/common/DialogBox";
 import StatCard from "@/components/common/StatCard";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ const GuestsPage = () => {
     const [selectedGuest, setSelectedGuest] = useState<GuestWithBookings | null>(null);
     const [statusLoading, setStatusLoading] = useState(false);
     const [pendingStatus, setPendingStatus] = useState<boolean>(false);
+    const [statusFilter, setStatusFilter] = useState<string>("all");
 
     // Fetch guests with booking statistics
     const fetchGuests = useCallback(async () => {
@@ -182,6 +184,12 @@ const GuestsPage = () => {
         );
     };
 
+    const statusOptions: Option[] = [
+        { value: "all", label: "All" },
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" },
+    ];
+
     // Define columns
     const columns = [
         {
@@ -287,9 +295,18 @@ const GuestsPage = () => {
                 )}
             </div>
 
+            <div className="mb-4 w-full max-w-sm">
+                <SelectField
+                    name="guestStatusFilter"
+                    options={statusOptions}
+                    value={statusFilter}
+                    onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+                />
+            </div>
+
             <DataTable
                 columns={columns}
-                data={guests}
+                data={guests.filter(g => statusFilter === 'all' ? true : (statusFilter === 'active' ? g.isActive : !g.isActive))}
                 loading={loading}
                 emptyMessage="No guests found."
                 pagination={{

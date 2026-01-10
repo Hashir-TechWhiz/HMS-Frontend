@@ -114,3 +114,63 @@ export const updateProfile = async (data: { name?: string; email?: string }): Pr
     }
 };
 
+/**
+ * Request password reset OTP
+ * POST /auth/forgot-password
+ * 
+ * @param email - User's registered email address
+ * @returns Promise with success/error response
+ */
+export const forgotPassword = async (email: string): Promise<ApiResponse> => {
+    try {
+        const response = await api.post<ApiResponse>('/auth/forgot-password', { email });
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data) {
+            return error.response.data as ApiErrorResponse;
+        }
+        throw error;
+    }
+};
+
+/**
+ * Verify password reset OTP
+ * POST /auth/verify-reset-otp
+ * 
+ * @param email - User's email address
+ * @param otp - 6-digit OTP sent to email
+ * @returns Promise with success/error response
+ */
+export const verifyResetOtp = async (email: string, otp: string): Promise<ApiResponse> => {
+    try {
+        const response = await api.post<ApiResponse>('/auth/verify-reset-otp', { email, otp });
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data) {
+            return error.response.data as ApiErrorResponse;
+        }
+        throw error;
+    }
+};
+
+/**
+ * Reset password using verified OTP
+ * POST /auth/reset-password
+ * 
+ * @param email - User's email address
+ * @param otp - Verified 6-digit OTP
+ * @param newPassword - New password to set
+ * @returns Promise with success/error response
+ */
+export const resetPassword = async (email: string, otp: string, newPassword: string): Promise<ApiResponse> => {
+    try {
+        const response = await api.post<ApiResponse>('/auth/reset-password', { email, otp, newPassword });
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data) {
+            return error.response.data as ApiErrorResponse;
+        }
+        throw error;
+    }
+};
+

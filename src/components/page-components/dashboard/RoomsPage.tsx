@@ -3,7 +3,8 @@
 import {
     useState,
     useEffect,
-    useCallback
+    useCallback,
+    useMemo
 } from "react";
 
 import Image from "next/image";
@@ -34,16 +35,18 @@ import TextAreaField from "@/components/forms/TextAreaField";
 import { EdgeStoreUploader } from "@/components/common/EdgeStoreUploader";
 
 import { Eye, Pencil, Trash2, Plus, Building2, CheckCircle2, Ban, Wrench } from "lucide-react";
+import ViewRoomDetails from "@/components/common/ViewRoomDetails";
 
 const RoomsPage = () => {
     const { role, loading: authLoading } = useAuth();
     const { edgestore } = useEdgeStore();
 
-    const [rooms, setRooms] = useState<IRoom[]>([]);
+    const [allRooms, setAllRooms] = useState<IRoom[]>([]); // Store all unfiltered rooms
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
+    const [statusFilter, setStatusFilter] = useState<string>("all");
 
     // KPI states
     const [kpiLoading, setKpiLoading] = useState(false);
@@ -75,7 +78,7 @@ const RoomsPage = () => {
         description: string;
     }>();
 
-    // Fetch rooms
+    // Fetch rooms (without filtering)
     const fetchRooms = useCallback(async () => {
         if (!role || authLoading) return;
 
@@ -87,9 +90,9 @@ const RoomsPage = () => {
                 const roomsData: any = response.data;
                 const roomsArray = Array.isArray(roomsData) ? roomsData : (roomsData?.items || []);
 
-                setRooms(roomsArray);
+                // Store all rooms without filtering
+                setAllRooms(roomsArray);
                 setTotalPages(1);
-                setTotalItems(roomsArray.length);
             } else {
                 toast.error(response.message || "Failed to fetch rooms");
             }
@@ -99,6 +102,19 @@ const RoomsPage = () => {
             setLoading(false);
         }
     }, [role, authLoading]);
+
+    // Filter rooms based on status filter (client-side, no refetch)
+    const filteredRooms = useMemo(() => {
+        if (statusFilter === "all") {
+            return allRooms;
+        }
+        return allRooms.filter((room) => room.status === statusFilter);
+    }, [allRooms, statusFilter]);
+
+    // Update total items when filtered rooms change
+    useEffect(() => {
+        setTotalItems(filteredRooms.length);
+    }, [filteredRooms]);
 
     // Fetch room statistics
     const fetchRoomStats = useCallback(async () => {
@@ -340,8 +356,16 @@ const RoomsPage = () => {
         { value: "Presidential", label: "Presidential" },
     ];
 
-    // Status options
+    // Status options for room form
     const statusOptions: Option[] = [
+        { value: "available", label: "Available" },
+        { value: "unavailable", label: "Unavailable" },
+        { value: "maintenance", label: "Maintenance" },
+    ];
+
+    // Status filter options for filtering rooms
+    const statusFilterOptions: Option[] = [
+        { value: "all", label: "All Rooms" },
         { value: "available", label: "Available" },
         { value: "unavailable", label: "Unavailable" },
         { value: "maintenance", label: "Maintenance" },
@@ -489,22 +513,36 @@ const RoomsPage = () => {
 
             {/* Table */}
             <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
-                <div className="flex justify-between items-center">
+
+                <div className="flex md:flex-row flex-col gap-5 items-center justify-between w-full">
                     <div>
                         <h1 className="text-2xl font-bold text-white">Room Management</h1>
                         <p className="text-sm text-gray-400 mt-1">
                             View and manage all hotel rooms
                         </p>
                     </div>
-                    <Button onClick={handleAddClick} className="flex items-center gap-2 main-button-gradient">
-                        <Plus className="h-4 w-4" />
-                        Add Room
-                    </Button>
+
+                    <div className="flex lg:flex-row flex-col gap-5 w-full justify-end md:w-auto">
+                        <SelectField
+                            name="roomStatusFilter"
+                            options={statusFilterOptions}
+                            value={statusFilter}
+                            onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+                            width="md:w-[150px]"
+                            className="bg-black-500! border border-white/50 focus:ring-1! focus:ring-primary-800! text-xs md:text-sm h-10!"
+                        />
+
+                        <Button onClick={handleAddClick} className="main-button-gradient w-full md:w-[150px]">
+                            <Plus className="h-4 w-4" />
+                            Add Room
+                        </Button>
+                    </div>
                 </div>
+
 
                 <DataTable
                     columns={columns}
-                    data={rooms}
+                    data={filteredRooms}
                     loading={loading}
                     emptyMessage="No rooms found."
                     pagination={{
@@ -520,85 +558,9 @@ const RoomsPage = () => {
                     open={viewDialogOpen}
                     onOpenChange={setViewDialogOpen}
                     title="Room Details"
-                    widthClass="max-w-3xl"
+                    widthClass="md:min-w-3xl!"
                 >
-                    {selectedRoom && (
-                        <div className="space-y-4 py-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-sm text-gray-400">Room ID</p>
-                                    <p className="text-sm font-medium">{selectedRoom._id}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-400">Status</p>
-                                    <StatusBadge status={selectedRoom.status} />
-                                </div>
-                            </div>
-                            <div className="border-t border-gray-700 pt-4">
-                                <h3 className="text-sm font-semibold mb-3">Room Information</h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p className="text-sm text-gray-400">Room Number</p>
-                                        <p className="text-sm font-medium">{selectedRoom.roomNumber}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-400">Room Type</p>
-                                        <p className="text-sm font-medium">{selectedRoom.roomType}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-400">Capacity</p>
-                                        <p className="text-sm font-medium">{selectedRoom.capacity}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-400">Price Per Night</p>
-                                        <p className="text-sm font-medium">
-                                            ${selectedRoom.pricePerNight.toFixed(2)}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                            {selectedRoom.description && (
-                                <div className="border-t border-gray-700 pt-4">
-                                    <h3 className="text-sm font-semibold mb-2">Description</h3>
-                                    <p className="text-sm text-gray-300">{selectedRoom.description}</p>
-                                </div>
-                            )}
-                            <div className="border-t border-gray-700 pt-4">
-                                <h3 className="text-sm font-semibold mb-3">Images</h3>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    {selectedRoom.images.map((imageUrl, index) => (
-                                        <div
-                                            key={index}
-                                            className="relative w-full aspect-square rounded-lg overflow-hidden"
-                                        >
-                                            <Image
-                                                src={imageUrl}
-                                                alt={`Room ${selectedRoom.roomNumber} - Image ${index + 1}`}
-                                                fill
-                                                className="object-cover"
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="border-t border-gray-700 pt-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p className="text-sm text-gray-400">Created At</p>
-                                        <p className="text-sm font-medium">
-                                            {formatDateTime(selectedRoom.createdAt)}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-400">Last Updated</p>
-                                        <p className="text-sm font-medium">
-                                            {formatDateTime(selectedRoom.updatedAt)}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    <ViewRoomDetails room={selectedRoom} />
                 </DialogBox>
 
                 {/* Add/Edit Form Dialog */}

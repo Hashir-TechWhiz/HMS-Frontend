@@ -14,9 +14,12 @@ import {
     InputOTPGroup,
     InputOTPSlot,
 } from "@/components/ui/input-otp";
+import { forgotPassword, verifyResetOtp, resetPassword } from "@/services/authService";
+import { toast } from "sonner";
 
 const ForgotPassword = () => {
     const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+    const [storedEmail, setStoredEmail] = useState<string>("");
     const steps = ["Reset Password", "Verify OTP", "Set New Password"];
 
     const router = useRouter();
@@ -25,10 +28,102 @@ const ForgotPassword = () => {
         register,
         watch,
         control,
+        handleSubmit,
+        setError,
         formState: { errors, isSubmitting },
     } = useForm<IForgotPasswordForm>({
         mode: "onBlur",
     });
+
+    // Step 1: Request OTP
+    const handleRequestOtp = async (data: IForgotPasswordForm) => {
+        try {
+            const response = await forgotPassword(data.email);
+
+            if (response.success) {
+                setStoredEmail(data.email);
+                toast.success(response.message || "OTP sent to your email!");
+                setStep(2);
+            } else {
+                const errorMessage = response.message || "Failed to send OTP";
+                const lowerCaseError = errorMessage.toLowerCase();
+
+                if (lowerCaseError.includes("email") || lowerCaseError.includes("account")) {
+                    setError("email", {
+                        type: "manual",
+                        message: errorMessage,
+                    });
+                } else {
+                    toast.error(errorMessage);
+                }
+            }
+        } catch {
+            toast.error("An unexpected error occurred. Please try again.");
+        }
+    };
+
+    // Step 2: Verify OTP
+    const handleVerifyOtp = async (data: IForgotPasswordForm) => {
+        try {
+            const response = await verifyResetOtp(storedEmail, data.otp);
+
+            if (response.success) {
+                toast.success(response.message || "OTP verified successfully!");
+                setStep(3);
+            } else {
+                const errorMessage = response.message || "Invalid OTP";
+                const lowerCaseError = errorMessage.toLowerCase();
+
+                if (lowerCaseError.includes("otp")) {
+                    setError("otp", {
+                        type: "manual",
+                        message: errorMessage,
+                    });
+                } else {
+                    toast.error(errorMessage);
+                }
+            }
+        } catch {
+            toast.error("An unexpected error occurred. Please try again.");
+        }
+    };
+
+    // Step 3: Reset Password
+    const handleResetPassword = async (data: IForgotPasswordForm) => {
+        try {
+            const response = await resetPassword(storedEmail, data.otp, data.newPassword);
+
+            if (response.success) {
+                toast.success(response.message || "Password reset successfully!");
+                setStep(4);
+            } else {
+                const errorMessage = response.message || "Failed to reset password";
+                const lowerCaseError = errorMessage.toLowerCase();
+
+                if (lowerCaseError.includes("password")) {
+                    setError("newPassword", {
+                        type: "manual",
+                        message: errorMessage,
+                    });
+                } else {
+                    toast.error(errorMessage);
+                }
+            }
+        } catch {
+            toast.error("An unexpected error occurred. Please try again.");
+        }
+    };
+
+    // Form submission handler based on current step
+    const onSubmit = (data: IForgotPasswordForm) => {
+        if (step === 1) {
+            return handleRequestOtp(data);
+        } else if (step === 2) {
+            return handleVerifyOtp(data);
+        } else if (step === 3) {
+            return handleResetPassword(data);
+        }
+    };
 
     return (
         <div className="flex flex-col items-center justify-center w-full lg:px-8">
@@ -36,7 +131,7 @@ const ForgotPassword = () => {
             {step < 4 && <Stepper steps={steps} currentStep={step} />}
 
             {/* Form */}
-            <form className="space-y-4 w-full">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 w-full">
                 {/* Title + description */}
                 <div className="flex flex-col items-center gap-2 mt-4">
                     <h2 className="text-2xl font-semibold text-white">
@@ -169,22 +264,24 @@ const ForgotPassword = () => {
 
                                 {/* Next Button */}
                                 <Button
-                                    type="button"
+                                    type="submit"
                                     className="flex-1 main-button-gradient"
                                     disabled={isSubmitting}
                                 >
-                                    Send OTP
+                                    {isSubmitting ? "Sending..." : "Send OTP"}
                                 </Button>
                             </>
                         ) : (
                             <Button
-                                type="button"
+                                type="submit"
                                 className="w-full mt-2 main-button-gradient"
                                 disabled={isSubmitting}
                             >
-                                {step === 2
-                                    ? "Verify OTP"
-                                    : "Reset Password"}
+                                {isSubmitting
+                                    ? "Processing..."
+                                    : step === 2
+                                        ? "Verify OTP"
+                                        : "Reset Password"}
                             </Button>
                         )}
                     </div>

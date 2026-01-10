@@ -3,17 +3,20 @@
 import {
     useState,
     useEffect,
-    useCallback
+    useCallback,
+    useMemo
 } from "react";
 
 import { useAuth } from "@/contexts/AuthContext";
 
 import {
     getAllServiceRequests,
-    updateServiceRequestStatus
+    updateServiceRequestStatus,
+    assignServiceRequest
 } from "@/services/serviceRequestService";
 
 import { getServiceRequestsReport } from "@/services/reportService";
+import { getUsers } from "@/services/adminUserService";
 
 import { DateRange } from "react-day-picker";
 import { useForm } from "react-hook-form";
@@ -32,17 +35,18 @@ import DialogBox from "@/components/common/DialogBox";
 import SelectField from "@/components/forms/SelectField";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 
-import { Eye, RefreshCw, Settings, Clock, Loader2 as LoaderIcon, CheckCircle2 } from "lucide-react";
+import { Eye, RefreshCw, Settings, Clock, Loader2 as LoaderIcon, CheckCircle2, UserPlus } from "lucide-react";
 
 const AdminServiceRequestsPage = () => {
     const { role, loading: authLoading } = useAuth();
 
-    const [serviceRequests, setServiceRequests] = useState<IServiceRequest[]>([]);
+    const [allServiceRequests, setAllServiceRequests] = useState<IServiceRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+    const [statusFilter, setStatusFilter] = useState<string>("all");
 
     // KPI states
     const [kpiLoading, setKpiLoading] = useState(false);
@@ -51,18 +55,30 @@ const AdminServiceRequestsPage = () => {
     // Dialog states
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
     const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+    const [assignDialogOpen, setAssignDialogOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<IServiceRequest | null>(null);
     const [statusLoading, setStatusLoading] = useState(false);
+    const [assignLoading, setAssignLoading] = useState(false);
+    const [housekeepingStaff, setHousekeepingStaff] = useState<IUser[]>([]);
 
     const itemsPerPage = 10;
 
     const {
-        handleSubmit,
-        formState: { errors },
-        reset,
-        control,
+        handleSubmit: handleStatusSubmit,
+        formState: { errors: statusErrors },
+        reset: resetStatus,
+        control: statusControl,
     } = useForm<{
         status: ServiceStatus;
+    }>();
+
+    const {
+        handleSubmit: handleAssignSubmit,
+        formState: { errors: assignErrors },
+        reset: resetAssign,
+        control: assignControl,
+    } = useForm<{
+        staffId: string;
     }>();
 
     // Fetch all service requests
@@ -84,7 +100,7 @@ const AdminServiceRequestsPage = () => {
                     ? requestsData
                     : (requestsData?.items || []);
 
-                setServiceRequests(requestsArray);
+                setAllServiceRequests(requestsArray);
 
                 // Handle pagination
                 if (requestsData?.pagination) {
@@ -121,12 +137,29 @@ const AdminServiceRequestsPage = () => {
         }
     }, [role, authLoading]);
 
+    // Fetch housekeeping staff
+    const fetchHousekeepingStaff = useCallback(async () => {
+        try {
+            const response = await getUsers({ role: 'housekeeping', isActive: true });
+            if (response.success && response.data) {
+                const usersData: any = response.data;
+                const usersArray = Array.isArray(usersData)
+                    ? usersData
+                    : (usersData?.items || usersData?.users || []);
+                setHousekeepingStaff(usersArray);
+            }
+        } catch (error) {
+            console.error("Failed to fetch housekeeping staff:", error);
+        }
+    }, []);
+
     useEffect(() => {
         if (role && !authLoading && role === "admin") {
             fetchServiceRequests(currentPage);
             fetchServiceRequestStats();
+            fetchHousekeepingStaff();
         }
-    }, [role, authLoading, currentPage, fetchServiceRequests, fetchServiceRequestStats]);
+    }, [role, authLoading, currentPage, fetchServiceRequests, fetchServiceRequestStats, fetchHousekeepingStaff]);
 
     // Handle page change
     const handlePageChange = (newPage: number) => {
@@ -148,10 +181,19 @@ const AdminServiceRequestsPage = () => {
     // Handle update status
     const handleUpdateStatusClick = (request: IServiceRequest) => {
         setSelectedRequest(request);
-        reset({
+        resetStatus({
             status: request.status,
         });
         setStatusDialogOpen(true);
+    };
+
+    // Handle assign request
+    const handleAssignRequestClick = (request: IServiceRequest) => {
+        setSelectedRequest(request);
+        resetAssign({
+            staffId: '',
+        });
+        setAssignDialogOpen(true);
     };
 
     // Handle status update submit
@@ -167,6 +209,7 @@ const AdminServiceRequestsPage = () => {
                 toast.success("Service request status updated successfully");
                 setStatusDialogOpen(false);
                 fetchServiceRequests(currentPage);
+                fetchServiceRequestStats();
             } else {
                 toast.error(response.message || "Failed to update status");
             }
@@ -174,6 +217,30 @@ const AdminServiceRequestsPage = () => {
             toast.error(error?.message || "An error occurred");
         } finally {
             setStatusLoading(false);
+        }
+    };
+
+    // Handle assignment submit
+    const onAssignSubmit = async (data: { staffId: string }) => {
+        if (!selectedRequest) return;
+
+        try {
+            setAssignLoading(true);
+
+            const response = await assignServiceRequest(selectedRequest._id, data.staffId);
+
+            if (response.success) {
+                toast.success("Service request assigned successfully");
+                setAssignDialogOpen(false);
+                fetchServiceRequests(currentPage);
+                fetchServiceRequestStats();
+            } else {
+                toast.error(response.message || "Failed to assign request");
+            }
+        } catch (error: any) {
+            toast.error(error?.message || "An error occurred");
+        } finally {
+            setAssignLoading(false);
         }
     };
 
@@ -245,12 +312,33 @@ const AdminServiceRequestsPage = () => {
         maintenance: "Maintenance",
     };
 
-    // Status options
+    // Status options for form
     const statusOptions: Option[] = [
         { value: "pending", label: "Pending" },
         { value: "in_progress", label: "In Progress" },
         { value: "completed", label: "Completed" },
     ];
+
+    // Status filter options
+    const statusFilterOptions: Option[] = [
+        { value: "all", label: "All Requests" },
+        { value: "pending", label: "Pending" },
+        { value: "in_progress", label: "In Progress" },
+        { value: "completed", label: "Completed" },
+    ];
+
+    // Filter service requests based on status filter (client-side)
+    const filteredServiceRequests = useMemo(() => {
+        if (statusFilter === "all") {
+            return allServiceRequests;
+        }
+        return allServiceRequests.filter((request) => request.status === statusFilter);
+    }, [allServiceRequests, statusFilter]);
+
+    // Update total items when filtered requests change
+    useEffect(() => {
+        setTotalItems(filteredServiceRequests.length);
+    }, [filteredServiceRequests]);
 
     // Define columns
     const columns = [
@@ -313,6 +401,17 @@ const AdminServiceRequestsPage = () => {
                     >
                         <Eye className="h-4 w-4" />
                     </Button>
+                    {request.status === "pending" && !request.assignedTo && (
+                        <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleAssignRequestClick(request)}
+                            className="h-8 px-2 bg-blue-600 hover:bg-blue-700"
+                            title="Assign to Staff"
+                        >
+                            <UserPlus className="h-4 w-4" />
+                        </Button>
+                    )}
                     <Button
                         size="sm"
                         variant="outline"
@@ -376,22 +475,34 @@ const AdminServiceRequestsPage = () => {
 
             {/* Table */}
             <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
-                <div className="flex justify-between items-center">
+
+                <div className="flex md:flex-row flex-col gap-5 md:items-center justify-between w-full">
                     <div>
                         <h1 className="text-2xl font-semibold">Service Requests</h1>
                         <p className="text-sm text-gray-400 mt-1">
                             View and manage all service requests
                         </p>
                     </div>
-                    <DateRangePicker
-                        value={dateRange}
-                        onChange={handleDateRangeChange}
-                        className="w-full max-w-sm"
-                    />
+
+                    <div className="flex lg:flex-row flex-col gap-5 w-full justify-end md:w-auto">
+                        <SelectField
+                            name="statusFilter"
+                            options={statusFilterOptions}
+                            value={statusFilter}
+                            onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+                            width="md:w-[250px]"
+                            className="text-xs md:text-sm h-11!"
+                        />
+                        <DateRangePicker
+                            value={dateRange}
+                            onChange={handleDateRangeChange}
+                            className="w-full max-w-sm"
+                        />
+                    </div>
                 </div>
                 <DataTable
                     columns={columns}
-                    data={serviceRequests}
+                    data={filteredServiceRequests}
                     loading={loading}
                     emptyMessage="No service requests found."
                     pagination={{
@@ -496,6 +607,38 @@ const AdminServiceRequestsPage = () => {
                     )}
                 </DialogBox>
 
+                {/* Assign Request Dialog */}
+                <DialogBox
+                    open={assignDialogOpen}
+                    onOpenChange={setAssignDialogOpen}
+                    title="Assign Service Request"
+                    widthClass="max-w-md"
+                    showFooter
+                    confirmText="Assign"
+                    cancelText="Cancel"
+                    onConfirm={handleAssignSubmit(onAssignSubmit)}
+                    onCancel={() => setAssignDialogOpen(false)}
+                    disableConfirm={assignLoading}
+                    confirmLoading={assignLoading}
+                >
+                    <form onSubmit={(e) => { e.preventDefault(); handleAssignSubmit(onAssignSubmit)(e); }} className="space-y-4 py-4">
+                        <SelectField
+                            name="staffId"
+                            label="Assign to Housekeeping Staff *"
+                            options={housekeepingStaff.map(staff => ({
+                                value: staff._id,
+                                label: staff.name
+                            }))}
+                            control={assignControl}
+                            required
+                            error={assignErrors.staffId}
+                        />
+                        <p className="text-xs text-gray-400">
+                            Select a housekeeping staff member to assign this request to.
+                        </p>
+                    </form>
+                </DialogBox>
+
                 {/* Update Status Dialog */}
                 <DialogBox
                     open={statusDialogOpen}
@@ -505,19 +648,19 @@ const AdminServiceRequestsPage = () => {
                     showFooter
                     confirmText="Update Status"
                     cancelText="Cancel"
-                    onConfirm={handleSubmit(onStatusSubmit)}
+                    onConfirm={handleStatusSubmit(onStatusSubmit)}
                     onCancel={() => setStatusDialogOpen(false)}
                     disableConfirm={statusLoading}
                     confirmLoading={statusLoading}
                 >
-                    <form onSubmit={(e) => { e.preventDefault(); handleSubmit(onStatusSubmit)(e); }} className="space-y-4 py-4">
+                    <form onSubmit={(e) => { e.preventDefault(); handleStatusSubmit(onStatusSubmit)(e); }} className="space-y-4 py-4">
                         <SelectField
                             name="status"
                             label="Service Request Status *"
                             options={statusOptions}
-                            control={control}
+                            control={statusControl}
                             required
-                            error={errors.status}
+                            error={statusErrors.status}
                         />
                         <p className="text-xs text-gray-400">
                             Update the status to reflect the current state of the service request.

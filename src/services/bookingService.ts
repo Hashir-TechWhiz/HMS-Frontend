@@ -2,6 +2,16 @@ import api from '@/lib/api';
 import { AxiosError } from 'axios';
 
 /**
+ * Room availability check result interface
+ */
+export interface AvailabilityCheckResult {
+    available: boolean;
+    roomId: string;
+    checkInDate: string;
+    checkOutDate: string;
+}
+
+/**
  * Booking creation data interface
  * Based on backend API specification in README.md
  * 
@@ -25,6 +35,43 @@ export interface CreateBookingData {
         email?: string; // Optional
     };
 }
+
+/**
+ * Check room availability for given dates
+ * GET /api/bookings/check-availability
+ * 
+ * Public endpoint (no authentication required)
+ * 
+ * @param roomId - Room ID to check
+ * @param checkInDate - Check-in date (ISO string)
+ * @param checkOutDate - Check-out date (ISO string)
+ * @returns Promise with availability status
+ */
+export const checkAvailability = async (
+    roomId: string,
+    checkInDate: string,
+    checkOutDate: string
+): Promise<ApiResponse<AvailabilityCheckResult>> => {
+    try {
+        const response = await api.get<ApiResponse<AvailabilityCheckResult>>(
+            '/bookings/check-availability',
+            {
+                params: { roomId, checkInDate, checkOutDate }
+            }
+        );
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data) {
+            return error.response.data as ApiErrorResponse;
+        }
+        return {
+            success: false,
+            message: error instanceof AxiosError
+                ? error.message || 'Network error occurred'
+                : 'An unexpected error occurred'
+        };
+    }
+};
 
 /**
  * Create a new booking
@@ -158,11 +205,18 @@ export const getMyBookings = async (
  * PATCH /api/bookings/:id/cancel
  * 
  * @param bookingId - The ID of the booking to cancel
+ * @param penaltyData - Optional penalty data (for staff cancellations)
  * @returns Promise with updated booking data
  */
-export const cancelBooking = async (bookingId: string): Promise<ApiResponse<IBooking>> => {
+export const cancelBooking = async (
+    bookingId: string,
+    penaltyData?: { cancellationPenalty?: number; cancellationReason?: string }
+): Promise<ApiResponse<IBooking>> => {
     try {
-        const response = await api.patch<ApiResponse<IBooking>>(`/bookings/${bookingId}/cancel`);
+        const response = await api.patch<ApiResponse<IBooking>>(
+            `/bookings/${bookingId}/cancel`,
+            penaltyData || {}
+        );
         return response.data;
     } catch (error) {
         if (error instanceof AxiosError && error.response?.data) {
@@ -203,3 +257,52 @@ export const confirmBooking = async (bookingId: string): Promise<ApiResponse<IBo
     }
 };
 
+/**
+ * Check-in a booking (manual action by staff)
+ * PATCH /api/bookings/:id/check-in
+ * 
+ * @param bookingId - The ID of the booking to check-in
+ * @returns Promise with updated booking data
+ */
+export const checkInBooking = async (bookingId: string): Promise<ApiResponse<IBooking>> => {
+    try {
+        const response = await api.patch<ApiResponse<IBooking>>(`/bookings/${bookingId}/check-in`);
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data) {
+            return error.response.data as ApiErrorResponse;
+        }
+        // Handle network errors, auth errors, or any other errors gracefully
+        return {
+            success: false,
+            message: error instanceof AxiosError
+                ? error.message || 'Network error occurred'
+                : 'An unexpected error occurred'
+        };
+    }
+};
+
+/**
+ * Check-out a booking (manual action by staff)
+ * PATCH /api/bookings/:id/check-out
+ * 
+ * @param bookingId - The ID of the booking to check-out
+ * @returns Promise with updated booking data
+ */
+export const checkOutBooking = async (bookingId: string): Promise<ApiResponse<IBooking>> => {
+    try {
+        const response = await api.patch<ApiResponse<IBooking>>(`/bookings/${bookingId}/check-out`);
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data) {
+            return error.response.data as ApiErrorResponse;
+        }
+        // Handle network errors, auth errors, or any other errors gracefully
+        return {
+            success: false,
+            message: error instanceof AxiosError
+                ? error.message || 'Network error occurred'
+                : 'An unexpected error occurred'
+        };
+    }
+};

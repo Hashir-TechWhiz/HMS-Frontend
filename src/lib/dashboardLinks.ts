@@ -33,6 +33,12 @@ export const DASHBOARD_LINKS = {
             title: "Management",
             links: [
                 {
+                    label: "Operations Hub",
+                    href: "/dashboard/operations",
+                    icon: "/icons/Operations.svg",
+                    roles: getAllowedRoles("/dashboard/operations")!,
+                },
+                {
                     label: "Bookings",
                     href: "/dashboard/bookings",
                     icon: "/icons/Bookings.svg",
@@ -64,17 +70,17 @@ export const DASHBOARD_LINKS = {
                 },
             ],
         },
-        // {
-        //     title: "Reports",
-        //     links: [
-        //         {
-        //             label: "Reports",
-        //             href: "/dashboard/reports",
-        //             icon: "/icons/Reports.svg",
-        //             roles: getAllowedRoles("/dashboard/reports")!,
-        //         },
-        //     ],
-        // },
+        {
+            title: "Reports",
+            links: [
+                {
+                    label: "Reports",
+                    href: "/dashboard/reports",
+                    icon: "/icons/Reports.svg",
+                    roles: getAllowedRoles("/dashboard/reports")!,
+                },
+            ],
+        },
         {
             title: "Administration",
             links: [

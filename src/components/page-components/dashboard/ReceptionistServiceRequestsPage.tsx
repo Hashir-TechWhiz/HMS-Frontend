@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAllServiceRequests } from "@/services/serviceRequestService";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
+import SelectField from "@/components/forms/SelectField";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Eye } from "lucide-react";
@@ -15,12 +16,13 @@ import { DateRange } from "react-day-picker";
 const ReceptionistServiceRequestsPage = () => {
     const { role, loading: authLoading } = useAuth();
 
-    const [serviceRequests, setServiceRequests] = useState<IServiceRequest[]>([]);
+    const [allServiceRequests, setAllServiceRequests] = useState<IServiceRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+    const [statusFilter, setStatusFilter] = useState<string>("all");
 
     // Dialog states
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -47,7 +49,7 @@ const ReceptionistServiceRequestsPage = () => {
                     ? requestsData
                     : (requestsData?.items || []);
 
-                setServiceRequests(requestsArray);
+                setAllServiceRequests(requestsArray);
 
                 // Handle pagination
                 if (requestsData?.pagination) {
@@ -158,6 +160,27 @@ const ReceptionistServiceRequestsPage = () => {
         maintenance: "Maintenance",
     };
 
+    // Status filter options
+    const statusFilterOptions: Option[] = [
+        { value: "all", label: "All Requests" },
+        { value: "pending", label: "Pending" },
+        { value: "in_progress", label: "In Progress" },
+        { value: "completed", label: "Completed" },
+    ];
+
+    // Filter service requests based on status filter (client-side)
+    const filteredServiceRequests = useMemo(() => {
+        if (statusFilter === "all") {
+            return allServiceRequests;
+        }
+        return allServiceRequests.filter((request) => request.status === statusFilter);
+    }, [allServiceRequests, statusFilter]);
+
+    // Update total items when filtered requests change
+    useEffect(() => {
+        setTotalItems(filteredServiceRequests.length);
+    }, [filteredServiceRequests]);
+
     // Define columns
     const columns = [
         {
@@ -237,16 +260,26 @@ const ReceptionistServiceRequestsPage = () => {
                         View all service requests from guests
                     </p>
                 </div>
-                <DateRangePicker
-                    value={dateRange}
-                    onChange={handleDateRangeChange}
-                    className="w-full max-w-sm"
-                />
+                <div className="flex items-center gap-3">
+                    <SelectField
+                        name="statusFilter"
+                        options={statusFilterOptions}
+                        value={statusFilter}
+                        onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+                        width="md:w-[150px]"
+                        className="bg-black-500! border border-white/50 focus:ring-1! focus:ring-primary-800! text-xs md:text-sm h-10!"
+                    />
+                    <DateRangePicker
+                        value={dateRange}
+                        onChange={handleDateRangeChange}
+                        className="w-full max-w-sm"
+                    />
+                </div>
             </div>
 
             <DataTable
                 columns={columns}
-                data={serviceRequests}
+                data={filteredServiceRequests}
                 loading={loading}
                 emptyMessage="No service requests found."
                 pagination={{
