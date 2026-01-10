@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, useState, useEffect } from "react";
+import { FC, useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { format } from "date-fns";
@@ -15,11 +15,11 @@ import { getRooms, GetRoomsParams } from "@/services/roomService";
 import {
     Pagination,
     PaginationContent,
+    PaginationEllipsis,
     PaginationItem,
     PaginationLink,
     PaginationNext,
     PaginationPrevious,
-    PaginationEllipsis,
 } from "@/components/ui/pagination";
 
 interface RoomsPageProps {
@@ -40,6 +40,7 @@ const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
     const ITEMS_PER_PAGE = 6;
 
     // View room dialog state
@@ -56,55 +57,70 @@ const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
     const checkOutDate = checkOutParam ? new Date(checkOutParam) : null;
     const guests = guestsParam ? parseInt(guestsParam) : null;
 
+    // Check if client-side filters are active (guest capacity or multiple room types)
+    const hasClientSideFilters = (guests !== null && guests > 0) || (clientRoomTypes && clientRoomTypes.length > 0);
+
     // Fetch rooms from API with pagination
-    useEffect(() => {
-        const fetchRooms = async () => {
-            setLoading(true);
-            setError(null);
+    const fetchRooms = useCallback(async () => {
+        setLoading(true);
+        setError(null);
 
-            try {
-                // Add pagination params to filters
-                const params = {
-                    ...filters,
-                    page: currentPage,
-                    limit: ITEMS_PER_PAGE,
-                };
+        try {
+            // Prepare params
+            const params: GetRoomsParams = {
+                ...filters,
+            };
 
-                const response = await getRooms(params);
-
-                if (response.success && response.data) {
-                    const data: any = response.data;
-
-                    // Handle paginated response
-                    if (data.pagination) {
-                        setRooms(data.rooms || []);
-                        setTotalPages(data.pagination.totalPages || 1);
-                    } else {
-                        // Fallback for non-paginated response (shouldn't happen now)
-                        const roomsArray = Array.isArray(data) ? data : [];
-                        setRooms(roomsArray);
-                        setTotalPages(1);
-                    }
-                } else {
-                    setError(response.message || "Failed to load rooms");
-                    setRooms([]);
-                }
-            } catch (err) {
-                console.error("Error fetching rooms:", err);
-                setError("An unexpected error occurred while loading rooms");
-                setRooms([]);
-            } finally {
-                setLoading(false);
+            // Only paginate when NO client-side filters are active
+            // This prevents the issue where client-side filtering after pagination
+            // causes "No rooms found" on page 1 when results exist on later pages
+            if (!hasClientSideFilters) {
+                params.page = currentPage;
+                params.limit = ITEMS_PER_PAGE;
             }
-        };
 
-        fetchRooms();
-    }, [filters, currentPage, ITEMS_PER_PAGE]);
+            const response = await getRooms(params);
 
-    // Reset to page 1 when filters change
+            if (response.success && response.data) {
+                const data: any = response.data;
+
+                // Handle paginated response
+                if (data.pagination && !hasClientSideFilters) {
+                    setRooms(data.rooms || []);
+                    setTotalPages(data.pagination.totalPages || 1);
+                    setTotalItems(data.pagination.totalRooms || 0);
+                } else {
+                    // Non-paginated or client-side filtered response
+                    let roomsArray: IRoom[] = [];
+                    if (Array.isArray(data)) {
+                        roomsArray = data;
+                    } else if (data.rooms && Array.isArray(data.rooms)) {
+                        roomsArray = data.rooms;
+                    }
+                    setRooms(roomsArray);
+                    setTotalPages(1);
+                    setTotalItems(roomsArray.length);
+                }
+            } else {
+                setError(response.message || "Failed to load rooms");
+                setRooms([]);
+                setTotalPages(1);
+                setTotalItems(0);
+            }
+        } catch (err) {
+            console.error("Error fetching rooms:", err);
+            setError("An unexpected error occurred while loading rooms");
+            setRooms([]);
+            setTotalPages(1);
+            setTotalItems(0);
+        } finally {
+            setLoading(false);
+        }
+    }, [filters, currentPage, ITEMS_PER_PAGE, hasClientSideFilters]);
+
     useEffect(() => {
-        setCurrentPage(1);
-    }, [filters]);
+        fetchRooms();
+    }, [fetchRooms]);
 
     const handleSearch = (data: {
         checkIn?: Date;
@@ -138,6 +154,19 @@ const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
         setFilters(newFilters);
         // Store room types for client-side filtering if multiple selected
         setClientRoomTypes(selectedRoomTypes);
+        // Reset to page 1 when filters change
+        setCurrentPage(1);
+    };
+
+    // Reset to page 1 when guest filter changes (from URL params)
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [guests]);
+
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
+        // Scroll to top of results
+        window.scrollTo({ top: 400, behavior: 'smooth' });
     };
 
     const handleRoomSelect = (roomId: string) => {
@@ -220,7 +249,7 @@ const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
                             checkIn={checkInDate ? format(checkInDate, "MMM dd, yyyy") : null}
                             checkOut={checkOutDate ? format(checkOutDate, "MMM dd, yyyy") : null}
                             guests={guests}
-                            resultsCount={filteredRoomsCount}
+                            resultsCount={hasClientSideFilters ? filteredRoomsCount : totalItems}
                         />
 
                         {/* Filters and Results Grid */}
@@ -246,59 +275,68 @@ const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
                                     onFilteredCountChange={setFilteredRoomsCount}
                                 />
 
-                                {/* Pagination Controls */}
-                                {!loading && !error && totalPages > 1 && (
-                                    <div className="mt-8 flex justify-center">
+                                {/* Pagination Controls - Only show when no client-side filters active */}
+                                {!loading && !error && totalPages > 1 && !hasClientSideFilters && (
+                                    <div className="flex items-center justify-center w-full mt-8 mb-4">
                                         <Pagination>
                                             <PaginationContent>
-                                                {/* Previous Button */}
                                                 <PaginationItem>
                                                     <PaginationPrevious
-                                                        onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
-                                                        className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                                                        onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+                                                        className={
+                                                            currentPage === 1
+                                                                ? "cursor-not-allowed opacity-50"
+                                                                : "cursor-pointer hover:bg-white/10"
+                                                        }
                                                     />
                                                 </PaginationItem>
 
-                                                {/* Page Numbers */}
-                                                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                                                    // Show first page, last page, current page, and pages around current
-                                                    const showPage =
-                                                        page === 1 ||
-                                                        page === totalPages ||
-                                                        (page >= currentPage - 1 && page <= currentPage + 1);
-
-                                                    // Show ellipsis
-                                                    const showEllipsisBefore = page === currentPage - 2 && currentPage > 3;
-                                                    const showEllipsisAfter = page === currentPage + 2 && currentPage < totalPages - 2;
-
-                                                    if (showEllipsisBefore || showEllipsisAfter) {
+                                                {[...Array(totalPages)].map((_, i) => {
+                                                    const pageNumber = i + 1;
+                                                    if (
+                                                        totalPages <= 7 ||
+                                                        pageNumber === 1 ||
+                                                        pageNumber === totalPages ||
+                                                        (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                                                    ) {
                                                         return (
-                                                            <PaginationItem key={page}>
+                                                            <PaginationItem key={pageNumber}>
+                                                                <PaginationLink
+                                                                    onClick={() => handlePageChange(pageNumber)}
+                                                                    isActive={currentPage === pageNumber}
+                                                                    className={
+                                                                        currentPage === pageNumber
+                                                                            ? "bg-primary text-white"
+                                                                            : "cursor-pointer hover:bg-white/10"
+                                                                    }
+                                                                >
+                                                                    {pageNumber}
+                                                                </PaginationLink>
+                                                            </PaginationItem>
+                                                        );
+                                                    } else if (
+                                                        pageNumber === currentPage - 2 ||
+                                                        pageNumber === currentPage + 2
+                                                    ) {
+                                                        return (
+                                                            <PaginationItem key={pageNumber}>
                                                                 <PaginationEllipsis />
                                                             </PaginationItem>
                                                         );
                                                     }
-
-                                                    if (!showPage) return null;
-
-                                                    return (
-                                                        <PaginationItem key={page}>
-                                                            <PaginationLink
-                                                                onClick={() => setCurrentPage(page)}
-                                                                isActive={currentPage === page}
-                                                                className="cursor-pointer"
-                                                            >
-                                                                {page}
-                                                            </PaginationLink>
-                                                        </PaginationItem>
-                                                    );
+                                                    return null;
                                                 })}
 
-                                                {/* Next Button */}
                                                 <PaginationItem>
                                                     <PaginationNext
-                                                        onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
-                                                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                                                        onClick={() =>
+                                                            currentPage < totalPages && handlePageChange(currentPage + 1)
+                                                        }
+                                                        className={
+                                                            currentPage === totalPages
+                                                                ? "cursor-not-allowed opacity-50"
+                                                                : "cursor-pointer hover:bg-white/10"
+                                                        }
                                                     />
                                                 </PaginationItem>
                                             </PaginationContent>

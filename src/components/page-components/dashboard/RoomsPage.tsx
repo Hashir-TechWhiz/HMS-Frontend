@@ -4,6 +4,7 @@ import {
     useState,
     useEffect,
     useCallback,
+    useMemo
 } from "react";
 
 import Image from "next/image";
@@ -86,23 +87,23 @@ const RoomsPage = () => {
 
         try {
             setLoading(true);
-
+            
             // Prepare params with pagination
             const params: any = {
                 page: currentPage,
                 limit: ITEMS_PER_PAGE,
             };
-
+            
             // Add status filter if not "all"
             if (statusFilter !== "all") {
                 params.status = statusFilter;
             }
-
+            
             const response = await getRooms(params);
 
             if (response.success) {
                 const data: any = response.data;
-
+                
                 // Handle paginated response
                 if (data.pagination) {
                     setRooms(data.rooms || []);
@@ -580,6 +581,7 @@ const RoomsPage = () => {
                         total: totalItems,
                         onPageChange: handlePageChange,
                     } : undefined}
+                    selectable={false}
                 />
                 {/* View Details Dialog */}
                 <DialogBox
