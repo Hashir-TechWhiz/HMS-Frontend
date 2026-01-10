@@ -8,8 +8,19 @@ import SearchSummary from "./SearchSummary";
 import RoomsFilters from "./RoomsFilters";
 import RoomsList from "./RoomsList";
 import RoomSearchForm from "@/components/common/RoomSearchForm";
+import DialogBox from "@/components/common/DialogBox";
+import ViewRoomDetails from "@/components/common/ViewRoomDetails";
 import { UserRole } from "@/components/common/RoomCard";
 import { getRooms, GetRoomsParams } from "@/services/roomService";
+import {
+    Pagination,
+    PaginationContent,
+    PaginationItem,
+    PaginationLink,
+    PaginationNext,
+    PaginationPrevious,
+    PaginationEllipsis,
+} from "@/components/ui/pagination";
 
 interface RoomsPageProps {
     userRole?: UserRole;
@@ -26,6 +37,15 @@ const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
     const [clientRoomTypes, setClientRoomTypes] = useState<RoomType[] | undefined>();
     const [filteredRoomsCount, setFilteredRoomsCount] = useState<number>(0);
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const ITEMS_PER_PAGE = 6;
+
+    // View room dialog state
+    const [viewDialogOpen, setViewDialogOpen] = useState(false);
+    const [selectedRoom, setSelectedRoom] = useState<IRoom | null>(null);
+
     // Read search parameters from URL (UI display only - not sent to backend)
     const checkInParam = searchParams.get("checkIn");
     const checkOutParam = searchParams.get("checkOut");
@@ -36,17 +56,35 @@ const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
     const checkOutDate = checkOutParam ? new Date(checkOutParam) : null;
     const guests = guestsParam ? parseInt(guestsParam) : null;
 
-    // Fetch rooms from API
+    // Fetch rooms from API with pagination
     useEffect(() => {
         const fetchRooms = async () => {
             setLoading(true);
             setError(null);
 
             try {
-                const response = await getRooms(filters);
+                // Add pagination params to filters
+                const params = {
+                    ...filters,
+                    page: currentPage,
+                    limit: ITEMS_PER_PAGE,
+                };
+
+                const response = await getRooms(params);
 
                 if (response.success && response.data) {
-                    setRooms(response.data);
+                    const data: any = response.data;
+
+                    // Handle paginated response
+                    if (data.pagination) {
+                        setRooms(data.rooms || []);
+                        setTotalPages(data.pagination.totalPages || 1);
+                    } else {
+                        // Fallback for non-paginated response (shouldn't happen now)
+                        const roomsArray = Array.isArray(data) ? data : [];
+                        setRooms(roomsArray);
+                        setTotalPages(1);
+                    }
                 } else {
                     setError(response.message || "Failed to load rooms");
                     setRooms([]);
@@ -61,6 +99,11 @@ const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
         };
 
         fetchRooms();
+    }, [filters, currentPage, ITEMS_PER_PAGE]);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
     }, [filters]);
 
     const handleSearch = (data: {
@@ -98,8 +141,12 @@ const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
     };
 
     const handleRoomSelect = (roomId: string) => {
-        // Navigation will be implemented later based on user role
-        console.log("Room selected:", roomId);
+        // Find the room by ID and open the view dialog
+        const room = rooms.find((r) => r._id === roomId);
+        if (room) {
+            setSelectedRoom(room);
+            setViewDialogOpen(true);
+        }
     };
 
     return (
@@ -198,11 +245,81 @@ const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
                                     guestsFilter={guests}
                                     onFilteredCountChange={setFilteredRoomsCount}
                                 />
+
+                                {/* Pagination Controls */}
+                                {!loading && !error && totalPages > 1 && (
+                                    <div className="mt-8 flex justify-center">
+                                        <Pagination>
+                                            <PaginationContent>
+                                                {/* Previous Button */}
+                                                <PaginationItem>
+                                                    <PaginationPrevious
+                                                        onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
+                                                        className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                                                    />
+                                                </PaginationItem>
+
+                                                {/* Page Numbers */}
+                                                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                                                    // Show first page, last page, current page, and pages around current
+                                                    const showPage =
+                                                        page === 1 ||
+                                                        page === totalPages ||
+                                                        (page >= currentPage - 1 && page <= currentPage + 1);
+
+                                                    // Show ellipsis
+                                                    const showEllipsisBefore = page === currentPage - 2 && currentPage > 3;
+                                                    const showEllipsisAfter = page === currentPage + 2 && currentPage < totalPages - 2;
+
+                                                    if (showEllipsisBefore || showEllipsisAfter) {
+                                                        return (
+                                                            <PaginationItem key={page}>
+                                                                <PaginationEllipsis />
+                                                            </PaginationItem>
+                                                        );
+                                                    }
+
+                                                    if (!showPage) return null;
+
+                                                    return (
+                                                        <PaginationItem key={page}>
+                                                            <PaginationLink
+                                                                onClick={() => setCurrentPage(page)}
+                                                                isActive={currentPage === page}
+                                                                className="cursor-pointer"
+                                                            >
+                                                                {page}
+                                                            </PaginationLink>
+                                                        </PaginationItem>
+                                                    );
+                                                })}
+
+                                                {/* Next Button */}
+                                                <PaginationItem>
+                                                    <PaginationNext
+                                                        onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
+                                                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                                                    />
+                                                </PaginationItem>
+                                            </PaginationContent>
+                                        </Pagination>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* View Room Details Dialog */}
+            <DialogBox
+                open={viewDialogOpen}
+                onOpenChange={setViewDialogOpen}
+                title="Room Details"
+                widthClass="md:min-w-3xl!"
+            >
+                <ViewRoomDetails room={selectedRoom} userRole={userRole} />
+            </DialogBox>
         </div>
     );
 };

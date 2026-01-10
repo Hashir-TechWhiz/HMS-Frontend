@@ -134,6 +134,7 @@ declare global {
         status: RoomStatus;
         description: string;
         images: string[]; // Array of image URLs (1-4 images required)
+        amenities?: string[]; // Optional array of amenities
         createdAt: string;
         updatedAt: string;
     }

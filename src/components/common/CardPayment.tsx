@@ -176,7 +176,7 @@ const CardPayment = ({
                     <p className="text-xs text-yellow-400 flex items-center gap-2">
                         <Lock className="h-3 w-3" />
                         <span>
-                            <strong>Test Mode:</strong> Use card number starting with 4 for success (e.g., 4111111111111111)
+                            Use card number starting with 4 for success (e.g., 4111 1111 1111 1111)
                         </span>
                     </p>
                 </div>

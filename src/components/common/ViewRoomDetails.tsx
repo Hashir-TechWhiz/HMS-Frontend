@@ -5,9 +5,10 @@ import ThumbSlider from "../sliders/ThumbSlider";
 
 interface RoomDetailsProps {
     room: IRoom | null;
+    userRole?: "public" | "guest" | "receptionist" | "admin";
 }
 
-const RoomDetails = ({ room }: RoomDetailsProps) => {
+const RoomDetails = ({ room, userRole = "public" }: RoomDetailsProps) => {
     if (!room) return null;
 
     return (
@@ -47,11 +48,32 @@ const RoomDetails = ({ room }: RoomDetailsProps) => {
                             value={`$${room.pricePerNight.toFixed(2)}`}
                             accent
                         />
-                        <Field label="Created At" value={formatDateTime(room.createdAt)} />
-                        <Field label="Updated At" value={formatDateTime(room.updatedAt)} />
+                        {userRole === "admin" && (
+                            <>
+                                <Field label="Created At" value={formatDateTime(room.createdAt)} />
+                                <Field label="Updated At" value={formatDateTime(room.updatedAt)} />
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
+
+            {/* Amenities */}
+            {room.amenities && room.amenities.length > 0 && (
+                <div className="flex flex-col gap-2">
+                    <p className="font-semibold">Amenities</p>
+                    <div className="flex flex-wrap gap-2">
+                        {room.amenities.map((amenity) => (
+                            <span
+                                key={amenity}
+                                className="px-3 py-1 rounded-md text-xs font-medium bg-primary-500/20 text-primary-300 border border-primary-500/50"
+                            >
+                                {amenity}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Description */}
             {room.description && (
