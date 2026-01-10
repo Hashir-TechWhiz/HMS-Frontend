@@ -33,7 +33,8 @@ const mapRoomToCardProps = (room: IRoom): Omit<RoomCardProps, "userRole" | "onAc
     name: name,
     image: image,
     description: room.description || `${room.roomType} room with comfortable accommodations`,
-    features: [], // Backend doesn't have amenities field, keep empty for now
+    features: [], // Kept for backward compatibility
+    amenities: room.amenities || [],
     capacity: room.capacity,
     beds: Math.ceil(room.capacity / 2), // Estimate beds based on capacity
     pricePerNight: room.pricePerNight,
@@ -125,7 +126,7 @@ const RoomsList: FC<RoomsListProps> = ({
           key={room._id}
           {...mapRoomToCardProps(room)}
           userRole={userRole}
-          onAction={onRoomSelect}
+          onCardClick={onRoomSelect}
         />
       ))}
     </div>

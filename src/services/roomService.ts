@@ -10,32 +10,69 @@ import { AxiosError } from 'axios';
  * - status: Filter by room status (available, occupied, maintenance)
  * - minPrice: Filter by minimum price
  * - maxPrice: Filter by maximum price
+ * - page: Page number for pagination (default: 1)
+ * - limit: Number of items per page (default: 10)
  */
 export interface GetRoomsParams {
     roomType?: RoomType;
     status?: RoomStatus;
     minPrice?: number;
     maxPrice?: number;
+    page?: number;
+    limit?: number;
 }
 
 /**
- * Get all rooms with optional filters
+ * Response structure for paginated rooms
+ */
+export interface GetRoomsResponse {
+    rooms: IRoom[];
+    pagination: {
+        totalRooms: number;
+        totalPages: number;
+        currentPage: number;
+        limit: number;
+    };
+}
+
+/**
+ * Get all rooms with optional filters and pagination
  * GET /rooms
  * 
  * This is a public endpoint that supports filtering by:
  * - Room type (standard, deluxe, suite, presidential)
  * - Status (available, occupied, maintenance)
  * - Price range (minPrice, maxPrice)
+ * - Pagination (page, limit)
  * 
- * @param params - Optional query parameters for filtering rooms
- * @returns Promise with array of rooms
+ * @param params - Optional query parameters for filtering and pagination
+ * @returns Promise with paginated rooms response or array of rooms (backward compatible)
  */
-export const getRooms = async (params?: GetRoomsParams): Promise<ApiResponse<IRoom[]>> => {
+export const getRooms = async (params?: GetRoomsParams): Promise<ApiResponse<IRoom[] | GetRoomsResponse>> => {
     try {
-        const response = await api.get<ApiResponse<IRoom[]>>('/rooms', {
+        const response = await api.get<any>('/rooms', {
             params: params || {}
         });
-        return response.data;
+
+        // Backend always returns: { success, count, pagination, data }
+        // If caller requested pagination (page/limit params), return structured response
+        if (params?.page !== undefined || params?.limit !== undefined) {
+            return {
+                success: response.data.success,
+                message: response.data.message,
+                data: {
+                    rooms: response.data.data,
+                    pagination: response.data.pagination
+                }
+            };
+        }
+
+        // For backward compatibility: return just the array for non-paginated calls
+        return {
+            success: response.data.success,
+            message: response.data.message,
+            data: response.data.data
+        };
     } catch (error) {
         if (error instanceof AxiosError && error.response?.data) {
             return error.response.data as ApiErrorResponse;

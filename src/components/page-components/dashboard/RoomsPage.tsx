@@ -32,6 +32,7 @@ import DialogBox from "@/components/common/DialogBox";
 import InputField from "@/components/forms/InputField";
 import SelectField from "@/components/forms/SelectField";
 import TextAreaField from "@/components/forms/TextAreaField";
+import CheckboxGroupField from "@/components/forms/CheckboxGroupField";
 import { EdgeStoreUploader } from "@/components/common/EdgeStoreUploader";
 
 import { Eye, Pencil, Trash2, Plus, Building2, CheckCircle2, Ban, Wrench } from "lucide-react";
@@ -41,12 +42,13 @@ const RoomsPage = () => {
     const { role, loading: authLoading } = useAuth();
     const { edgestore } = useEdgeStore();
 
-    const [allRooms, setAllRooms] = useState<IRoom[]>([]); // Store all unfiltered rooms
+    const [rooms, setRooms] = useState<IRoom[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
     const [statusFilter, setStatusFilter] = useState<string>("all");
+    const ITEMS_PER_PAGE = 10;
 
     // KPI states
     const [kpiLoading, setKpiLoading] = useState(false);
@@ -62,6 +64,7 @@ const RoomsPage = () => {
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [imageFiles, setImageFiles] = useState<(File | string)[]>([]);
     const [submitAttempted, setSubmitAttempted] = useState(false);
+    const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
 
     const {
         register,
@@ -78,21 +81,41 @@ const RoomsPage = () => {
         description: string;
     }>();
 
-    // Fetch rooms (without filtering)
+    // Fetch rooms with pagination
     const fetchRooms = useCallback(async () => {
         if (!role || authLoading) return;
 
         try {
             setLoading(true);
-            const response = await getRooms();
+            
+            // Prepare params with pagination
+            const params: any = {
+                page: currentPage,
+                limit: ITEMS_PER_PAGE,
+            };
+            
+            // Add status filter if not "all"
+            if (statusFilter !== "all") {
+                params.status = statusFilter;
+            }
+            
+            const response = await getRooms(params);
 
             if (response.success) {
-                const roomsData: any = response.data;
-                const roomsArray = Array.isArray(roomsData) ? roomsData : (roomsData?.items || []);
-
-                // Store all rooms without filtering
-                setAllRooms(roomsArray);
-                setTotalPages(1);
+                const data: any = response.data;
+                
+                // Handle paginated response
+                if (data.pagination) {
+                    setRooms(data.rooms || []);
+                    setTotalPages(data.pagination.totalPages || 1);
+                    setTotalItems(data.pagination.totalRooms || 0);
+                } else {
+                    // Fallback for non-paginated response
+                    const roomsArray = Array.isArray(data) ? data : [];
+                    setRooms(roomsArray);
+                    setTotalPages(1);
+                    setTotalItems(roomsArray.length);
+                }
             } else {
                 toast.error(response.message || "Failed to fetch rooms");
             }
@@ -101,20 +124,12 @@ const RoomsPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [role, authLoading]);
+    }, [role, authLoading, currentPage, statusFilter, ITEMS_PER_PAGE]);
 
-    // Filter rooms based on status filter (client-side, no refetch)
-    const filteredRooms = useMemo(() => {
-        if (statusFilter === "all") {
-            return allRooms;
-        }
-        return allRooms.filter((room) => room.status === statusFilter);
-    }, [allRooms, statusFilter]);
-
-    // Update total items when filtered rooms change
+    // Reset to page 1 when status filter changes
     useEffect(() => {
-        setTotalItems(filteredRooms.length);
-    }, [filteredRooms]);
+        setCurrentPage(1);
+    }, [statusFilter]);
 
     // Fetch room statistics
     const fetchRoomStats = useCallback(async () => {
@@ -156,6 +171,7 @@ const RoomsPage = () => {
         setIsEditMode(false);
         setSelectedRoom(null);
         setImageFiles([]);
+        setSelectedAmenities([]);
         setSubmitAttempted(false);
         reset({
             roomNumber: "",
@@ -173,6 +189,7 @@ const RoomsPage = () => {
         setIsEditMode(true);
         setSelectedRoom(room);
         setImageFiles(room.images);
+        setSelectedAmenities(room.amenities || []);
         setSubmitAttempted(false);
         reset({
             roomNumber: room.roomNumber,
@@ -252,6 +269,7 @@ const RoomsPage = () => {
             const roomData = {
                 ...data,
                 images: imageUrls,
+                amenities: selectedAmenities,
             };
 
             let response;
@@ -371,6 +389,18 @@ const RoomsPage = () => {
         { value: "maintenance", label: "Maintenance" },
     ];
 
+    // Amenities options
+    const amenitiesOptions = [
+        "Wi-Fi",
+        "Air Conditioning",
+        "TV",
+        "Mini Bar",
+        "Room Service",
+        "Balcony",
+        "Sea View",
+        "Safe Locker",
+    ];
+
     // Define columns
     const columns = [
         {
@@ -419,7 +449,7 @@ const RoomsPage = () => {
             key: "pricePerNight",
             label: "Price Per Night",
             render: (room: IRoom) => (
-                <span className="font-medium">${room.pricePerNight.toFixed(2)}</span>
+                <span className="font-medium">LKR {""}{room.pricePerNight.toFixed(2)}</span>
             ),
         },
         {
@@ -542,15 +572,15 @@ const RoomsPage = () => {
 
                 <DataTable
                     columns={columns}
-                    data={filteredRooms}
+                    data={rooms}
                     loading={loading}
                     emptyMessage="No rooms found."
-                    pagination={{
+                    pagination={totalPages > 1 ? {
                         page: currentPage,
                         totalPages: totalPages,
                         total: totalItems,
                         onPageChange: handlePageChange,
-                    }}
+                    } : undefined}
                     selectable={false}
                 />
                 {/* View Details Dialog */}
@@ -560,7 +590,7 @@ const RoomsPage = () => {
                     title="Room Details"
                     widthClass="md:min-w-3xl!"
                 >
-                    <ViewRoomDetails room={selectedRoom} />
+                    <ViewRoomDetails room={selectedRoom} userRole="admin" />
                 </DialogBox>
 
                 {/* Add/Edit Form Dialog */}
@@ -656,6 +686,15 @@ const RoomsPage = () => {
                                 register={register}
                                 error={errors.description}
                                 rows={3}
+                            />
+                        </div>
+                        <div>
+                            <CheckboxGroupField
+                                name="amenities"
+                                label="Amenities (Optional)"
+                                options={amenitiesOptions}
+                                value={selectedAmenities}
+                                onChange={setSelectedAmenities}
                             />
                         </div>
                         <div>
