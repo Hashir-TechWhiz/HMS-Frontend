@@ -154,10 +154,12 @@ const ReceptionistServiceRequestsPage = () => {
     };
 
     // Service type labels
-    const serviceTypeLabels: Record<ServiceType, string> = {
+    const serviceTypeLabels: Record<string, string> = {
         housekeeping: "Housekeeping",
         room_service: "Room Service",
         maintenance: "Maintenance",
+        cleaning: "Cleaning",
+        other: "Other"
     };
 
     // Status filter options
@@ -222,6 +224,19 @@ const ReceptionistServiceRequestsPage = () => {
                     </div>
                 </div>
             ),
+        },
+        {
+            key: "priority",
+            label: "Priority",
+            render: (request: IServiceRequest) => {
+                const colors: any = {
+                    low: "bg-gray-500/20 text-gray-400 border-gray-500/50",
+                    normal: "bg-blue-500/20 text-blue-400 border-blue-500/50",
+                    high: "bg-orange-500/20 text-orange-400 border-orange-500/50",
+                    urgent: "bg-red-500/20 text-red-400 border-red-500/50",
+                };
+                return <span className={`px-2 py-0.5 rounded text-[10px] border capitalize ${colors[request.priority || 'normal']}`}>{request.priority || 'normal'}</span>;
+            },
         },
         {
             key: "status",
@@ -336,6 +351,12 @@ const ReceptionistServiceRequestsPage = () => {
                                     <p className="text-sm text-gray-400">Assigned Staff</p>
                                     <p className={`text-sm ${getAssignedStaffName(selectedRequest) === "Unassigned" ? "text-gray-400" : "font-medium"}`}>
                                         {getAssignedStaffName(selectedRequest)}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-400">Price</p>
+                                    <p className="text-sm font-medium">
+                                        {selectedRequest.finalPrice ? `$${selectedRequest.finalPrice.toFixed(2)}` : selectedRequest.fixedPrice ? `$${selectedRequest.fixedPrice.toFixed(2)}` : "TBD"}
                                     </p>
                                 </div>
                             </div>

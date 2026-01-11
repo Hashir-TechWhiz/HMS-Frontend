@@ -12,6 +12,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import DialogBox from "@/components/common/DialogBox";
 import StatCard from "@/components/common/StatCard";
 import SelectField from "@/components/forms/SelectField";
+import CheckInForm from "./CheckInForm";
+import CheckOutInvoiceFlow from "./CheckOutInvoiceFlow";
 import { toast } from "sonner";
 import { Eye, CheckCircle2, LogOut, Calendar, Hotel, Clock, Users } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
@@ -204,56 +206,20 @@ const OperationsPage = () => {
         setCheckInDialogOpen(true);
     };
 
-    const handleCheckInConfirm = async () => {
-        if (!selectedBooking) return;
-
-        try {
-            setActionLoading(true);
-            const response = await checkInBooking(selectedBooking._id);
-
-            if (response.success) {
-                toast.success("Guest checked in successfully!");
-                setCheckInDialogOpen(false);
-                setSelectedBooking(null);
-                fetchBookings();
-                fetchKPIs();
-            } else {
-                toast.error(response.message || "Failed to check in");
-            }
-        } catch {
-            toast.error("An error occurred during check-in");
-        } finally {
-            setActionLoading(false);
-        }
-    };
-
     const handleCheckOutClick = (booking: IBooking) => {
         setSelectedBooking(booking);
         setCheckOutDialogOpen(true);
     };
 
-    const handleCheckOutConfirm = async () => {
-        if (!selectedBooking) return;
-
-        try {
-            setActionLoading(true);
-            const response = await checkOutBooking(selectedBooking._id);
-
-            if (response.success) {
-                toast.success("Guest checked out successfully!");
-                setCheckOutDialogOpen(false);
-                setSelectedBooking(null);
-                fetchBookings();
-                fetchKPIs();
-            } else {
-                toast.error(response.message || "Failed to check out");
-            }
-        } catch {
-            toast.error("An error occurred during check-out");
-        } finally {
-            setActionLoading(false);
-        }
+    const handleCheckInConfirm = async () => {
+        // This is handled by CheckInForm now
     };
+
+    const handleCheckOutConfirm = async () => {
+        // This is handled by CheckOutInvoiceFlow now
+    };
+
+
 
     // Booking Card Component
     const BookingCard = ({ booking }: { booking: IBooking }) => (
@@ -541,30 +507,40 @@ const OperationsPage = () => {
                 open={checkInDialogOpen}
                 onOpenChange={setCheckInDialogOpen}
                 title="Check In Guest"
-                description="Are you sure you want to check in this guest? This confirms that the guest has arrived and taken occupancy of the room."
-                showFooter
-                confirmText="Check In"
-                cancelText="Cancel"
-                onConfirm={handleCheckInConfirm}
-                onCancel={() => setCheckInDialogOpen(false)}
-                confirmLoading={actionLoading}
-                variant="success"
-            />
+                widthClass="max-w-xl"
+            >
+                {selectedBooking && (
+                    <CheckInForm
+                        bookingId={selectedBooking._id}
+                        onSuccess={() => {
+                            setCheckInDialogOpen(false);
+                            fetchBookings();
+                            fetchKPIs();
+                        }}
+                        onCancel={() => setCheckInDialogOpen(false)}
+                    />
+                )}
+            </DialogBox>
 
             {/* Check Out Dialog */}
             <DialogBox
                 open={checkOutDialogOpen}
                 onOpenChange={setCheckOutDialogOpen}
-                title="Check Out Guest"
-                description="Are you sure you want to check out this guest? This confirms that the guest has vacated the room and the booking is complete."
-                showFooter
-                confirmText="Check Out"
-                cancelText="Cancel"
-                onConfirm={handleCheckOutConfirm}
-                onCancel={() => setCheckOutDialogOpen(false)}
-                confirmLoading={actionLoading}
-                variant="success"
-            />
+                title="Check Out and Invoicing"
+                widthClass="max-w-xl"
+            >
+                {selectedBooking && (
+                    <CheckOutInvoiceFlow
+                        bookingId={selectedBooking._id}
+                        onSuccess={() => {
+                            setCheckOutDialogOpen(false);
+                            fetchBookings();
+                            fetchKPIs();
+                        }}
+                        onCancel={() => setCheckOutDialogOpen(false)}
+                    />
+                )}
+            </DialogBox>
         </div>
     );
 };

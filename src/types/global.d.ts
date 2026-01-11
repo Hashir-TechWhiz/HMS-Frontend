@@ -203,11 +203,61 @@ declare global {
         requestedBy?: IUser | string;
         serviceType: ServiceType;
         status: ServiceStatus;
+        priority: 'low' | 'normal' | 'high' | 'urgent';
         assignedRole?: string;
         assignedTo?: IUser | string;
         notes?: string;
+        fixedPrice?: number;
+        finalPrice?: number;
         createdAt: string;
         updatedAt: string;
+    }
+
+    // Service Catalog Types
+    interface IServiceCatalog {
+        _id: string;
+        hotelId: string | IHotel;
+        serviceType: string;
+        displayName: string;
+        description?: string;
+        fixedPrice?: number;
+        isActive: boolean;
+        category: string;
+    }
+
+    // Invoice Types
+    interface IInvoice {
+        _id: string;
+        hotelId: string | IHotel;
+        booking: string | IBooking;
+        guest?: string | IUser;
+        customerDetails?: {
+            name: string;
+            phone: string;
+            email?: string;
+        };
+        roomCharges: {
+            roomId: string;
+            roomNumber: string;
+            roomType: string;
+            pricePerNight: number;
+            numberOfNights: number;
+            totalRoomCharges: number;
+        };
+        serviceCharges: {
+            serviceRequestId: string;
+            serviceType: string;
+            description: string;
+            price: number;
+            completedAt: string;
+        }[];
+        subtotal: number;
+        tax: number;
+        totalAmount: number;
+        paymentStatus: 'pending' | 'paid' | 'partially_paid';
+        paidAmount: number;
+        generatedAt: string;
+        generatedBy?: string | IUser;
     }
 
     // Service Request filter types for API queries

@@ -35,6 +35,7 @@ import StatCard from "@/components/common/StatCard";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
 import SelectField from "@/components/forms/SelectField";
+import InputField from "@/components/forms/InputField";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 
 import { Eye, RefreshCw, Settings, Clock, Loader2 as LoaderIcon, CheckCircle2, UserPlus } from "lucide-react";
@@ -73,9 +74,14 @@ const AdminServiceRequestsPage = () => {
         formState: { errors: statusErrors },
         reset: resetStatus,
         control: statusControl,
+        watch: watchStatus,
+        register: registerStatus,
     } = useForm<{
         status: ServiceStatus;
+        finalPrice?: number;
     }>();
+
+    const currentStatus = watchStatus("status");
 
     const {
         handleSubmit: handleAssignSubmit,
@@ -211,6 +217,7 @@ const AdminServiceRequestsPage = () => {
         setSelectedRequest(request);
         resetStatus({
             status: request.status,
+            finalPrice: request.finalPrice || request.fixedPrice || 0,
         });
         setStatusDialogOpen(true);
     };
@@ -232,13 +239,13 @@ const AdminServiceRequestsPage = () => {
     };
 
     // Handle status update submit
-    const onStatusSubmit = async (data: { status: ServiceStatus }) => {
+    const onStatusSubmit = async (data: { status: ServiceStatus, finalPrice?: number }) => {
         if (!selectedRequest) return;
 
         try {
             setStatusLoading(true);
 
-            const response = await updateServiceRequestStatus(selectedRequest._id, data.status);
+            const response = await updateServiceRequestStatus(selectedRequest._id, data.status, data.finalPrice);
 
             if (response.success) {
                 toast.success("Service request status updated successfully");
@@ -341,10 +348,12 @@ const AdminServiceRequestsPage = () => {
     };
 
     // Service type labels
-    const serviceTypeLabels: Record<ServiceType, string> = {
+    const serviceTypeLabels: Record<string, string> = {
         housekeeping: "Housekeeping",
         room_service: "Room Service",
         maintenance: "Maintenance",
+        cleaning: "Cleaning",
+        other: "Other"
     };
 
     // Status options for form
@@ -429,6 +438,19 @@ const AdminServiceRequestsPage = () => {
                     </div>
                 </div>
             ),
+        },
+        {
+            key: "priority",
+            label: "Priority",
+            render: (request: IServiceRequest) => {
+                const colors: any = {
+                    low: "bg-gray-500/20 text-gray-400 border-gray-500/50",
+                    normal: "bg-blue-500/20 text-blue-400 border-blue-500/50",
+                    high: "bg-orange-500/20 text-orange-400 border-orange-500/50",
+                    urgent: "bg-red-500/20 text-red-400 border-red-500/50",
+                };
+                return <span className={`px-2 py-0.5 rounded text-[10px] border capitalize ${colors[request.priority || 'normal']}`}>{request.priority || 'normal'}</span>;
+            },
         },
         {
             key: "status",
@@ -620,6 +642,12 @@ const AdminServiceRequestsPage = () => {
                                             {getAssignedStaffName(selectedRequest)}
                                         </p>
                                     </div>
+                                    <div>
+                                        <p className="text-sm text-gray-400">Price</p>
+                                        <p className="text-sm font-medium">
+                                            {selectedRequest.finalPrice ? `$${selectedRequest.finalPrice.toFixed(2)}` : selectedRequest.fixedPrice ? `$${selectedRequest.fixedPrice.toFixed(2)}` : "TBD"}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                             <div className="border-t border-gray-700 pt-4">
@@ -723,6 +751,22 @@ const AdminServiceRequestsPage = () => {
                             required
                             error={statusErrors.status}
                         />
+                        {currentStatus === "completed" && (
+                            <div className="space-y-4 pt-2">
+                                <InputField
+                                    name="finalPrice"
+                                    label="Final Price ($) *"
+                                    type="number"
+                                    placeholder="0.00"
+                                    register={registerStatus}
+                                    validation={{ valueAsNumber: true, min: 0 }}
+                                    error={statusErrors.finalPrice}
+                                />
+                                <p className="text-xs text-gray-400">
+                                    Confirm the final price for this service. This amount will be added to the guest's invoice.
+                                </p>
+                            </div>
+                        )}
                         <p className="text-xs text-gray-400">
                             Update the status to reflect the current state of the service request.
                         </p>

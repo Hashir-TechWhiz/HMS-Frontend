@@ -9,6 +9,8 @@ import { getActiveHotels } from "@/services/hotelService";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
 import CancellationPenaltyDialog from "./CancellationPenaltyDialog";
+import CheckInForm from "./CheckInForm";
+import CheckOutInvoiceFlow from "./CheckOutInvoiceFlow";
 import StatCard from "@/components/common/StatCard";
 import SelectField from "@/components/forms/SelectField";
 import { Button } from "@/components/ui/button";
@@ -334,56 +336,10 @@ const BookingsPage = () => {
         setCheckInDialogOpen(true);
     };
 
-    const handleCheckInConfirm = async () => {
-        if (!selectedBooking) return;
-
-        try {
-            setCheckInLoading(true);
-            const response = await checkInBooking(selectedBooking._id);
-
-            if (response.success) {
-                toast.success("Booking checked-in successfully!");
-                setCheckInDialogOpen(false);
-                setSelectedBooking(null);
-                fetchBookings(currentPage);
-                fetchBookingStats();
-            } else {
-                toast.error(response.message || "Failed to check-in booking");
-            }
-        } catch {
-            toast.error("An error occurred while checking-in the booking");
-        } finally {
-            setCheckInLoading(false);
-        }
-    };
-
     // Handle check-out booking
     const handleCheckOutClick = (booking: IBooking) => {
         setSelectedBooking(booking);
         setCheckOutDialogOpen(true);
-    };
-
-    const handleCheckOutConfirm = async () => {
-        if (!selectedBooking) return;
-
-        try {
-            setCheckOutLoading(true);
-            const response = await checkOutBooking(selectedBooking._id);
-
-            if (response.success) {
-                toast.success("Booking checked-out successfully!");
-                setCheckOutDialogOpen(false);
-                setSelectedBooking(null);
-                fetchBookings(currentPage);
-                fetchBookingStats();
-            } else {
-                toast.error(response.message || "Failed to check-out booking");
-            }
-        } catch {
-            toast.error("An error occurred while checking-out the booking");
-        } finally {
-            setCheckOutLoading(false);
-        }
     };
 
 
@@ -942,29 +898,37 @@ const BookingsPage = () => {
                     open={checkInDialogOpen}
                     onOpenChange={setCheckInDialogOpen}
                     title="Check In Booking"
-                    description="Are you sure you want to check-in this booking? This action confirms that the guest has arrived and taken occupancy of the room."
-                    showFooter
-                    confirmText="Check In"
-                    cancelText="Go Back"
-                    onConfirm={handleCheckInConfirm}
-                    onCancel={() => setCheckInDialogOpen(false)}
-                    confirmLoading={checkInLoading}
-                    variant="success"
-                />
+                    widthClass="max-w-xl"
+                >
+                    {selectedBooking && (
+                        <CheckInForm
+                            bookingId={selectedBooking._id}
+                            onSuccess={() => {
+                                setCheckInDialogOpen(false);
+                                fetchBookings(currentPage);
+                            }}
+                            onCancel={() => setCheckInDialogOpen(false)}
+                        />
+                    )}
+                </DialogBox>
                 {/* Check Out Dialog */}
                 <DialogBox
                     open={checkOutDialogOpen}
                     onOpenChange={setCheckOutDialogOpen}
-                    title="Check Out Booking"
-                    description="Are you sure you want to check-out this booking? This action confirms that the guest has vacated the room and the booking is complete."
-                    showFooter
-                    confirmText="Check Out"
-                    cancelText="Go Back"
-                    onConfirm={handleCheckOutConfirm}
-                    onCancel={() => setCheckOutDialogOpen(false)}
-                    confirmLoading={checkOutLoading}
-                    variant="success"
-                />
+                    title="Check Out and Invoicing"
+                    widthClass="max-w-xl"
+                >
+                    {selectedBooking && (
+                        <CheckOutInvoiceFlow
+                            bookingId={selectedBooking._id}
+                            onSuccess={() => {
+                                setCheckOutDialogOpen(false);
+                                fetchBookings(currentPage);
+                            }}
+                            onCancel={() => setCheckOutDialogOpen(false)}
+                        />
+                    )}
+                </DialogBox>
             </div>
         </div>
     );

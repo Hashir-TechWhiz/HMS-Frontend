@@ -9,6 +9,7 @@ import DialogBox from "@/components/common/DialogBox";
 import { Button } from "@/components/ui/button";
 import SelectField from "@/components/forms/SelectField";
 import TextAreaField from "@/components/forms/TextAreaField";
+import ServiceRequestForm from "./ServiceRequestForm";
 import { toast } from "sonner";
 import { Eye, Plus } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -35,6 +36,7 @@ const MyServiceRequestsPage = () => {
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
     const [formDialogOpen, setFormDialogOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<IServiceRequest | null>(null);
+    const [selectedBookingId, setSelectedBookingId] = useState<string>("");
     const [formLoading, setFormLoading] = useState(false);
 
     const itemsPerPage = 10;
@@ -154,72 +156,6 @@ const MyServiceRequestsPage = () => {
         });
         setFormDialogOpen(true);
     };
-
-    // Handle form submit
-    const onSubmit = async (data: {
-        bookingId: string;
-        serviceType: ServiceType;
-        notes: string;
-    }) => {
-        try {
-            setFormLoading(true);
-
-            // Find selected booking
-            const selectedBooking = bookings.find(b => b._id === data.bookingId);
-            if (!selectedBooking) {
-                toast.error("Selected booking not found");
-                return;
-            }
-
-            // Validation 1: Ensure booking is checked-in (manual check-in is source of truth)
-            if (selectedBooking.status !== "checkedin") {
-                toast.error("Service requests are only available during an active stay (after check-in)");
-                return;
-            }
-
-            // Validation 2: Check for duplicate pending/in_progress requests
-            const existingRequest = allServiceRequests.find(
-                (request: IServiceRequest) => {
-                    const requestBookingId = typeof request.booking === "object"
-                        ? request.booking._id
-                        : request.booking;
-
-                    return requestBookingId === data.bookingId &&
-                        request.serviceType === data.serviceType &&
-                        (request.status === "pending" || request.status === "in_progress");
-                }
-            );
-
-            if (existingRequest) {
-                const serviceTypeLabel = serviceTypeOptions.find(
-                    opt => opt.value === data.serviceType
-                )?.label || data.serviceType;
-                toast.error(`A ${serviceTypeLabel} request is already in progress for this booking`);
-                return;
-            }
-
-            const requestData = {
-                bookingId: data.bookingId,
-                serviceType: data.serviceType,
-                notes: data.notes || undefined,
-            };
-
-            const response = await createServiceRequest(requestData);
-
-            if (response.success) {
-                toast.success("Service request created successfully");
-                setFormDialogOpen(false);
-                fetchServiceRequests(currentPage);
-            } else {
-                toast.error(response.message || "Failed to create service request");
-            }
-        } catch (error: any) {
-            toast.error(error?.message || "An error occurred");
-        } finally {
-            setFormLoading(false);
-        }
-    };
-
 
     // Get room number
     const getRoomNumber = (request: IServiceRequest): string => {
@@ -498,15 +434,8 @@ const MyServiceRequestsPage = () => {
                 onOpenChange={setFormDialogOpen}
                 title="New Service Request"
                 widthClass="max-w-xl"
-                showFooter
-                confirmText="Submit Request"
-                cancelText="Cancel"
-                onConfirm={handleSubmit(onSubmit)}
-                onCancel={() => setFormDialogOpen(false)}
-                disableConfirm={formLoading || bookingsLoading}
-                confirmLoading={formLoading}
             >
-                <form onSubmit={(e) => { e.preventDefault(); handleSubmit(onSubmit)(e); }} className="space-y-4 py-4">
+                <div className="space-y-4 py-4">
                     {bookingsLoading ? (
                         <div className="text-center py-4 text-gray-400">Loading bookings...</div>
                     ) : bookings.length === 0 ? (
@@ -517,36 +446,35 @@ const MyServiceRequestsPage = () => {
                         </div>
                     ) : (
                         <>
-                            <SelectField
-                                name="bookingId"
-                                label="Select Booking *"
-                                placeholder="Select your Booking"
-                                options={bookingOptions}
-                                control={control}
-                                required
-                                error={errors.bookingId}
-                            />
-
-                            <SelectField
-                                name="serviceType"
-                                label="Service Type *"
-                                options={serviceTypeOptions}
-                                control={control}
-                                required
-                                error={errors.serviceType}
-                            />
-
-                            <TextAreaField
-                                name="notes"
-                                label="Notes"
-                                placeholder="Please provide any additional details about your request (optional)"
-                                register={control.register}
-                                error={errors.notes}
-                                rows={4}
-                            />
+                            {!selectedBookingId ? (
+                                <div className="space-y-4">
+                                    <SelectField
+                                        name="bookingId"
+                                        label="Select Booking *"
+                                        placeholder="Select your active stay"
+                                        options={bookingOptions}
+                                        onChange={(val) => setSelectedBookingId(val)}
+                                        required
+                                    />
+                                    <div className="flex justify-end pt-4">
+                                        <Button variant="outline" onClick={() => setFormDialogOpen(false)}>Cancel</Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <ServiceRequestForm
+                                    bookingId={selectedBookingId}
+                                    hotelId={bookings.find(b => b._id === selectedBookingId)?.hotelId as string || (bookings.find(b => b._id === selectedBookingId)?.hotelId as any)?._id}
+                                    onSuccess={() => {
+                                        setFormDialogOpen(false);
+                                        fetchServiceRequests(currentPage);
+                                        setSelectedBookingId("");
+                                    }}
+                                    onCancel={() => setSelectedBookingId("")}
+                                />
+                            )}
                         </>
                     )}
-                </form>
+                </div>
             </DialogBox>
         </div>
     );
