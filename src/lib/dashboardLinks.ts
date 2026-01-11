@@ -85,6 +85,12 @@ export const DASHBOARD_LINKS = {
             title: "Administration",
             links: [
                 {
+                    label: "Hotels",
+                    href: "/dashboard/hotels",
+                    icon: "/icons/Rooms.svg",
+                    roles: getAllowedRoles("/dashboard/hotels")!,
+                },
+                {
                     label: "User Management",
                     href: "/dashboard/users",
                     icon: "/icons/Users.svg",

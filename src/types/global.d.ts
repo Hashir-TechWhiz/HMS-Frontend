@@ -116,7 +116,25 @@ declare global {
         name: string;
         email: string;
         role: UserRole;
+        hotelId?: string | IHotel; // Optional - only for receptionist/housekeeping
         isActive: boolean;
+        createdAt: string;
+        updatedAt: string;
+    }
+
+    // Hotel Types
+    type HotelStatus = 'Active' | 'Inactive';
+
+    interface IHotel {
+        _id: string;
+        name: string;
+        code: string; // Format: HMS-XXX (e.g., HMS-001)
+        address: string;
+        city: string;
+        country: string;
+        contactEmail: string;
+        contactPhone: string;
+        status: HotelStatus;
         createdAt: string;
         updatedAt: string;
     }
@@ -127,6 +145,7 @@ declare global {
 
     interface IRoom {
         _id: string;
+        hotelId: string | IHotel;
         roomNumber: string;
         roomType: RoomType;
         pricePerNight: number;
@@ -144,6 +163,7 @@ declare global {
 
     interface IBooking {
         _id: string;
+        hotelId: string | IHotel;
         guest?: IUser | string; // Optional - only for guest bookings
         customerDetails?: {
             name: string;
@@ -176,6 +196,7 @@ declare global {
 
     interface IServiceRequest {
         _id: string;
+        hotelId: string | IHotel;
         booking: IBooking | string;
         guest?: IUser | string;
         room: IRoom | string;
