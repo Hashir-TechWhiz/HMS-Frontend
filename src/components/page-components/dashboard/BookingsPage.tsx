@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useHotel } from "@/contexts/HotelContext";
 import { getAllBookings, getMyBookings, cancelBooking, confirmBooking, checkInBooking, checkOutBooking } from "@/services/bookingService";
 import { getBookingsReport } from "@/services/reportService";
+import { getActiveHotels } from "@/services/hotelService";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
 import CancellationPenaltyDialog from "./CancellationPenaltyDialog";
@@ -24,6 +26,7 @@ import {
 
 const BookingsPage = () => {
     const { role, loading: authLoading } = useAuth();
+    const { selectedHotel } = useHotel();
 
     const [allBookings, setAllBookings] = useState<IBooking[]>([]);
     const [loading, setLoading] = useState(true);
@@ -32,6 +35,8 @@ const BookingsPage = () => {
     const [totalItems, setTotalItems] = useState(0);
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [hotelFilter, setHotelFilter] = useState<string>("all");
+    const [availableHotels, setAvailableHotels] = useState<IHotel[]>([]);
 
     // KPI states
     const [kpiLoading, setKpiLoading] = useState(false);
@@ -126,12 +131,26 @@ const BookingsPage = () => {
         }
     }, [role, authLoading]);
 
+    // Fetch available hotels
+    const fetchAvailableHotels = useCallback(async () => {
+        if (role !== "admin") return;
+        try {
+            const response = await getActiveHotels();
+            if (response.success && response.data) {
+                setAvailableHotels(response.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch hotels:", error);
+        }
+    }, [role]);
+
     useEffect(() => {
         if (role && !authLoading) {
             fetchBookings(currentPage);
             fetchBookingStats();
+            fetchAvailableHotels();
         }
-    }, [role, authLoading, currentPage, fetchBookings, fetchBookingStats]);
+    }, [role, authLoading, currentPage, fetchBookings, fetchBookingStats, fetchAvailableHotels]);
 
     // Handle date range change
     const handleDateRangeChange = (range: DateRange | undefined) => {
@@ -452,13 +471,26 @@ const BookingsPage = () => {
         { value: "cancelled", label: "Cancelled" },
     ];
 
-    // Filter bookings based on status filter (client-side)
+    // Filter bookings based on status and hotel filters (client-side)
     const filteredBookings = useMemo(() => {
-        if (statusFilter === "all") {
-            return allBookings;
+        let filtered = allBookings;
+
+        // Filter by status
+        if (statusFilter !== "all") {
+            filtered = filtered.filter((booking) => booking.status === statusFilter);
         }
-        return allBookings.filter((booking) => booking.status === statusFilter);
-    }, [allBookings, statusFilter]);
+
+        // Filter by hotel (admin only)
+        if (role === "admin" && hotelFilter !== "all") {
+            filtered = filtered.filter((booking) => {
+                if (!booking.hotelId) return false;
+                const bookingHotelId = typeof booking.hotelId === 'string' ? booking.hotelId : booking.hotelId._id;
+                return bookingHotelId === hotelFilter;
+            });
+        }
+
+        return filtered;
+    }, [allBookings, statusFilter, hotelFilter, role]);
 
     // Update total items when filtered bookings change
     useEffect(() => {
@@ -739,7 +771,20 @@ const BookingsPage = () => {
 
                     <div className="flex lg:flex-row flex-col gap-5 w-full justify-end md:w-auto">
                         {(role === "admin" || role === "receptionist") && (
-                            <div>
+                            <>
+                                {role === "admin" && (
+                                    <SelectField
+                                        name="hotelFilter"
+                                        options={[
+                                            { value: "all", label: "All Hotels" },
+                                            ...availableHotels.map(h => ({ value: h._id, label: `${h.name} (${h.code})` }))
+                                        ]}
+                                        value={hotelFilter}
+                                        onChange={(v) => { setHotelFilter(v); setCurrentPage(1); }}
+                                        width="md:w-[200px]"
+                                        className="text-xs md:text-sm h-11!"
+                                    />
+                                )}
                                 <SelectField
                                     name="statusFilter"
                                     options={statusFilterOptions}
@@ -748,7 +793,7 @@ const BookingsPage = () => {
                                     width="md:w-[150px]"
                                     className="text-xs md:text-sm h-11!"
                                 />
-                            </div>
+                            </>
                         )}
                         <DateRangePicker
                             value={dateRange}

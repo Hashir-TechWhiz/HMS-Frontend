@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useHotel } from "@/contexts/HotelContext";
 
 import {
     getAllServiceRequests,
@@ -17,6 +18,7 @@ import {
 
 import { getServiceRequestsReport } from "@/services/reportService";
 import { getUsers } from "@/services/adminUserService";
+import { getActiveHotels } from "@/services/hotelService";
 
 import { DateRange } from "react-day-picker";
 import { useForm } from "react-hook-form";
@@ -39,6 +41,7 @@ import { Eye, RefreshCw, Settings, Clock, Loader2 as LoaderIcon, CheckCircle2, U
 
 const AdminServiceRequestsPage = () => {
     const { role, loading: authLoading } = useAuth();
+    const { selectedHotel } = useHotel();
 
     const [allServiceRequests, setAllServiceRequests] = useState<IServiceRequest[]>([]);
     const [loading, setLoading] = useState(true);
@@ -47,6 +50,8 @@ const AdminServiceRequestsPage = () => {
     const [totalItems, setTotalItems] = useState(0);
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [hotelFilter, setHotelFilter] = useState<string>("all");
+    const [availableHotels, setAvailableHotels] = useState<IHotel[]>([]);
 
     // KPI states
     const [kpiLoading, setKpiLoading] = useState(false);
@@ -137,8 +142,8 @@ const AdminServiceRequestsPage = () => {
         }
     }, [role, authLoading]);
 
-    // Fetch housekeeping staff
-    const fetchHousekeepingStaff = useCallback(async () => {
+    // Fetch housekeeping staff (hotel-scoped)
+    const fetchHousekeepingStaff = useCallback(async (hotelId?: string) => {
         try {
             const response = await getUsers({ role: 'housekeeping', isActive: true });
             if (response.success && response.data) {
@@ -146,10 +151,32 @@ const AdminServiceRequestsPage = () => {
                 const usersArray = Array.isArray(usersData)
                     ? usersData
                     : (usersData?.items || usersData?.users || []);
-                setHousekeepingStaff(usersArray);
+
+                // Filter by hotel if hotelId is provided
+                if (hotelId) {
+                    const filteredStaff = usersArray.filter((user: IUser) => {
+                        const userHotelId = typeof user.hotelId === 'string' ? user.hotelId : user.hotelId?._id;
+                        return userHotelId === hotelId;
+                    });
+                    setHousekeepingStaff(filteredStaff);
+                } else {
+                    setHousekeepingStaff(usersArray);
+                }
             }
         } catch (error) {
             console.error("Failed to fetch housekeeping staff:", error);
+        }
+    }, []);
+
+    // Fetch available hotels
+    const fetchAvailableHotels = useCallback(async () => {
+        try {
+            const response = await getActiveHotels();
+            if (response.success && response.data) {
+                setAvailableHotels(response.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch hotels:", error);
         }
     }, []);
 
@@ -158,8 +185,9 @@ const AdminServiceRequestsPage = () => {
             fetchServiceRequests(currentPage);
             fetchServiceRequestStats();
             fetchHousekeepingStaff();
+            fetchAvailableHotels();
         }
-    }, [role, authLoading, currentPage, fetchServiceRequests, fetchServiceRequestStats, fetchHousekeepingStaff]);
+    }, [role, authLoading, currentPage, fetchServiceRequests, fetchServiceRequestStats, fetchHousekeepingStaff, fetchAvailableHotels]);
 
     // Handle page change
     const handlePageChange = (newPage: number) => {
@@ -193,6 +221,13 @@ const AdminServiceRequestsPage = () => {
         resetAssign({
             staffId: '',
         });
+
+        // Fetch staff from the same hotel as the service request
+        const requestHotelId = typeof request.hotelId === 'string' ? request.hotelId : request.hotelId?._id;
+        if (requestHotelId) {
+            fetchHousekeepingStaff(requestHotelId);
+        }
+
         setAssignDialogOpen(true);
     };
 
@@ -327,13 +362,26 @@ const AdminServiceRequestsPage = () => {
         { value: "completed", label: "Completed" },
     ];
 
-    // Filter service requests based on status filter (client-side)
+    // Filter service requests based on status and hotel filters (client-side)
     const filteredServiceRequests = useMemo(() => {
-        if (statusFilter === "all") {
-            return allServiceRequests;
+        let filtered = allServiceRequests;
+
+        // Filter by status
+        if (statusFilter !== "all") {
+            filtered = filtered.filter((request) => request.status === statusFilter);
         }
-        return allServiceRequests.filter((request) => request.status === statusFilter);
-    }, [allServiceRequests, statusFilter]);
+
+        // Filter by hotel
+        if (hotelFilter !== "all") {
+            filtered = filtered.filter((request) => {
+                if (!request.hotelId) return false;
+                const requestHotelId = typeof request.hotelId === 'string' ? request.hotelId : request.hotelId._id;
+                return requestHotelId === hotelFilter;
+            });
+        }
+
+        return filtered;
+    }, [allServiceRequests, statusFilter, hotelFilter]);
 
     // Update total items when filtered requests change
     useEffect(() => {
@@ -485,6 +533,19 @@ const AdminServiceRequestsPage = () => {
                     </div>
 
                     <div className="flex lg:flex-row flex-col gap-5 w-full justify-end md:w-auto">
+                        {role === "admin" && (
+                            <SelectField
+                                name="hotelFilter"
+                                options={[
+                                    { value: "all", label: "All Hotels" },
+                                    ...availableHotels.map(h => ({ value: h._id, label: `${h.name} (${h.code})` }))
+                                ]}
+                                value={hotelFilter}
+                                onChange={(v) => { setHotelFilter(v); setCurrentPage(1); }}
+                                width="md:w-[250px]"
+                                className="text-xs md:text-sm h-11!"
+                            />
+                        )}
                         <SelectField
                             name="statusFilter"
                             options={statusFilterOptions}
