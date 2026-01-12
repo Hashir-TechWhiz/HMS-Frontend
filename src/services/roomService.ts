@@ -6,6 +6,7 @@ import { AxiosError } from 'axios';
  * Based on backend API specification in README.md
  * 
  * Supported parameters:
+ * - hotelId: Filter by hotel ID
  * - roomType: Filter by room type (standard, deluxe, suite, presidential)
  * - status: Filter by room status (available, occupied, maintenance)
  * - minPrice: Filter by minimum price
@@ -14,6 +15,7 @@ import { AxiosError } from 'axios';
  * - limit: Number of items per page (default: 10)
  */
 export interface GetRoomsParams {
+    hotelId?: string;
     roomType?: RoomType;
     status?: RoomStatus;
     minPrice?: number;

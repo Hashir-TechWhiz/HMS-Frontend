@@ -159,3 +159,31 @@ export const getUserStatistics = async (): Promise<ApiResponse<{
     }
 };
 
+/**
+ * Get all housekeeping staff for a specific hotel
+ * GET /admin/users?role=housekeeping&isActive=true
+ * 
+ * @param hotelId - The hotel ID to filter housekeeping staff
+ * @returns Promise with housekeeping staff array
+ */
+export const getHousekeepingStaff = async (hotelId: string): Promise<ApiResponse<IUser[]>> => {
+    try {
+        const response = await api.get<ApiResponse<IUser[]>>('/admin/users', {
+            params: {
+                role: 'housekeeping',
+                isActive: true,
+                hotelId: hotelId
+            }
+        });
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data) {
+            return error.response.data as ApiErrorResponse;
+        }
+        return {
+            success: false,
+            message: 'Failed to fetch housekeeping staff'
+        };
+    }
+};
+

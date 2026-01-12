@@ -495,10 +495,52 @@ const BookingsPage = () => {
                         variant="outline"
                         onClick={() => handleViewDetails(booking)}
                         className="h-8 px-2"
+                        title="View Details"
                     >
                         <Eye className="h-4 w-4" />
                     </Button>
 
+                    {/* Check-In Button for Confirmed Bookings */}
+                    {booking.status === "confirmed" && (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <span>
+                                        <Button
+                                            size="sm"
+                                            variant="default"
+                                            onClick={() => handleCheckInClick(booking)}
+                                            disabled={!isCheckInAllowed(booking)}
+                                            className="h-8 px-2 bg-blue-600 hover:bg-blue-700 border-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title="Check In"
+                                        >
+                                            <CheckCircle2 className="h-4 w-4" />
+                                        </Button>
+                                    </span>
+                                </TooltipTrigger>
+                                {!isCheckInAllowed(booking) && (
+                                    <TooltipContent side="bottom">
+                                        Check-in is only allowed on or after the scheduled check-in date
+                                    </TooltipContent>
+                                )}
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
+
+                    {/* Check-Out Button for Checked-In Bookings */}
+                    {booking.status === "checkedin" && (
+                        <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleCheckOutClick(booking)}
+                            className="h-8 px-2 bg-purple-600 hover:bg-purple-700 border-purple-700"
+                            title="Check Out"
+                        >
+                            <CheckCircle className="h-4 w-4" />
+                        </Button>
+                    )}
+
+                    {/* Cancel Button for Pending Bookings */}
                     <TooltipProvider>
                         <Tooltip >
                             <TooltipTrigger asChild>
@@ -509,6 +551,7 @@ const BookingsPage = () => {
                                         onClick={() => handleCancelClick(booking)}
                                         disabled={booking.status !== "pending"}
                                         className="h-8 px-2"
+                                        title="Cancel Booking"
                                     >
                                         <XCircle className="h-4 w-4" />
                                     </Button>

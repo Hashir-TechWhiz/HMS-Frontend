@@ -4,8 +4,10 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHotel } from "@/contexts/HotelContext";
 import { getServiceCatalog, deleteServiceCatalog } from "@/services/serviceCatalogService";
+import { getActiveHotels } from "@/services/hotelService";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
+import SelectField from "@/components/forms/SelectField";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, CheckCircle2, XCircle } from "lucide-react";
@@ -20,8 +22,41 @@ const ServiceCatalogPage = () => {
     const [loading, setLoading] = useState(true);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedService, setSelectedService] = useState<IServiceCatalog | null>(null);
+    const [availableHotels, setAvailableHotels] = useState<IHotel[]>([]);
+    const [filterHotel, setFilterHotel] = useState<string>("");
 
-    const hotelId = selectedHotel?._id || (typeof user?.hotelId === 'string' ? user?.hotelId : user?.hotelId?._id);
+    // Fetch available hotels for admin
+    const fetchAvailableHotels = useCallback(async () => {
+        if (role !== "admin") return;
+        try {
+            const response = await getActiveHotels();
+            if (response.success && response.data) {
+                setAvailableHotels(response.data);
+                // Set default hotel to first available if not already set
+                if (!filterHotel && response.data.length > 0) {
+                    setFilterHotel(response.data[0]._id);
+                }
+            }
+        } catch (error) {
+            console.error("Failed to fetch hotels:", error);
+        }
+    }, [role, filterHotel]);
+
+    // Initialize hotel filter based on role
+    useEffect(() => {
+        if (role === "admin") {
+            fetchAvailableHotels();
+        } else if (role === "receptionist") {
+            // For receptionist, set to their hotel
+            const hotelId = selectedHotel?._id || (typeof user?.hotelId === 'string' ? user?.hotelId : user?.hotelId?._id);
+            if (hotelId) {
+                setFilterHotel(hotelId);
+            }
+        }
+    }, [role, selectedHotel, user, fetchAvailableHotels]);
+
+    // Use filterHotel for admin, or user's hotel for receptionist
+    const hotelId = role === "admin" ? filterHotel : (selectedHotel?._id || (typeof user?.hotelId === 'string' ? user?.hotelId : user?.hotelId?._id));
 
     const fetchCatalog = useCallback(async () => {
         if (!hotelId) return;
@@ -39,8 +74,10 @@ const ServiceCatalogPage = () => {
     }, [hotelId]);
 
     useEffect(() => {
-        fetchCatalog();
-    }, [fetchCatalog]);
+        if (hotelId) {
+            fetchCatalog();
+        }
+    }, [hotelId, fetchCatalog]);
 
     const handleAddClick = () => {
         setSelectedService(null);
@@ -90,13 +127,6 @@ const ServiceCatalogPage = () => {
             ),
         },
         {
-            key: "category",
-            label: "Category",
-            render: (item: IServiceCatalog) => (
-                <Badge variant="outline" className="capitalize">{item.category || "General"}</Badge>
-            ),
-        },
-        {
             key: "isActive",
             label: "Status",
             render: (item: IServiceCatalog) => (
@@ -127,15 +157,29 @@ const ServiceCatalogPage = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-white">Service Catalog</h1>
                     <p className="text-sm text-gray-400 mt-1">Manage predefined services and pricing for this hotel</p>
                 </div>
-                <Button onClick={handleAddClick} className="main-button-gradient gap-2">
-                    <Plus className="h-4 w-4" />
-                    Add Service
-                </Button>
+                <div className="flex gap-3 w-full md:w-auto">
+                    {role === "admin" && (
+                        <SelectField
+                            name="hotelFilter"
+                            options={[
+                                ...availableHotels.map(h => ({ value: h._id, label: `${h.name} (${h.code})` }))
+                            ]}
+                            value={filterHotel}
+                            onChange={setFilterHotel}
+                            width="md:w-[200px]"
+                            className="text-xs md:text-sm h-11!"
+                        />
+                    )}
+                    <Button onClick={handleAddClick} className="main-button-gradient gap-2">
+                        <Plus className="h-4 w-4" />
+                        Add Service
+                    </Button>
+                </div>
             </div>
 
             <div className="bg-primary-900/10 border border-white/10 rounded-xl p-5">

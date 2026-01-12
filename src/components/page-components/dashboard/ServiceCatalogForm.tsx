@@ -19,7 +19,6 @@ const serviceCatalogSchema = z.object({
     description: z.string().optional(),
     fixedPrice: z.coerce.number().min(0, "Price cannot be negative"),
     isActive: z.boolean(),
-    category: z.string().optional(),
 });
 
 type ServiceCatalogFormValues = z.infer<typeof serviceCatalogSchema>;
@@ -49,14 +48,12 @@ const ServiceCatalogForm = ({ hotelId, initialData, onSuccess, onCancel }: Servi
             description: initialData.description || "",
             fixedPrice: initialData.fixedPrice || 0,
             isActive: !!initialData.isActive,
-            category: initialData.category || "General",
         } : {
             serviceType: "",
             displayName: "",
             description: "",
             isActive: true,
             fixedPrice: 0,
-            category: "General",
         }
     });
 
@@ -86,11 +83,19 @@ const ServiceCatalogForm = ({ hotelId, initialData, onSuccess, onCancel }: Servi
                 label="Service Type"
                 name="serviceType"
                 options={[
+                    { value: "cleaning", label: "Cleaning" },
                     { value: "housekeeping", label: "Housekeeping" },
                     { value: "room_service", label: "Room Service" },
-                    { value: "maintenance", label: "Maintenance" },
+                    { value: "food_service", label: "Food Service" },
+                    { value: "medical_assistance", label: "Medical Assistance" },
+                    { value: "massage", label: "Massage" },
+                    { value: "gym_access", label: "Gym Access" },
+                    { value: "yoga_session", label: "Yoga Session" },
                     { value: "laundry", label: "Laundry" },
                     { value: "spa", label: "Spa" },
+                    { value: "transport", label: "Transport" },
+                    { value: "room_decoration", label: "Room Decoration" },
+                    { value: "maintenance", label: "Maintenance" },
                     { value: "other", label: "Other" },
                 ]}
                 control={control}
@@ -115,14 +120,6 @@ const ServiceCatalogForm = ({ hotelId, initialData, onSuccess, onCancel }: Servi
                 validation={{ valueAsNumber: true, min: 0 }}
                 error={errors.fixedPrice}
                 placeholder="0.00"
-            />
-
-            <InputField
-                label="Category"
-                name="category"
-                register={register}
-                error={errors.category}
-                placeholder="e.g. Cleaning, Food, Wellness"
             />
 
             <TextAreaField

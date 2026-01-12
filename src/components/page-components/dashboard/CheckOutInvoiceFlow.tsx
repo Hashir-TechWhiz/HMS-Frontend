@@ -27,10 +27,14 @@ const CheckOutInvoiceFlow = ({ bookingId, onSuccess, onCancel }: CheckOutInvoice
             if (response.success && response.data) {
                 setInvoice(response.data);
             } else {
+                // Invoice not found is expected - guest hasn't generated it yet
+                // Don't show error toast, just set invoice to null
                 setInvoice(null);
             }
         } catch (error) {
-            console.error("Failed to fetch invoice:", error);
+            // Silent fail - invoice not found is expected behavior
+            console.log("No invoice found for this booking (expected on first checkout attempt)");
+            setInvoice(null);
         } finally {
             setLoading(false);
         }

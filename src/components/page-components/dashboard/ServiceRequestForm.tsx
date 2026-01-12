@@ -51,14 +51,29 @@ const ServiceRequestForm = ({ bookingId, hotelId, onSuccess, onCancel }: Service
 
     useEffect(() => {
         const fetchCatalog = async () => {
+            if (!hotelId) {
+                console.error("ServiceRequestForm: No hotelId provided");
+                setCatalogLoading(false);
+                return;
+            }
+
             try {
+                console.log("ServiceRequestForm: Fetching catalog for hotelId:", hotelId);
                 setCatalogLoading(true);
                 const response = await getServiceCatalog(hotelId);
+
+                console.log("ServiceRequestForm: Catalog response:", response);
+
                 if (response.success && response.data) {
+                    console.log("ServiceRequestForm: Catalog loaded successfully:", response.data.length, "services");
                     setCatalog(response.data);
+                } else {
+                    console.error("ServiceRequestForm: Failed to load catalog:", response.message);
+                    toast.error(response.message || "Failed to load service catalog");
                 }
             } catch (error) {
-                console.error("Failed to fetch catalog:", error);
+                console.error("ServiceRequestForm: Error fetching catalog:", error);
+                toast.error("Failed to load services. Please try again.");
             } finally {
                 setCatalogLoading(false);
             }
@@ -96,14 +111,23 @@ const ServiceRequestForm = ({ bookingId, hotelId, onSuccess, onCancel }: Service
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
+            {!catalogLoading && catalog.length === 0 && (
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-yellow-400">
+                        <strong>No services available.</strong> Please contact the hotel administrator to add services to the catalog for this hotel.
+                    </p>
+                </div>
+            )}
+
             <SelectField
                 label="Service Type"
                 name="serviceType"
                 options={catalog.map(s => ({ value: s.serviceType, label: s.displayName }))}
                 control={control}
                 error={errors.serviceType}
-                placeholder={catalogLoading ? "Loading catalog..." : "Select a service"}
+                placeholder={catalogLoading ? "Loading catalog..." : catalog.length === 0 ? "No services available" : "Select a service"}
                 required
+                disabled={catalogLoading || catalog.length === 0}
             />
 
             {selectedService && (
