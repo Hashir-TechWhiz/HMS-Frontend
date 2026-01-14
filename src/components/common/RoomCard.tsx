@@ -18,6 +18,7 @@ import {
   Home,
   Waves,
   Lock,
+  MapPin,
   LucideIcon
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,6 +35,9 @@ export interface RoomCardProps {
   capacity: number;
   beds: number;
   pricePerNight: number;
+  hotelName?: string;
+  hotelCity?: string;
+  hotelCountry?: string;
   userRole?: UserRole;
   onAction?: (roomId: string) => void;
   onCardClick?: (roomId: string) => void;
@@ -48,6 +52,9 @@ const RoomCard: FC<RoomCardProps> = ({
   capacity,
   beds,
   pricePerNight,
+  hotelName,
+  hotelCity,
+  hotelCountry,
   userRole = "public",
   onCardClick,
 }) => {
@@ -147,6 +154,21 @@ const RoomCard: FC<RoomCardProps> = ({
         <h3 className="text-lg font-semibold text-foreground mb-2 group-hover:text-primary transition-colors duration-300 line-clamp-1">
           {name}
         </h3>
+
+        {/* Hotel Information */}
+        {hotelName && (
+          <div className="flex items-start gap-1.5 mb-2">
+            <MapPin className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+            <div className="flex flex-col">
+              <span className="text-xs font-medium text-foreground">{hotelName}</span>
+              {(hotelCity || hotelCountry) && (
+                <span className="text-[10px] text-muted-foreground">
+                  {[hotelCity, hotelCountry].filter(Boolean).join(', ')}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {description && (
           <p className="text-xs text-muted-foreground mb-3 line-clamp-2 leading-relaxed">

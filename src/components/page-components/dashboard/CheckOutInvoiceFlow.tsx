@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { generateInvoice, getInvoiceByBookingId, updatePaymentStatus } from "@/services/invoiceService";
+import { generateInvoice, getInvoiceByBookingId, updatePaymentStatus, IInvoice } from "@/services/invoiceService";
 import { checkOutBooking } from "@/services/bookingService";
 import { toast } from "sonner";
 import { FileText, CreditCard, CheckCircle2, Loader2, DollarSign } from "lucide-react";
@@ -66,10 +66,9 @@ const CheckOutInvoiceFlow = ({ bookingId, onSuccess, onCancel }: CheckOutInvoice
         try {
             setActionLoading(true);
             const response = await updatePaymentStatus(invoice._id, {
-                paymentStatus: 'paid',
-                paidAmount: invoice.totalAmount
+                paymentStatus: 'paid'
             });
-            if (response.success) {
+            if (response.success && response.data) {
                 toast.success("Payment confirmed!");
                 setInvoice(response.data);
             } else {
@@ -139,8 +138,8 @@ const CheckOutInvoiceFlow = ({ bookingId, onSuccess, onCancel }: CheckOutInvoice
             <div className="bg-primary-900/10 border border-white/10 rounded-xl p-5 space-y-4">
                 <div className="flex justify-between items-start">
                     <div>
-                        <h3 className="text-lg font-semibold text-white">Invoice #{invoice._id.slice(-6).toUpperCase()}</h3>
-                        <p className="text-xs text-gray-400">Generated on {formatDateTime(invoice.generatedAt)}</p>
+                        <h3 className="text-lg font-semibold text-white">Invoice #{invoice.invoiceNumber}</h3>
+                        <p className="text-xs text-gray-400">Generated on {formatDateTime(invoice.createdAt)}</p>
                     </div>
                     <Badge className={isPaid ? "bg-green-500/20 text-green-400 border-green-500/50" : "bg-yellow-500/20 text-yellow-400 border-yellow-500/50"}>
                         {isPaid ? "Paid" : "Unpaid"}
@@ -149,17 +148,17 @@ const CheckOutInvoiceFlow = ({ bookingId, onSuccess, onCancel }: CheckOutInvoice
 
                 <div className="space-y-3 border-t border-white/5 pt-4">
                     <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">Room Charges ({invoice.roomCharges.numberOfNights} nights)</span>
-                        <span className="text-white font-medium">${invoice.roomCharges.totalRoomCharges.toFixed(2)}</span>
+                        <span className="text-gray-400">Room Charges ({invoice.roomCharges?.numberOfNights || 0} nights)</span>
+                        <span className="text-white font-medium">LKR {(invoice.roomCharges?.subtotal || 0).toFixed(2)}</span>
                     </div>
 
-                    {invoice.serviceCharges.length > 0 && (
+                    {invoice.serviceCharges && invoice.serviceCharges.length > 0 && (
                         <div className="space-y-2">
                             <span className="text-xs font-semibold text-primary-400 uppercase tracking-wider">Service Charges</span>
                             {invoice.serviceCharges.map((service, idx) => (
                                 <div key={idx} className="flex justify-between text-sm pl-2">
                                     <span className="text-gray-400">{service.description || service.serviceType}</span>
-                                    <span className="text-white">${service.price.toFixed(2)}</span>
+                                    <span className="text-white">LKR {(service.total || 0).toFixed(2)}</span>
                                 </div>
                             ))}
                         </div>
@@ -167,7 +166,7 @@ const CheckOutInvoiceFlow = ({ bookingId, onSuccess, onCancel }: CheckOutInvoice
 
                     <div className="flex justify-between text-sm pt-2 border-t border-white/5 font-semibold">
                         <span className="text-white text-base">Total Amount</span>
-                        <span className="text-primary-400 text-lg">${invoice.totalAmount.toFixed(2)}</span>
+                        <span className="text-primary-400 text-lg">LKR {(invoice.summary?.grandTotal || 0).toFixed(2)}</span>
                     </div>
                 </div>
             </div>
