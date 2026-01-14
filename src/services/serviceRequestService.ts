@@ -14,8 +14,9 @@ import { AxiosError } from 'axios';
  */
 export interface CreateServiceRequestData {
     bookingId: string;
-    serviceType: ServiceType;
+    serviceType: string;
     notes?: string;
+    priority?: 'low' | 'normal' | 'high' | 'urgent';
 }
 
 /**
@@ -231,12 +232,13 @@ export const assignServiceRequest = async (
  */
 export const updateServiceRequestStatus = async (
     serviceRequestId: string,
-    status: ServiceStatus
+    status: ServiceStatus,
+    finalPrice?: number
 ): Promise<ApiResponse<IServiceRequest>> => {
     try {
         const response = await api.patch<ApiResponse<IServiceRequest>>(
             `/service-requests/${serviceRequestId}/status`,
-            { status }
+            { status, finalPrice }
         );
         return response.data;
     } catch (error) {

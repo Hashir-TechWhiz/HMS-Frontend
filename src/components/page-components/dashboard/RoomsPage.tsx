@@ -10,6 +10,7 @@ import {
 import Image from "next/image";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useHotel } from "@/contexts/HotelContext";
 
 import {
     getRooms,
@@ -18,6 +19,7 @@ import {
     deleteRoom
 } from "@/services/roomService";
 import { getRoomsReport } from "@/services/reportService";
+import { getActiveHotels } from "@/services/hotelService";
 
 import { useForm } from "react-hook-form";
 import { useEdgeStore } from "@/lib/edgestore";
@@ -40,7 +42,10 @@ import ViewRoomDetails from "@/components/common/ViewRoomDetails";
 
 const RoomsPage = () => {
     const { role, loading: authLoading } = useAuth();
+    const { selectedHotel } = useHotel();
     const { edgestore } = useEdgeStore();
+
+    const [availableHotels, setAvailableHotels] = useState<IHotel[]>([]);
 
     const [rooms, setRooms] = useState<IRoom[]>([]);
     const [loading, setLoading] = useState(true);
@@ -48,6 +53,7 @@ const RoomsPage = () => {
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
     const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [hotelFilter, setHotelFilter] = useState<string>("all");
     const ITEMS_PER_PAGE = 10;
 
     // KPI states
@@ -73,6 +79,7 @@ const RoomsPage = () => {
         reset,
         control,
     } = useForm<{
+        hotelId: string;
         roomNumber: string;
         roomType: RoomType;
         capacity: number;
@@ -87,23 +94,28 @@ const RoomsPage = () => {
 
         try {
             setLoading(true);
-            
+
             // Prepare params with pagination
             const params: any = {
                 page: currentPage,
                 limit: ITEMS_PER_PAGE,
             };
-            
+
             // Add status filter if not "all"
             if (statusFilter !== "all") {
                 params.status = statusFilter;
             }
-            
+
+            // Add hotel filter if not "all"
+            if (hotelFilter !== "all") {
+                params.hotelId = hotelFilter;
+            }
+
             const response = await getRooms(params);
 
             if (response.success) {
                 const data: any = response.data;
-                
+
                 // Handle paginated response
                 if (data.pagination) {
                     setRooms(data.rooms || []);
@@ -124,12 +136,12 @@ const RoomsPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [role, authLoading, currentPage, statusFilter, ITEMS_PER_PAGE]);
+    }, [role, authLoading, currentPage, statusFilter, hotelFilter, ITEMS_PER_PAGE]);
 
-    // Reset to page 1 when status filter changes
+    // Reset to page 1 when status or hotel filter changes
     useEffect(() => {
         setCurrentPage(1);
-    }, [statusFilter]);
+    }, [statusFilter, hotelFilter]);
 
     // Fetch room statistics
     const fetchRoomStats = useCallback(async () => {
@@ -155,6 +167,24 @@ const RoomsPage = () => {
         }
     }, [role, authLoading, fetchRooms, fetchRoomStats]);
 
+    // Fetch available hotels for selection
+    const fetchAvailableHotels = useCallback(async () => {
+        try {
+            const response = await getActiveHotels();
+            if (response.success && response.data) {
+                setAvailableHotels(response.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch hotels:", error);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (role === "admin" && !authLoading) {
+            fetchAvailableHotels();
+        }
+    }, [role, authLoading, fetchAvailableHotels]);
+
     // Handle page change
     const handlePageChange = (newPage: number) => {
         setCurrentPage(newPage);
@@ -174,6 +204,7 @@ const RoomsPage = () => {
         setSelectedAmenities([]);
         setSubmitAttempted(false);
         reset({
+            hotelId: selectedHotel?._id || "",
             roomNumber: "",
             roomType: "Single",
             capacity: 1,
@@ -191,7 +222,9 @@ const RoomsPage = () => {
         setImageFiles(room.images);
         setSelectedAmenities(room.amenities || []);
         setSubmitAttempted(false);
+        const roomHotelId = typeof room.hotelId === 'string' ? room.hotelId : room.hotelId._id;
         reset({
+            hotelId: roomHotelId,
             roomNumber: room.roomNumber,
             roomType: room.roomType,
             capacity: room.capacity,
@@ -241,6 +274,7 @@ const RoomsPage = () => {
 
     // Handle form submit
     const onSubmit = async (data: {
+        hotelId: string;
         roomNumber: string;
         roomType: RoomType;
         capacity: number;
@@ -401,6 +435,12 @@ const RoomsPage = () => {
         "Safe Locker",
     ];
 
+    // Hotel filter options
+    const hotelFilterOptions: Option[] = [
+        { value: "all", label: "All Hotels" },
+        ...availableHotels.map(h => ({ value: h._id, label: `${h.name} (${h.code})` }))
+    ];
+
     // Define columns
     const columns = [
         {
@@ -554,6 +594,15 @@ const RoomsPage = () => {
 
                     <div className="flex lg:flex-row flex-col gap-5 w-full justify-end md:w-auto">
                         <SelectField
+                            name="hotelFilter"
+                            options={hotelFilterOptions}
+                            value={hotelFilter}
+                            onChange={(v) => { setHotelFilter(v); setCurrentPage(1); }}
+                            width="md:w-[200px]"
+                            className="bg-black-500! border border-white/50 focus:ring-1! focus:ring-primary-800! text-xs md:text-sm h-10!"
+                        />
+
+                        <SelectField
                             name="roomStatusFilter"
                             options={statusFilterOptions}
                             value={statusFilter}
@@ -616,6 +665,16 @@ const RoomsPage = () => {
                     confirmLoading={formLoading}
                 >
                     <form onSubmit={(e) => { e.preventDefault(); handleSubmit(onSubmit)(e); }} className="space-y-4 py-4">
+                        <div>
+                            <SelectField
+                                name="hotelId"
+                                label="Hotel *"
+                                options={availableHotels.map(h => ({ value: h._id, label: `${h.name} (${h.code})` }))}
+                                control={control}
+                                required
+                                error={errors.hotelId}
+                            />
+                        </div>
                         <div className="grid grid-cols-2 gap-4">
                             <InputField
                                 name="roomNumber"

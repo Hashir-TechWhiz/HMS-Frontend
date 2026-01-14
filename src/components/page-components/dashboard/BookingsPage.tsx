@@ -2,11 +2,15 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useHotel } from "@/contexts/HotelContext";
 import { getAllBookings, getMyBookings, cancelBooking, confirmBooking, checkInBooking, checkOutBooking } from "@/services/bookingService";
 import { getBookingsReport } from "@/services/reportService";
+import { getActiveHotels } from "@/services/hotelService";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
 import CancellationPenaltyDialog from "./CancellationPenaltyDialog";
+import CheckInForm from "./CheckInForm";
+import CheckOutInvoiceFlow from "./CheckOutInvoiceFlow";
 import StatCard from "@/components/common/StatCard";
 import SelectField from "@/components/forms/SelectField";
 import { Button } from "@/components/ui/button";
@@ -24,6 +28,7 @@ import {
 
 const BookingsPage = () => {
     const { role, loading: authLoading } = useAuth();
+    const { selectedHotel } = useHotel();
 
     const [allBookings, setAllBookings] = useState<IBooking[]>([]);
     const [loading, setLoading] = useState(true);
@@ -32,6 +37,8 @@ const BookingsPage = () => {
     const [totalItems, setTotalItems] = useState(0);
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [hotelFilter, setHotelFilter] = useState<string>("all");
+    const [availableHotels, setAvailableHotels] = useState<IHotel[]>([]);
 
     // KPI states
     const [kpiLoading, setKpiLoading] = useState(false);
@@ -126,12 +133,26 @@ const BookingsPage = () => {
         }
     }, [role, authLoading]);
 
+    // Fetch available hotels
+    const fetchAvailableHotels = useCallback(async () => {
+        if (role !== "admin") return;
+        try {
+            const response = await getActiveHotels();
+            if (response.success && response.data) {
+                setAvailableHotels(response.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch hotels:", error);
+        }
+    }, [role]);
+
     useEffect(() => {
         if (role && !authLoading) {
             fetchBookings(currentPage);
             fetchBookingStats();
+            fetchAvailableHotels();
         }
-    }, [role, authLoading, currentPage, fetchBookings, fetchBookingStats]);
+    }, [role, authLoading, currentPage, fetchBookings, fetchBookingStats, fetchAvailableHotels]);
 
     // Handle date range change
     const handleDateRangeChange = (range: DateRange | undefined) => {
@@ -315,56 +336,10 @@ const BookingsPage = () => {
         setCheckInDialogOpen(true);
     };
 
-    const handleCheckInConfirm = async () => {
-        if (!selectedBooking) return;
-
-        try {
-            setCheckInLoading(true);
-            const response = await checkInBooking(selectedBooking._id);
-
-            if (response.success) {
-                toast.success("Booking checked-in successfully!");
-                setCheckInDialogOpen(false);
-                setSelectedBooking(null);
-                fetchBookings(currentPage);
-                fetchBookingStats();
-            } else {
-                toast.error(response.message || "Failed to check-in booking");
-            }
-        } catch {
-            toast.error("An error occurred while checking-in the booking");
-        } finally {
-            setCheckInLoading(false);
-        }
-    };
-
     // Handle check-out booking
     const handleCheckOutClick = (booking: IBooking) => {
         setSelectedBooking(booking);
         setCheckOutDialogOpen(true);
-    };
-
-    const handleCheckOutConfirm = async () => {
-        if (!selectedBooking) return;
-
-        try {
-            setCheckOutLoading(true);
-            const response = await checkOutBooking(selectedBooking._id);
-
-            if (response.success) {
-                toast.success("Booking checked-out successfully!");
-                setCheckOutDialogOpen(false);
-                setSelectedBooking(null);
-                fetchBookings(currentPage);
-                fetchBookingStats();
-            } else {
-                toast.error(response.message || "Failed to check-out booking");
-            }
-        } catch {
-            toast.error("An error occurred while checking-out the booking");
-        } finally {
-            setCheckOutLoading(false);
-        }
     };
 
 
@@ -452,13 +427,26 @@ const BookingsPage = () => {
         { value: "cancelled", label: "Cancelled" },
     ];
 
-    // Filter bookings based on status filter (client-side)
+    // Filter bookings based on status and hotel filters (client-side)
     const filteredBookings = useMemo(() => {
-        if (statusFilter === "all") {
-            return allBookings;
+        let filtered = allBookings;
+
+        // Filter by status
+        if (statusFilter !== "all") {
+            filtered = filtered.filter((booking) => booking.status === statusFilter);
         }
-        return allBookings.filter((booking) => booking.status === statusFilter);
-    }, [allBookings, statusFilter]);
+
+        // Filter by hotel (admin only)
+        if (role === "admin" && hotelFilter !== "all") {
+            filtered = filtered.filter((booking) => {
+                if (!booking.hotelId) return false;
+                const bookingHotelId = typeof booking.hotelId === 'string' ? booking.hotelId : booking.hotelId._id;
+                return bookingHotelId === hotelFilter;
+            });
+        }
+
+        return filtered;
+    }, [allBookings, statusFilter, hotelFilter, role]);
 
     // Update total items when filtered bookings change
     useEffect(() => {
@@ -507,10 +495,52 @@ const BookingsPage = () => {
                         variant="outline"
                         onClick={() => handleViewDetails(booking)}
                         className="h-8 px-2"
+                        title="View Details"
                     >
                         <Eye className="h-4 w-4" />
                     </Button>
 
+                    {/* Check-In Button for Confirmed Bookings */}
+                    {booking.status === "confirmed" && (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <span>
+                                        <Button
+                                            size="sm"
+                                            variant="default"
+                                            onClick={() => handleCheckInClick(booking)}
+                                            disabled={!isCheckInAllowed(booking)}
+                                            className="h-8 px-2 bg-blue-600 hover:bg-blue-700 border-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title="Check In"
+                                        >
+                                            <CheckCircle2 className="h-4 w-4" />
+                                        </Button>
+                                    </span>
+                                </TooltipTrigger>
+                                {!isCheckInAllowed(booking) && (
+                                    <TooltipContent side="bottom">
+                                        Check-in is only allowed on or after the scheduled check-in date
+                                    </TooltipContent>
+                                )}
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
+
+                    {/* Check-Out Button for Checked-In Bookings */}
+                    {booking.status === "checkedin" && (
+                        <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleCheckOutClick(booking)}
+                            className="h-8 px-2 bg-purple-600 hover:bg-purple-700 border-purple-700"
+                            title="Check Out"
+                        >
+                            <CheckCircle className="h-4 w-4" />
+                        </Button>
+                    )}
+
+                    {/* Cancel Button for Pending Bookings */}
                     <TooltipProvider>
                         <Tooltip >
                             <TooltipTrigger asChild>
@@ -521,6 +551,7 @@ const BookingsPage = () => {
                                         onClick={() => handleCancelClick(booking)}
                                         disabled={booking.status !== "pending"}
                                         className="h-8 px-2"
+                                        title="Cancel Booking"
                                     >
                                         <XCircle className="h-4 w-4" />
                                     </Button>
@@ -739,7 +770,20 @@ const BookingsPage = () => {
 
                     <div className="flex lg:flex-row flex-col gap-5 w-full justify-end md:w-auto">
                         {(role === "admin" || role === "receptionist") && (
-                            <div>
+                            <>
+                                {role === "admin" && (
+                                    <SelectField
+                                        name="hotelFilter"
+                                        options={[
+                                            { value: "all", label: "All Hotels" },
+                                            ...availableHotels.map(h => ({ value: h._id, label: `${h.name} (${h.code})` }))
+                                        ]}
+                                        value={hotelFilter}
+                                        onChange={(v) => { setHotelFilter(v); setCurrentPage(1); }}
+                                        width="md:w-[200px]"
+                                        className="text-xs md:text-sm h-11!"
+                                    />
+                                )}
                                 <SelectField
                                     name="statusFilter"
                                     options={statusFilterOptions}
@@ -748,7 +792,7 @@ const BookingsPage = () => {
                                     width="md:w-[150px]"
                                     className="text-xs md:text-sm h-11!"
                                 />
-                            </div>
+                            </>
                         )}
                         <DateRangePicker
                             value={dateRange}
@@ -897,29 +941,37 @@ const BookingsPage = () => {
                     open={checkInDialogOpen}
                     onOpenChange={setCheckInDialogOpen}
                     title="Check In Booking"
-                    description="Are you sure you want to check-in this booking? This action confirms that the guest has arrived and taken occupancy of the room."
-                    showFooter
-                    confirmText="Check In"
-                    cancelText="Go Back"
-                    onConfirm={handleCheckInConfirm}
-                    onCancel={() => setCheckInDialogOpen(false)}
-                    confirmLoading={checkInLoading}
-                    variant="success"
-                />
+                    widthClass="max-w-xl"
+                >
+                    {selectedBooking && (
+                        <CheckInForm
+                            bookingId={selectedBooking._id}
+                            onSuccess={() => {
+                                setCheckInDialogOpen(false);
+                                fetchBookings(currentPage);
+                            }}
+                            onCancel={() => setCheckInDialogOpen(false)}
+                        />
+                    )}
+                </DialogBox>
                 {/* Check Out Dialog */}
                 <DialogBox
                     open={checkOutDialogOpen}
                     onOpenChange={setCheckOutDialogOpen}
-                    title="Check Out Booking"
-                    description="Are you sure you want to check-out this booking? This action confirms that the guest has vacated the room and the booking is complete."
-                    showFooter
-                    confirmText="Check Out"
-                    cancelText="Go Back"
-                    onConfirm={handleCheckOutConfirm}
-                    onCancel={() => setCheckOutDialogOpen(false)}
-                    confirmLoading={checkOutLoading}
-                    variant="success"
-                />
+                    title="Check Out and Invoicing"
+                    widthClass="max-w-xl"
+                >
+                    {selectedBooking && (
+                        <CheckOutInvoiceFlow
+                            bookingId={selectedBooking._id}
+                            onSuccess={() => {
+                                setCheckOutDialogOpen(false);
+                                fetchBookings(currentPage);
+                            }}
+                            onCancel={() => setCheckOutDialogOpen(false)}
+                        />
+                    )}
+                </DialogBox>
             </div>
         </div>
     );

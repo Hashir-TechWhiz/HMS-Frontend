@@ -3,6 +3,7 @@
 import { ReactNode } from 'react';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { HotelProvider } from '@/contexts/HotelContext';
 
 interface ProvidersProps {
     children: ReactNode;
@@ -11,8 +12,10 @@ interface ProvidersProps {
 export default function Providers({ children }: ProvidersProps) {
     return (
         <AuthProvider>
-            {children}
-            <Toaster position="bottom-right" richColors />
+            <HotelProvider>
+                {children}
+                <Toaster position="bottom-right" richColors />
+            </HotelProvider>
         </AuthProvider>
     );
 }

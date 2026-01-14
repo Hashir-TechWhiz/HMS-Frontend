@@ -258,15 +258,27 @@ export const confirmBooking = async (bookingId: string): Promise<ApiResponse<IBo
 };
 
 /**
- * Check-in a booking (manual action by staff)
+ * Check-in data interface
+ */
+export interface CheckInData {
+    nicPassport: string;
+    nationality: string;
+    phoneNumber: string;
+    country: string;
+    visaDetails?: string;
+}
+
+/**
+ * Check-in a booking (manual action by staff or guest)
  * PATCH /api/bookings/:id/check-in
  * 
  * @param bookingId - The ID of the booking to check-in
+ * @param data - Check-in detail data
  * @returns Promise with updated booking data
  */
-export const checkInBooking = async (bookingId: string): Promise<ApiResponse<IBooking>> => {
+export const checkInBooking = async (bookingId: string, data: CheckInData): Promise<ApiResponse<IBooking>> => {
     try {
-        const response = await api.patch<ApiResponse<IBooking>>(`/bookings/${bookingId}/check-in`);
+        const response = await api.patch<ApiResponse<IBooking>>(`/bookings/${bookingId}/check-in`, data);
         return response.data;
     } catch (error) {
         if (error instanceof AxiosError && error.response?.data) {
