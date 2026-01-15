@@ -191,7 +191,9 @@ declare global {
     }
 
     // Service Request Types
-    type ServiceType = 'housekeeping' | 'room_service' | 'maintenance';
+    type ServiceType = 'cleaning' | 'housekeeping' | 'maintenance' | 'room_service' | 'food_service' | 
+                       'medical_assistance' | 'massage' | 'gym_access' | 'yoga_session' | 'laundry' | 
+                       'spa' | 'transport' | 'room_decoration' | 'other';
     type ServiceStatus = 'pending' | 'in_progress' | 'completed';
 
     interface IServiceRequest {

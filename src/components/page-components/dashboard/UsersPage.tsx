@@ -144,6 +144,13 @@ const UsersPage = () => {
         }
     }, [role, authLoading, fetchAvailableHotels]);
 
+    useEffect(() => {
+        if (availableHotels.length > 0 && hotelFilter === "all") {
+            setHotelFilter(availableHotels[0]._id);
+        }
+    }, [availableHotels, hotelFilter]);
+
+
     // Handle page change
     const handlePageChange = (newPage: number) => {
         setCurrentPage(newPage);
@@ -359,7 +366,6 @@ const UsersPage = () => {
 
     // Hotel filter options
     const hotelFilterOptions: Option[] = [
-        { value: "all", label: "All Hotels" },
         ...availableHotels.map(h => ({ value: h._id, label: `${h.name} (${h.code})` }))
     ];
 
@@ -414,6 +420,26 @@ const UsersPage = () => {
             key: "role",
             label: "Role",
             render: (user: IUser) => <RoleBadge role={user.role} />,
+        },
+        {
+            key: "hotel",
+            label: "Hotel",
+            render: (user: IUser) => {
+                if (!user.hotelId) {
+                    return <span className="text-gray-400 text-sm">—</span>;
+                }
+
+                if (typeof user.hotelId === "string") {
+                    return <span className="text-sm">Assigned</span>;
+                }
+
+                return (
+                    <div className="text-sm">
+                        <div className="font-medium">{user.hotelId.name}</div>
+                        <div className="text-xs text-gray-400">{user.hotelId.code}</div>
+                    </div>
+                );
+            },
         },
         {
             key: "status",
@@ -538,7 +564,7 @@ const UsersPage = () => {
                             options={hotelFilterOptions}
                             value={hotelFilter}
                             onChange={(v) => { setHotelFilter(v); setCurrentPage(1); }}
-                            width="md:w-[200px]"
+                            width="md:w-[250px]"
                             className="bg-black-500! border border-white/50 focus:ring-1! focus:ring-primary-800! text-xs md:text-sm h-10!"
                         />
                         <SelectField

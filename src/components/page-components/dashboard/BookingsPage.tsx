@@ -527,18 +527,8 @@ const BookingsPage = () => {
                         </TooltipProvider>
                     )}
 
-                    {/* Check-Out Button for Checked-In Bookings */}
-                    {booking.status === "checkedin" && (
-                        <Button
-                            size="sm"
-                            variant="default"
-                            onClick={() => handleCheckOutClick(booking)}
-                            className="h-8 px-2 bg-purple-600 hover:bg-purple-700 border-purple-700"
-                            title="Check Out"
-                        >
-                            <CheckCircle className="h-4 w-4" />
-                        </Button>
-                    )}
+                    {/* Check-Out Button - Only for Staff (Admin/Receptionist) */}
+                    {/* Guests cannot checkout - only staff can perform checkout */}
 
                     {/* Cancel Button for Pending Bookings */}
                     <TooltipProvider>
@@ -780,7 +770,7 @@ const BookingsPage = () => {
                                         ]}
                                         value={hotelFilter}
                                         onChange={(v) => { setHotelFilter(v); setCurrentPage(1); }}
-                                        width="md:w-[200px]"
+                                        width="md:w-[250px]"
                                         className="text-xs md:text-sm h-11!"
                                     />
                                 )}

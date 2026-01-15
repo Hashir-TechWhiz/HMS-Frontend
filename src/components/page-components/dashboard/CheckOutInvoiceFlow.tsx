@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { generateInvoice, getInvoiceByBookingId, updatePaymentStatus, IInvoice } from "@/services/invoiceService";
+import { generateInvoice, getInvoiceByBookingId, updatePaymentStatus, downloadInvoicePDF, IInvoice } from "@/services/invoiceService";
 import { checkOutBooking } from "@/services/bookingService";
 import { toast } from "sonner";
-import { FileText, CreditCard, CheckCircle2, Loader2, DollarSign } from "lucide-react";
+import { FileText, CreditCard, CheckCircle2, Loader2, Printer } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
@@ -42,13 +42,14 @@ const CheckOutInvoiceFlow = ({ bookingId, onSuccess, onCancel }: CheckOutInvoice
 
     useEffect(() => {
         fetchInvoice();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [bookingId]);
 
     const handleGenerateInvoice = async () => {
         try {
             setActionLoading(true);
             const response = await generateInvoice(bookingId);
-            if (response.success) {
+            if (response.success && response.data) {
                 toast.success("Invoice generated successfully!");
                 setInvoice(response.data);
             } else {
@@ -98,6 +99,19 @@ const CheckOutInvoiceFlow = ({ bookingId, onSuccess, onCancel }: CheckOutInvoice
         }
     };
 
+    const handlePrintInvoice = async () => {
+        if (!invoice) return;
+        try {
+            setActionLoading(true);
+            await downloadInvoicePDF(invoice._id, invoice.invoiceNumber);
+            toast.success("Invoice downloaded successfully!");
+        } catch (error) {
+            toast.error("Failed to download invoice");
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
@@ -112,19 +126,19 @@ const CheckOutInvoiceFlow = ({ bookingId, onSuccess, onCancel }: CheckOutInvoice
             <div className="py-8 text-center space-y-6">
                 <div className="flex flex-col items-center space-y-2">
                     <FileText className="h-12 w-12 text-gray-500 opacity-50" />
-                    <h3 className="text-lg font-medium text-white">No Invoice Generated</h3>
+                    <h3 className="text-lg font-medium text-white">Ready for Checkout</h3>
                     <p className="text-sm text-gray-400 max-w-sm mx-auto">
-                        An invoice must be generated before the guest can check out.
+                        Invoice will be generated and finalized during checkout. Click below to proceed with checkout.
                     </p>
                 </div>
                 <div className="flex justify-center gap-3">
                     <Button variant="outline" onClick={onCancel}>Cancel</Button>
                     <Button
-                        onClick={handleGenerateInvoice}
+                        onClick={handleConfirmCheckOut}
                         disabled={actionLoading}
                         className="bg-primary-600 hover:bg-primary-700"
                     >
-                        {actionLoading ? "Generating..." : "Generate Final Invoice"}
+                        {actionLoading ? "Processing..." : "Generate Final Invoice & Checkout"}
                     </Button>
                 </div>
             </div>
@@ -183,21 +197,33 @@ const CheckOutInvoiceFlow = ({ bookingId, onSuccess, onCancel }: CheckOutInvoice
                     </Button>
                 )}
 
-                <Button
-                    onClick={handleConfirmCheckOut}
-                    disabled={!isPaid || actionLoading}
-                    className="w-full bg-primary-600 hover:bg-primary-700 text-white gap-2 h-11"
-                >
-                    <CheckCircle2 className="h-4 w-4" />
-                    {actionLoading ? "Processing..." : "Complete Check-out"}
-                </Button>
+                <div className="flex gap-3">
+                    <Button
+                        onClick={handlePrintInvoice}
+                        disabled={actionLoading}
+                        variant="outline"
+                        className="flex-1 gap-2 h-11 border-primary-500/30 hover:bg-primary-500/10 text-white"
+                    >
+                        <Printer className="h-4 w-4" />
+                        Print Invoice
+                    </Button>
+
+                    <Button
+                        onClick={handleConfirmCheckOut}
+                        disabled={!isPaid || actionLoading}
+                        className="flex-1 bg-primary-600 hover:bg-primary-700 text-white gap-2 h-11"
+                    >
+                        <CheckCircle2 className="h-4 w-4" />
+                        {actionLoading ? "Processing..." : "Complete Check-out"}
+                    </Button>
+                </div>
 
                 <p className="text-[10px] text-center text-gray-500">
                     {!isPaid ? "Payment must be settled before checkout." : "Invoice is settled. Ready for checkout."}
                 </p>
 
                 <Button variant="ghost" onClick={onCancel} disabled={actionLoading} className="text-gray-400 hover:text-white">
-                    Cancel and Return
+                    Close
                 </Button>
             </div>
         </div>

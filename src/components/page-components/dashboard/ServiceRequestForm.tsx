@@ -5,15 +5,16 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
-import InputField from "@/components/forms/InputField";
 import SelectField from "@/components/forms/SelectField";
 import TextAreaField from "@/components/forms/TextAreaField";
 import { toast } from "sonner";
 import { createServiceRequest } from "@/services/serviceRequestService";
 import { getServiceCatalog } from "@/services/serviceCatalogService";
-import { DollarSign, Info } from "lucide-react";
+import { Info } from "lucide-react";
 
+/* -------------------- Schema -------------------- */
 const serviceRequestSchema = z.object({
+    bookingId: z.string().min(1, "Active stay is required"),
     serviceType: z.string().min(1, "Service type is required"),
     notes: z.string().optional(),
     priority: z.enum(["low", "normal", "high", "urgent"]),
@@ -22,16 +23,19 @@ const serviceRequestSchema = z.object({
 type ServiceRequestFormValues = z.infer<typeof serviceRequestSchema>;
 
 interface ServiceRequestFormProps {
-    bookingId: string;
-    hotelId: string;
+    bookings: IBooking[];
     onSuccess: () => void;
     onCancel: () => void;
 }
 
-const ServiceRequestForm = ({ bookingId, hotelId, onSuccess, onCancel }: ServiceRequestFormProps) => {
+const ServiceRequestForm = ({
+    bookings,
+    onSuccess,
+    onCancel,
+}: ServiceRequestFormProps) => {
     const [loading, setLoading] = useState(false);
     const [catalog, setCatalog] = useState<IServiceCatalog[]>([]);
-    const [catalogLoading, setCatalogLoading] = useState(true);
+    const [catalogLoading, setCatalogLoading] = useState(false);
     const [selectedService, setSelectedService] = useState<IServiceCatalog | null>(null);
 
     const {
@@ -44,56 +48,68 @@ const ServiceRequestForm = ({ bookingId, hotelId, onSuccess, onCancel }: Service
         resolver: zodResolver(serviceRequestSchema),
         defaultValues: {
             priority: "normal",
-        }
+        },
     });
 
+    const watchedBookingId = watch("bookingId");
     const watchedServiceType = watch("serviceType");
 
+    /* -------------------- Resolve Selected Booking -------------------- */
+    const selectedBooking = bookings.find((b) => b._id === watchedBookingId);
+
+    const hotelId =
+        typeof selectedBooking?.hotelId === "object"
+            ? selectedBooking.hotelId._id
+            : selectedBooking?.hotelId;
+
+    /* -------------------- Fetch Service Catalog -------------------- */
     useEffect(() => {
         const fetchCatalog = async () => {
             if (!hotelId) {
-                console.error("ServiceRequestForm: No hotelId provided");
-                setCatalogLoading(false);
+                setCatalog([]);
                 return;
             }
 
             try {
-                console.log("ServiceRequestForm: Fetching catalog for hotelId:", hotelId);
                 setCatalogLoading(true);
                 const response = await getServiceCatalog(hotelId);
 
-                console.log("ServiceRequestForm: Catalog response:", response);
-
                 if (response.success && response.data) {
-                    console.log("ServiceRequestForm: Catalog loaded successfully:", response.data.length, "services");
                     setCatalog(response.data);
                 } else {
-                    console.error("ServiceRequestForm: Failed to load catalog:", response.message);
                     toast.error(response.message || "Failed to load service catalog");
                 }
-            } catch (error) {
-                console.error("ServiceRequestForm: Error fetching catalog:", error);
+            } catch {
                 toast.error("Failed to load services. Please try again.");
             } finally {
                 setCatalogLoading(false);
             }
         };
+
         fetchCatalog();
     }, [hotelId]);
 
+    /* -------------------- Selected Service Info -------------------- */
     useEffect(() => {
         if (watchedServiceType) {
-            const service = catalog.find(s => s.serviceType === watchedServiceType);
+            const service = catalog.find(
+                (s) => s.serviceType === watchedServiceType
+            );
             setSelectedService(service || null);
+        } else {
+            setSelectedService(null);
         }
     }, [watchedServiceType, catalog]);
 
+    /* -------------------- Submit -------------------- */
     const onSubmit = async (data: ServiceRequestFormValues) => {
         try {
             setLoading(true);
             const response = await createServiceRequest({
-                bookingId,
-                ...data
+                bookingId: data.bookingId,
+                serviceType: data.serviceType,
+                priority: data.priority,
+                notes: data.notes,
             });
 
             if (response.success) {
@@ -102,61 +118,102 @@ const ServiceRequestForm = ({ bookingId, hotelId, onSuccess, onCancel }: Service
             } else {
                 toast.error(response.message || "Failed to submit request");
             }
-        } catch (error) {
+        } catch {
             toast.error("An error occurred during submission");
         } finally {
             setLoading(false);
         }
     };
 
+    /* -------------------- UI -------------------- */
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
-            {!catalogLoading && catalog.length === 0 && (
-                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+
+            {/* Active Stay Selection */}
+            <SelectField
+                label="Active Stay"
+                name="bookingId"
+                control={control}
+                error={errors.bookingId}
+                required
+                placeholder="Select your active stay"
+                options={bookings.map((booking) => ({
+                    value: booking._id,
+                    label: `Room ${typeof booking.room === "object"
+                        ? booking.room.roomNumber
+                        : "N/A"
+                        }`,
+                }))}
+            />
+
+            {/* No Catalog Warning */}
+            {!catalogLoading && watchedBookingId && catalog.length === 0 && (
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
                     <p className="text-sm text-yellow-400">
-                        <strong>No services available.</strong> Please contact the hotel administrator to add services to the catalog for this hotel.
+                        <strong>No services available.</strong> Please contact the
+                        hotel administrator.
                     </p>
                 </div>
             )}
 
+            {/* Service Type */}
             <SelectField
                 label="Service Type"
                 name="serviceType"
-                options={catalog.map(s => ({ value: s.serviceType, label: s.displayName }))}
                 control={control}
                 error={errors.serviceType}
-                placeholder={catalogLoading ? "Loading catalog..." : catalog.length === 0 ? "No services available" : "Select a service"}
                 required
-                disabled={catalogLoading || catalog.length === 0}
+                disabled={!watchedBookingId || catalogLoading || catalog.length === 0}
+                placeholder={
+                    !watchedBookingId
+                        ? "Select an active stay first"
+                        : catalogLoading
+                            ? "Loading services..."
+                            : "Select a service"
+                }
+                options={catalog.map((s) => ({
+                    value: s.serviceType,
+                    label: s.displayName,
+                }))}
             />
 
+            {/* Service Info Card */}
             {selectedService && (
-                <div className="bg-primary-900/20 border border-primary-500/20 rounded-lg p-3 flex items-start gap-3">
-                    <Info className="h-5 w-5 text-primary-400 shrink-0 mt-0.5" />
+                <div className="bg-primary-900/20 border border-primary-500/20 rounded-lg p-3 flex gap-3">
+                    <Info className="h-5 w-5 text-primary-400 mt-0.5 shrink-0" />
                     <div className="space-y-1">
-                        <p className="text-sm text-white font-medium">{selectedService.displayName}</p>
-                        <p className="text-xs text-gray-400">{selectedService.description || "No description available."}</p>
-                        <div className="flex items-center gap-1.5 mt-2 text-primary-300 font-semibold">
-                            <DollarSign className="h-3.5 w-3.5" />
-                            <span>{selectedService.serviceType === 'other' ? "Pricing will be determined upon completion" : `Fixed Price: $${selectedService.fixedPrice?.toFixed(2)}`}</span>
-                        </div>
+                        <p className="text-sm font-medium text-white">
+                            {selectedService.displayName}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                            {selectedService.description || "No description available."}
+                        </p>
+                        <p className="text-sm font-semibold text-primary-300 mt-2">
+                            {selectedService.serviceType === "other"
+                                ? "Pricing will be determined upon completion"
+                                : `Extra Charge: LKR ${selectedService.fixedPrice?.toFixed(
+                                    2
+                                )}`}
+                        </p>
                     </div>
                 </div>
             )}
 
+            {/* Priority */}
             <SelectField
                 label="Priority"
                 name="priority"
+                control={control}
+                error={errors.priority}
                 options={[
                     { value: "low", label: "Low" },
                     { value: "normal", label: "Normal" },
                     { value: "high", label: "High" },
                     { value: "urgent", label: "Urgent" },
                 ]}
-                control={control}
-                error={errors.priority}
             />
 
+            {/* Notes */}
             <TextAreaField
                 label="Additional Notes / Requirements"
                 name="notes"
@@ -165,11 +222,23 @@ const ServiceRequestForm = ({ bookingId, hotelId, onSuccess, onCancel }: Service
                 placeholder="Describe your request in detail..."
             />
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
-                <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+            {/* Actions */}
+            <div className="flex gap-3 pt-4 border-t border-white/10">
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onCancel}
+                    disabled={loading}
+                    className="flex-1 h-10"
+                >
                     Cancel
                 </Button>
-                <Button type="submit" className="bg-primary-600 hover:bg-primary-700" disabled={loading || catalogLoading}>
+
+                <Button
+                    type="submit"
+                    disabled={loading || catalogLoading || !watchedBookingId}
+                    className="flex-1 main-button-gradient h-10!"
+                >
                     {loading ? "Submitting..." : "Submit Request"}
                 </Button>
             </div>
