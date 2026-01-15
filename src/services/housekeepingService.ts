@@ -16,7 +16,7 @@ export const generateDailyTasks = async (hotelId: string, date: string): Promise
     }
 };
 
-export const getTasksByDate = async (params: { hotelId?: string, date: string, shift?: string, status?: string }): Promise<ApiResponse<any[]>> => {
+export const getTasksByDate = async (params: { hotelId?: string, date: string, session?: string, status?: string }): Promise<ApiResponse<any[]>> => {
     try {
         const response = await api.get<ApiResponse<any[]>>('/housekeeping/tasks', { params });
         return response.data;
@@ -31,7 +31,7 @@ export const getTasksByDate = async (params: { hotelId?: string, date: string, s
     }
 };
 
-export const getMyTasks = async (params: { date?: string, shift?: string, status?: string }): Promise<ApiResponse<any[]>> => {
+export const getMyTasks = async (params: { date?: string, session?: string, status?: string }): Promise<ApiResponse<any[]>> => {
     try {
         const response = await api.get<ApiResponse<any[]>>('/housekeeping/my-tasks', { params });
         return response.data;
@@ -64,6 +64,38 @@ export const updateTaskStatus = async (taskId: string, status: string, notes?: s
 export const assignTask = async (taskId: string, staffId: string): Promise<ApiResponse<any>> => {
     try {
         const response = await api.patch<ApiResponse<any>>(`/housekeeping/tasks/${taskId}/assign`, { staffId });
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data) {
+            return error.response.data as ApiErrorResponse;
+        }
+        return {
+            success: false,
+            message: 'An unexpected error occurred'
+        };
+    }
+};
+
+export const getCleaningSessions = async (params: { hotelId: string, date?: string, session?: string, status?: string, roomId?: string }): Promise<ApiResponse<any[]>> => {
+    try {
+        const response = await api.get<ApiResponse<any[]>>('/housekeeping/cleaning-sessions', { params });
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data) {
+            return error.response.data as ApiErrorResponse;
+        }
+        return {
+            success: false,
+            message: 'An unexpected error occurred'
+        };
+    }
+};
+
+export const getHotelStaffByRole = async (hotelId: string, role?: string): Promise<ApiResponse<any[]>> => {
+    try {
+        const response = await api.get<ApiResponse<any[]>>('/admin/users/hotel-staff', {
+            params: { hotelId, role }
+        });
         return response.data;
     } catch (error) {
         if (error instanceof AxiosError && error.response?.data) {

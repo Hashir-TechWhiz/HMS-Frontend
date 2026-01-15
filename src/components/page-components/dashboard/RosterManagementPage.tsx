@@ -5,11 +5,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useHotel } from "@/contexts/HotelContext";
 import {
     getTasksByDate,
+    getMyTasks,
     assignTask,
     updateTaskStatus,
-    generateDailyTasks
+    generateDailyTasks,
+    getHotelStaffByRole
 } from "@/services/housekeepingService";
-import { getHousekeepingStaff } from "@/services/adminUserService";
 import { getActiveHotels } from "@/services/hotelService";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
@@ -38,7 +39,7 @@ const RosterManagementPage = () => {
     const [assignDialogOpen, setAssignDialogOpen] = useState(false);
     const [selectedStaffId, setSelectedStaffId] = useState<string>("");
     const [assignLoading, setAssignLoading] = useState(false);
-    const [filterShift, setFilterShift] = useState<string>("all");
+    const [filterSession, setFilterSession] = useState<string>("all");
     const [filterStatus, setFilterStatus] = useState<string>("all");
     const [currentPage, setCurrentPage] = useState(1);
     const [availableHotels, setAvailableHotels] = useState<IHotel[]>([]);
@@ -79,7 +80,23 @@ const RosterManagementPage = () => {
         try {
             setLoading(true);
 
-            // Use filterHotel for admin, or user's hotel for receptionist
+            // Housekeepers use getMyTasks endpoint
+            if (role === "housekeeping") {
+                const response = await getMyTasks({
+                    date: new Date().toISOString(),
+                    session: filterSession === "all" ? undefined : filterSession,
+                    status: filterStatus === "all" ? undefined : filterStatus,
+                });
+
+                if (response.success) {
+                    setTasks(response.data || []);
+                } else {
+                    toast.error(response.message || "Failed to fetch tasks");
+                }
+                return;
+            }
+
+            // Admin and receptionist use getTasksByDate endpoint
             let hotelId = filterHotel;
             if (role === "receptionist") {
                 hotelId = selectedHotel?._id || (typeof user?.hotelId === 'string' ? user?.hotelId : user?.hotelId?._id) || "";
@@ -90,7 +107,7 @@ const RosterManagementPage = () => {
             const response = await getTasksByDate({
                 hotelId,
                 date: new Date().toISOString(),
-                shift: filterShift === "all" ? undefined : filterShift,
+                session: filterSession === "all" ? undefined : filterSession,
                 status: filterStatus === "all" ? undefined : filterStatus,
             });
 
@@ -104,7 +121,7 @@ const RosterManagementPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [role, user, selectedHotel, filterShift, filterStatus, filterHotel]);
+    }, [role, user, selectedHotel, filterSession, filterStatus, filterHotel]);
 
     const fetchHousekeepingStaff = useCallback(async () => {
         try {
@@ -116,7 +133,7 @@ const RosterManagementPage = () => {
 
             if (!hotelId) return;
 
-            const response = await getHousekeepingStaff(hotelId);
+            const response = await getHotelStaffByRole(hotelId, "housekeeping");
             if (response.success) {
                 setHousekeepingStaff(response.data || []);
             }
@@ -199,13 +216,13 @@ const RosterManagementPage = () => {
         return <Badge className={`${colors[status] || ""} border`}>{status.replace("_", " ").toUpperCase()}</Badge>;
     };
 
-    const getShiftBadge = (shift: string) => {
+    const getSessionBadge = (session: string) => {
         const colors: any = {
-            morning: "bg-orange-500/20 text-orange-400 border-orange-500/50",
-            afternoon: "bg-blue-500/20 text-blue-400 border-blue-500/50",
-            night: "bg-indigo-500/20 text-indigo-400 border-indigo-500/50",
+            MORNING: "bg-orange-500/20 text-orange-400 border-orange-500/50",
+            AFTERNOON: "bg-blue-500/20 text-blue-400 border-blue-500/50",
+            EVENING: "bg-indigo-500/20 text-indigo-400 border-indigo-500/50",
         };
-        return <Badge variant="outline" className={`${colors[shift] || ""} border`}>{shift.toUpperCase()}</Badge>;
+        return <Badge variant="outline" className={`${colors[session] || ""} border`}>{session}</Badge>;
     };
 
     const getPriorityBadge = (priority: string) => {
@@ -230,9 +247,9 @@ const RosterManagementPage = () => {
             ),
         },
         {
-            key: "shift",
-            label: "Shift",
-            render: (task: any) => getShiftBadge(task.shift),
+            key: "session",
+            label: "Session",
+            render: (task: any) => getSessionBadge(task.session),
         },
         {
             key: "taskType",
@@ -295,10 +312,70 @@ const RosterManagementPage = () => {
     );
     const totalPages = Math.ceil(tasks.length / itemsPerPage);
 
+    // Housekeepers see their own tasks
+    if (role === "housekeeping") {
+        return (
+            <div className="flex flex-col gap-6">
+                <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
+                    <div className="flex md:flex-row flex-col gap-5 md:items-center justify-between w-full">
+                        <div>
+                            <h1 className="text-2xl font-bold text-white">My Cleaning Tasks</h1>
+                            <p className="text-sm text-gray-400 mt-1">
+                                View and manage your assigned cleaning tasks for today
+                            </p>
+                        </div>
+
+                        <div className="flex lg:flex-row flex-col gap-3 w-full justify-end md:w-auto">
+                            <SelectField
+                                name="sessionFilter"
+                                options={[
+                                    { value: "all", label: "All Sessions" },
+                                    { value: "MORNING", label: "Morning" },
+                                    { value: "AFTERNOON", label: "Afternoon" },
+                                    { value: "EVENING", label: "Evening" },
+                                ]}
+                                value={filterSession}
+                                onChange={setFilterSession}
+                                width="md:w-[150px]"
+                            />
+                            <SelectField
+                                name="statusFilter"
+                                options={[
+                                    { value: "all", label: "All Status" },
+                                    { value: "pending", label: "Pending" },
+                                    { value: "in_progress", label: "In Progress" },
+                                    { value: "completed", label: "Completed" },
+                                ]}
+                                value={filterStatus}
+                                onChange={setFilterStatus}
+                                width="md:w-[150px]"
+                            />
+                        </div>
+                    </div>
+
+                    <DataTable
+                        columns={columns.filter(col => col.key !== 'actions')} // Remove actions column for housekeepers
+                        data={paginatedTasks}
+                        loading={loading}
+                        emptyMessage="No cleaning tasks assigned to you for today."
+                        pagination={{
+                            page: currentPage,
+                            totalPages: totalPages,
+                            total: tasks.length,
+                            onPageChange: setCurrentPage,
+                        }}
+                        selectable={false}
+                    />
+                </div>
+            </div>
+        );
+    }
+
+    // Admin and receptionist see full roster management
     if (role !== "admin" && role !== "receptionist") {
         return (
             <div className="p-6 text-center">
-                <p className="text-gray-400">Access denied. Only admin and receptionist can manage roster.</p>
+                <p className="text-gray-400">Access denied. Only admin, receptionist, and housekeeping can view this page.</p>
             </div>
         );
     }
@@ -328,15 +405,15 @@ const RosterManagementPage = () => {
                             />
                         )}
                         <SelectField
-                            name="shiftFilter"
+                            name="sessionFilter"
                             options={[
-                                { value: "all", label: "All Shifts" },
-                                { value: "morning", label: "Morning" },
-                                { value: "afternoon", label: "Afternoon" },
-                                { value: "night", label: "Night" },
+                                { value: "all", label: "All Sessions" },
+                                { value: "MORNING", label: "Morning" },
+                                { value: "AFTERNOON", label: "Afternoon" },
+                                { value: "EVENING", label: "Evening" },
                             ]}
-                            value={filterShift}
-                            onChange={setFilterShift}
+                            value={filterSession}
+                            onChange={setFilterSession}
                             width="md:w-[150px]"
                         />
                         <SelectField
@@ -395,7 +472,7 @@ const RosterManagementPage = () => {
                                         </h3>
                                         <p className="text-xs text-gray-400">{selectedTask.room?.roomType || "N/A"}</p>
                                     </div>
-                                    {getShiftBadge(selectedTask.shift)}
+                                    {getSessionBadge(selectedTask.session)}
                                 </div>
                                 <div className="flex gap-2">
                                     {getStatusBadge(selectedTask.status)}
@@ -406,13 +483,13 @@ const RosterManagementPage = () => {
                             <SelectField
                                 label="Assign to Housekeeping Staff"
                                 name="staffId"
-                                options={[
-                                    { value: "", label: "Select staff member..." },
-                                    ...housekeepingStaff.map((staff) => ({
+                                placeholder="Select staff member..."
+                                options={
+                                    housekeepingStaff.map((staff) => ({
                                         value: staff._id,
                                         label: `${staff.name} (${staff.email})`,
-                                    })),
-                                ]}
+                                    }))
+                                }
                                 value={selectedStaffId}
                                 onChange={setSelectedStaffId}
                                 required

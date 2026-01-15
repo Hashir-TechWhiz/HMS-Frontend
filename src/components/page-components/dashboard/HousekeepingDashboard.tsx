@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAssignedServiceRequests } from "@/services/serviceRequestService";
+import { getMyTasks } from "@/services/housekeepingService";
 import { KPICard, StatusBarChart, ActionCard } from "@/components/charts";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { ClipboardCheck, Clock, CheckCircle2, ListTodo } from "lucide-react";
+import { ClipboardCheck, Clock, CheckCircle2, ListTodo, Sparkles } from "lucide-react";
 import { ChartConfig } from "@/components/ui/chart";
 
 export const HousekeepingDashboard = () => {
@@ -16,14 +17,32 @@ export const HousekeepingDashboard = () => {
     const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [serviceRequests, setServiceRequests] = useState<IServiceRequest[]>([]);
+    const [cleaningTasks, setCleaningTasks] = useState<any[]>([]);
 
     useEffect(() => {
-        const fetchServiceRequests = async () => {
+        const fetchData = async () => {
             if (!user) return;
 
             try {
                 setLoading(true);
-                // Fetch all assigned service requests (no pagination for dashboard stats)
+
+                // Fetch cleaning tasks (housekeeping roster)
+                console.log("Fetching cleaning tasks for user:", user._id);
+                const tasksResponse = await getMyTasks({
+                    date: new Date().toISOString(),
+                });
+
+                console.log("Cleaning tasks response:", tasksResponse);
+
+                if (tasksResponse.success && tasksResponse.data) {
+                    console.log("Setting cleaning tasks:", tasksResponse.data);
+                    setCleaningTasks(tasksResponse.data);
+                } else {
+                    console.warn("No cleaning tasks or failed response:", tasksResponse);
+                    setCleaningTasks([]);
+                }
+
+                // Fetch service requests
                 const response = await getAssignedServiceRequests(1, 1000);
 
                 if (response.success && response.data) {
@@ -51,22 +70,29 @@ export const HousekeepingDashboard = () => {
                     setServiceRequests(relevantRequests);
                 } else {
                     setServiceRequests([]);
-                    if (!response.success) {
-                        toast.error(response.message || "Failed to fetch service requests");
-                    }
                 }
             } catch (error: any) {
-                toast.error(error?.message || "An error occurred while fetching service requests");
+                console.error("Error fetching housekeeping data:", error);
+                toast.error(error?.message || "An error occurred while fetching data");
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchServiceRequests();
+        fetchData();
     }, [user]);
 
+
+    // Calculate statistics from cleaning tasks
+    const cleaningStats = {
+        total: cleaningTasks.length,
+        pending: cleaningTasks.filter((task) => task.status === "pending").length,
+        in_progress: cleaningTasks.filter((task) => task.status === "in_progress").length,
+        completed: cleaningTasks.filter((task) => task.status === "completed").length,
+    };
+
     // Calculate statistics from service requests
-    const stats = {
+    const serviceStats = {
         total: serviceRequests.length,
         // Pending = unassigned new requests (available to accept)
         pending: serviceRequests.filter((sr) => sr.status === "pending" && !sr.assignedTo).length,
@@ -88,10 +114,26 @@ export const HousekeepingDashboard = () => {
         }).length,
     };
 
-    // Get today's completed tasks (only those assigned to current user)
+    // Combined statistics
+    const stats = {
+        total: cleaningStats.total + serviceStats.total,
+        pending: cleaningStats.pending + serviceStats.pending,
+        in_progress: cleaningStats.in_progress + serviceStats.in_progress,
+        completed: cleaningStats.completed + serviceStats.completed,
+    };
+
+    // Get today's completed tasks (cleaning tasks + service requests)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const completedToday = serviceRequests.filter((sr) => {
+
+    const cleaningCompletedToday = cleaningTasks.filter((task) => {
+        if (task.status !== "completed") return false;
+        const completedDate = task.completedAt ? new Date(task.completedAt) : new Date(task.updatedAt);
+        completedDate.setHours(0, 0, 0, 0);
+        return completedDate.getTime() === today.getTime();
+    }).length;
+
+    const serviceCompletedToday = serviceRequests.filter((sr) => {
         if (sr.status !== "completed") return false;
         // Only count if assigned to current user
         if (sr.assignedTo && typeof sr.assignedTo === "object") {
@@ -103,6 +145,8 @@ export const HousekeepingDashboard = () => {
         completedDate.setHours(0, 0, 0, 0);
         return completedDate.getTime() === today.getTime();
     }).length;
+
+    const completedToday = cleaningCompletedToday + serviceCompletedToday;
 
     // Chart configuration using global CSS variables
     const serviceRequestChartConfig: ChartConfig = {
@@ -183,10 +227,10 @@ export const HousekeepingDashboard = () => {
             {/* Chart */}
             <div className="">
                 <StatusBarChart
-                    title="Assigned Service Requests by Status"
+                    title="All Assigned Tasks by Status"
                     data={serviceRequestData}
                     config={serviceRequestChartConfig}
-                    description="Your current workload breakdown"
+                    description={`${cleaningStats.total} cleaning tasks + ${serviceStats.total} service requests`}
                 />
             </div>
 
@@ -196,8 +240,17 @@ export const HousekeepingDashboard = () => {
                 <h2 className="text-xl font-semibold text-white">Quick Actions</h2>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     <ActionCard
-                        title="View Assigned Requests"
-                        description="See all your assigned tasks"
+                        title="View Cleaning Tasks"
+                        description={`${cleaningStats.total} tasks assigned to you today`}
+                        icon={Sparkles}
+                        iconColor="text-purple-400"
+                        iconBg="bg-purple-500/10"
+                        gradient="linear-gradient(79.74deg, rgba(168, 85, 247, 0.08) 0%, rgba(0, 0, 0, 0.08) 100%)"
+                        onClick={() => router.push("/dashboard/roster")}
+                    />
+                    <ActionCard
+                        title="View Service Requests"
+                        description="See all your assigned service requests"
                         icon={ClipboardCheck}
                         iconColor="text-cyan-400"
                         iconBg="bg-cyan-500/10"
