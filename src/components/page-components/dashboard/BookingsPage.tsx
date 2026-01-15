@@ -124,10 +124,15 @@ const BookingsPage = () => {
             setKpiLoading(true);
             const response = await getBookingsReport();
             if (response.success && response.data) {
+                console.log("Booking Stats Response:", response.data);
                 setBookingStats(response.data);
+            } else {
+                console.error("Failed to fetch booking stats:", response.message);
+                toast.error(response.message || "Failed to fetch booking statistics");
             }
         } catch (error) {
             console.error("Failed to fetch booking statistics:", error);
+            toast.error("An error occurred while fetching booking statistics");
         } finally {
             setKpiLoading(false);
         }
@@ -701,7 +706,7 @@ const BookingsPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <StatCard
                         title="Total Bookings"
-                        value={bookingStats.totalBookings}
+                        value={bookingStats?.totalBookings || 0}
                         icon={ClipboardList}
                         iconColor="text-blue-400"
                         iconBg="bg-blue-500/10"
@@ -709,7 +714,7 @@ const BookingsPage = () => {
                     />
                     <StatCard
                         title="Confirmed"
-                        value={bookingStats.byStatus.confirmed}
+                        value={bookingStats?.byStatus?.confirmed || 0}
                         icon={CheckCircle2}
                         iconColor="text-green-400"
                         iconBg="bg-green-500/10"
@@ -717,7 +722,7 @@ const BookingsPage = () => {
                     />
                     <StatCard
                         title="Pending"
-                        value={bookingStats.byStatus.pending}
+                        value={bookingStats?.byStatus?.pending || 0}
                         icon={Clock}
                         iconColor="text-yellow-400"
                         iconBg="bg-yellow-500/10"
@@ -726,7 +731,7 @@ const BookingsPage = () => {
                     />
                     <StatCard
                         title="Cancelled"
-                        value={bookingStats.byStatus.cancelled}
+                        value={bookingStats?.byStatus?.cancelled || 0}
                         icon={XCircle}
                         iconColor="text-red-400"
                         iconBg="bg-red-500/10"

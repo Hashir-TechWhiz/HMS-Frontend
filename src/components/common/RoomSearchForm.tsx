@@ -149,7 +149,11 @@ const RoomSearchForm: FC<RoomSearchFormProps> = ({
                                 mode="single"
                                 selected={checkIn}
                                 onSelect={setCheckIn}
-                                disabled={(date) => date < new Date()}
+                                disabled={(date) => {
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+                                    return date < today;
+                                }}
                                 initialFocus
                             />
                         </PopoverContent>
@@ -180,7 +184,14 @@ const RoomSearchForm: FC<RoomSearchFormProps> = ({
                                 mode="single"
                                 selected={checkOut}
                                 onSelect={setCheckOut}
-                                disabled={(date) => date < (checkIn || new Date())}
+                                disabled={(date) => {
+                                    if (checkIn) {
+                                        return date <= checkIn;
+                                    }
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+                                    return date < today;
+                                }}
                                 autoFocus
                             />
                         </PopoverContent>

@@ -65,13 +65,15 @@ export const ReceptionistDashboard = () => {
         },
     };
 
-    // Prepare chart data
+    // Prepare chart data - include all booking statuses
     const bookingChartData = reportData
         ? [
             { name: "Confirmed", value: reportData.bookings.byStatus.confirmed, fill: "var(--chart-cyan-2)" },
+            { name: "Checked In", value: reportData.bookings.byStatus.checkedin, fill: "var(--chart-violet-1)" },
+            { name: "Completed", value: reportData.bookings.byStatus.completed, fill: "var(--chart-green-1)" },
             { name: "Pending", value: reportData.bookings.byStatus.pending, fill: "var(--chart-yellow-1)" },
             { name: "Cancelled", value: reportData.bookings.byStatus.cancelled, fill: "var(--chart-rose-4)" },
-        ]
+        ].filter(item => item.value > 0) // Only show statuses with bookings
         : [];
 
     const roomOccupancyData = reportData
@@ -151,10 +153,10 @@ export const ReceptionistDashboard = () => {
             {/* Charts */}
             <div className="grid gap-6 md:grid-cols-2">
                 <StatusPieChart
-                    title="Today's Bookings"
+                    title="Booking Status Overview"
                     data={bookingChartData}
                     config={bookingChartConfig}
-                    description="Current booking status overview"
+                    description="All bookings by status"
                 />
 
                 <StatusBarChart

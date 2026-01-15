@@ -57,12 +57,6 @@ export const DASHBOARD_LINKS = {
                     roles: getAllowedRoles("/dashboard/service-requests")!,
                 },
                 {
-                    label: "Housekeeping Roster",
-                    href: "/dashboard/roster",
-                    icon: "/icons/Housekeeping.svg",
-                    roles: getAllowedRoles("/dashboard/roster")!,
-                },
-                {
                     label: "Service Catalog",
                     href: "/dashboard/service-catalog",
                     icon: "/icons/Operations.svg",
