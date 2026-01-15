@@ -12,6 +12,7 @@ import DialogBox from "@/components/common/DialogBox";
 import ViewRoomDetails from "@/components/common/ViewRoomDetails";
 import { UserRole } from "@/components/common/RoomCard";
 import { getRooms, GetRoomsParams } from "@/services/roomService";
+import { getActiveHotels } from "@/services/hotelService";
 import {
     Pagination,
     PaginationContent,
@@ -32,8 +33,6 @@ const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
     const [rooms, setRooms] = useState<IRoom[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    // Default to showing only available rooms on public page
-    const [filters, setFilters] = useState<GetRoomsParams>({ status: "available" });
     const [clientRoomTypes, setClientRoomTypes] = useState<RoomType[] | undefined>();
     const [filteredRoomsCount, setFilteredRoomsCount] = useState<number>(0);
 
@@ -47,10 +46,17 @@ const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
     const [selectedRoom, setSelectedRoom] = useState<IRoom | null>(null);
 
-    // Read search parameters from URL (UI display only - not sent to backend)
+    // Hotel state - hotels matching the search location
+    const [availableHotels, setAvailableHotels] = useState<IHotel[]>([]);
+
+    // Read search parameters from URL
     const checkInParam = searchParams.get("checkIn");
     const checkOutParam = searchParams.get("checkOut");
     const guestsParam = searchParams.get("guests");
+    const locationParam = searchParams.get("location");
+
+    // Initialize filters - no initial hotelId filter (will be set after location resolution)
+    const [filters, setFilters] = useState<GetRoomsParams>({ status: "available" });
 
     // Format dates for display (UI only)
     const checkInDate = checkInParam ? new Date(checkInParam) : null;
@@ -59,6 +65,35 @@ const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
 
     // Check if client-side filters are active (guest capacity or multiple room types)
     const hasClientSideFilters = (guests !== null && guests > 0) || (clientRoomTypes && clientRoomTypes.length > 0);
+
+    // Fetch hotels based on location parameter
+    useEffect(() => {
+        const fetchHotelsByLocation = async () => {
+            try {
+                const response = await getActiveHotels();
+                if (response.success && response.data) {
+                    let hotelsToShow = response.data;
+
+                    // Filter by location if provided
+                    if (locationParam) {
+                        const locationLower = locationParam.toLowerCase().trim();
+                        hotelsToShow = response.data.filter((hotel) =>
+                            (hotel.city?.toLowerCase().includes(locationLower)) ||
+                            (hotel.country?.toLowerCase().includes(locationLower)) ||
+                            (hotel.name?.toLowerCase().includes(locationLower))
+                        );
+                    }
+
+                    setAvailableHotels(hotelsToShow);
+                }
+            } catch (error) {
+                console.error('Failed to fetch hotels:', error);
+                setAvailableHotels([]);
+            }
+        };
+
+        fetchHotelsByLocation();
+    }, [locationParam]);
 
     // Fetch rooms from API with pagination
     const fetchRooms = useCallback(async () => {
@@ -126,9 +161,14 @@ const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
         checkIn?: Date;
         checkOut?: Date;
         guests?: number;
+        location?: string;
     }) => {
         // Build query parameters from search data
         const params = new URLSearchParams();
+
+        if (data.location) {
+            params.set("location", data.location);
+        }
 
         if (data.checkIn) {
             params.set("checkIn", data.checkIn.toISOString());
@@ -249,6 +289,7 @@ const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
                             checkIn={checkInDate ? format(checkInDate, "MMM dd, yyyy") : null}
                             checkOut={checkOutDate ? format(checkOutDate, "MMM dd, yyyy") : null}
                             guests={guests}
+                            location={locationParam}
                             resultsCount={hasClientSideFilters ? filteredRoomsCount : totalItems}
                         />
 
@@ -257,7 +298,10 @@ const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
                             {/* Filters Sidebar */}
                             <div className="lg:col-span-1">
                                 <div className="sticky top-24">
-                                    <RoomsFilters onFilterChange={handleFilterChange} />
+                                    <RoomsFilters
+                                        onFilterChange={handleFilterChange}
+                                        availableHotels={availableHotels}
+                                    />
                                 </div>
                             </div>
 

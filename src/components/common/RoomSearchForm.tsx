@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, useState, useMemo } from "react";
+import { FC, useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CalendarIcon, Users, Search } from "lucide-react";
 import { format } from "date-fns";
+import ComboBoxField from "@/components/forms/ComboField";
+import { getActiveHotels } from "@/services/hotelService";
 
 interface RoomSearchFormProps {
     variant?: "hero" | "compact";
@@ -16,6 +18,7 @@ interface RoomSearchFormProps {
         checkIn?: Date;
         checkOut?: Date;
         guests?: number;
+        location?: string;
     }) => void;
 }
 
@@ -41,13 +44,57 @@ const RoomSearchForm: FC<RoomSearchFormProps> = ({
         return param ? parseInt(param) || 1 : 1;
     }, [searchParams]);
 
+    const initialLocation = useMemo(() => {
+        const param = searchParams.get("location");
+        return param || "";
+    }, [searchParams]);
+
     const [checkIn, setCheckIn] = useState<Date | undefined>(initialCheckIn);
     const [checkOut, setCheckOut] = useState<Date | undefined>(initialCheckOut);
     const [guests, setGuests] = useState<number>(initialGuests);
+    const [selectedCity, setSelectedCity] = useState<string>(initialLocation);
+    const [cityOptions, setCityOptions] = useState<{ value: string; label: string }[]>([]);
+    const [loadingCities, setLoadingCities] = useState(false);
+
+    // Fetch hotels and extract unique cities
+    useEffect(() => {
+        const fetchCities = async () => {
+            try {
+                setLoadingCities(true);
+                const response = await getActiveHotels();
+
+                if (response.success && response.data) {
+                    // Extract unique cities from hotels
+                    const cities = new Set<string>();
+                    response.data.forEach((hotel) => {
+                        if (hotel.city) {
+                            cities.add(hotel.city);
+                        }
+                    });
+
+                    // Convert to options format
+                    const options = Array.from(cities)
+                        .sort()
+                        .map((city) => ({
+                            value: city,
+                            label: city,
+                        }));
+
+                    setCityOptions(options);
+                }
+            } catch (error) {
+                console.error('Failed to fetch cities:', error);
+            } finally {
+                setLoadingCities(false);
+            }
+        };
+
+        fetchCities();
+    }, []);
 
     const handleSearch = () => {
         if (onSearch) {
-            onSearch({ checkIn, checkOut, guests });
+            onSearch({ checkIn, checkOut, guests, location: selectedCity || undefined });
         }
     };
 
@@ -56,16 +103,29 @@ const RoomSearchForm: FC<RoomSearchFormProps> = ({
     return (
         <div
             className={`${isHero
-                ? "bg-black/30 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/20 p-6 md:p-8 max-w-4xl"
+                ? "bg-black/30 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/20 p-6 md:p-8 max-w-5xl"
                 : "bg-card rounded-lg shadow-md border border-border p-4 w-full"
                 } w-full`}
         >
             <div
                 className={`grid gap-4 ${isHero
-                    ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
-                    : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+                    ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-5"
+                    : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-5"
                     }`}
             >
+
+                {/* City Selection */}
+                <div className="space-y-2">
+                    <ComboBoxField
+                        label="City"
+                        options={cityOptions}
+                        value={selectedCity}
+                        onChange={setSelectedCity}
+                        placeholder={loadingCities ? "Loading cities..." : "Select your destination"}
+                        disabled={loadingCities}
+                        className="h-11"
+                    />
+                </div>
 
                 {/* Check-in Date */}
                 <div className="space-y-2">
