@@ -74,6 +74,18 @@ export const DASHBOARD_LINKS = {
                     icon: "/icons/Guests.svg",
                     roles: getAllowedRoles("/dashboard/guests")!,
                 },
+                {
+                    label: "Staff Roster",
+                    href: "/dashboard/roster",
+                    icon: "/icons/Users.svg",
+                    roles: getAllowedRoles("/dashboard/roster")!,
+                },
+                {
+                    label: "My Roster",
+                    href: "/dashboard/my-roster",
+                    icon: "/icons/Dashboard.svg",
+                    roles: getAllowedRoles("/dashboard/my-roster")!,
+                },
             ],
         },
         {

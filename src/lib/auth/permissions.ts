@@ -17,6 +17,8 @@ export const ROUTE_PERMISSIONS: Record<string, UserRole[]> = {
     '/dashboard/reports': ['admin'],
     '/dashboard/users': ['admin'],
     '/dashboard/profile': ['guest', 'receptionist', 'housekeeping', 'admin'],
+    '/dashboard/roster': ['admin'],
+    '/dashboard/my-roster': ['receptionist', 'housekeeping'],
     '/rooms': ['guest', 'receptionist', 'admin'],
 };
 

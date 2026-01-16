@@ -388,6 +388,34 @@ declare global {
         totalBookings: number;
         createdAt: string;
     }
+
+    // Roster Types (Staff Shift Scheduling)
+    type ShiftType = 'morning' | 'afternoon' | 'evening' | 'night';
+    type RosterRole = 'receptionist' | 'housekeeping';
+
+    interface IRoster {
+        _id: string;
+        hotelId: string | IHotel;
+        staffId: string | IUser;
+        date: string; // ISO date string
+        shiftType: ShiftType;
+        shiftStartTime: string; // HH:MM format (e.g., "09:00")
+        shiftEndTime: string; // HH:MM format (e.g., "17:00")
+        role: RosterRole;
+        notes?: string;
+        isActive: boolean;
+        createdAt: string;
+        updatedAt: string;
+    }
+
+    // Roster filter types for API queries
+    interface IRosterFilters extends IDateRangeFilter {
+        hotelId?: string;
+        staffId?: string;
+        date?: string;
+        shiftType?: ShiftType;
+        role?: RosterRole;
+    }
 }
 
 export { };
