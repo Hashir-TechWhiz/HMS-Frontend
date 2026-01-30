@@ -405,6 +405,81 @@ declare global {
         totalBookings: number;
         createdAt: string;
     }
+
+    // Public Facility Types
+    type FacilityType = 'Event Hall' | 'Pool' | 'Gym' | 'Spa' | 'Conference Room' | 'Sports Court' | 'Game Room' | 'Other';
+    type FacilityStatus = 'available' | 'unavailable' | 'maintenance';
+
+    interface IPublicFacility {
+        _id: string;
+        hotelId: string | IHotel;
+        name: string;
+        facilityType: FacilityType;
+        description: string;
+        capacity: number;
+        pricePerHour: number;
+        pricePerDay?: number;
+        amenities: string[];
+        images: string[]; // Array of image URLs (1-4 images required)
+        operatingHours: {
+            start: string; // HH:MM format
+            end: string; // HH:MM format
+        };
+        status: FacilityStatus;
+        createdAt: string;
+        updatedAt: string;
+    }
+
+    // Public Facility Booking Types
+    type FacilityBookingType = 'hourly' | 'daily';
+    type FacilityBookingStatus = 'pending' | 'confirmed' | 'in_use' | 'completed' | 'cancelled';
+
+    interface IPublicFacilityBooking {
+        _id: string;
+        hotelId: string | IHotel;
+        guest?: IUser | string;
+        customerDetails?: {
+            name: string;
+            phone: string;
+            email?: string;
+        };
+        createdBy?: IUser | string;
+        facility: IPublicFacility | string;
+        bookingType: FacilityBookingType;
+        startDate: string;
+        endDate: string;
+        startTime?: string; // HH:MM format for hourly bookings
+        endTime?: string; // HH:MM format for hourly bookings
+        numberOfGuests: number;
+        purpose?: string;
+        specialRequests?: string;
+        status: FacilityBookingStatus;
+        // Cancellation fields
+        cancellationPenalty?: number;
+        cancelledBy?: IUser | string;
+        cancellationReason?: string;
+        cancellationDate?: string;
+        // Check-in/out fields
+        isCheckedIn: boolean;
+        checkInDetails?: {
+            checkedInAt: string;
+            checkedInBy: IUser | string;
+        };
+        isCheckedOut: boolean;
+        checkOutDetails?: {
+            checkedOutAt: string;
+            checkedOutBy: IUser | string;
+        };
+        // Payment tracking
+        paymentStatus: PaymentStatus;
+        payments: IPayment[];
+        totalPaid: number;
+        facilityCharges: number;
+        serviceCharges: number;
+        totalAmount: number;
+        createdAt: string;
+        updatedAt: string;
+    }
 }
 
 export { };

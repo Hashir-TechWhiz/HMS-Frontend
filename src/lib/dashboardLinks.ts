@@ -45,6 +45,12 @@ export const DASHBOARD_LINKS = {
                     roles: getAllowedRoles("/dashboard/bookings")!,
                 },
                 {
+                    label: "Facility Bookings",
+                    href: "/dashboard/facility-bookings",
+                    icon: "/icons/Bookings.svg",
+                    roles: ["guest", "receptionist", "admin"],
+                },
+                {
                     label: "Payments",
                     href: "/dashboard/payments",
                     icon: "/icons/Bookings.svg",
@@ -73,6 +79,12 @@ export const DASHBOARD_LINKS = {
                     href: "/dashboard/service-catalog",
                     icon: "/icons/Operations.svg",
                     roles: getAllowedRoles("/dashboard/service-catalog")!,
+                },
+                {
+                    label: "Public Facilities",
+                    href: "/dashboard/public-facilities",
+                    icon: "/icons/Rooms.svg",
+                    roles: ["admin", "receptionist"],
                 },
                 {
                     label: "Rooms",
