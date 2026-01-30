@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Eye, XCircle, CheckCircle, ClipboardList, CheckCircle2, Clock } from "lucide-react";
 import { formatDateTime, normalizeDateRange } from "@/lib/utils";
+import PaymentStatusBadge from "@/components/common/PaymentStatusBadge";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { DateRange } from "react-day-picker";
 import {
@@ -481,6 +482,13 @@ const BookingsPage = () => {
             render: (booking: IBooking) => formatDateTime(booking.checkOutDate),
         },
         {
+            key: "paymentStatus",
+            label: "Payment",
+            render: (booking: IBooking) => (
+                <PaymentStatusBadge status={booking.paymentStatus || "unpaid"} />
+            ),
+        },
+        {
             key: "status",
             label: "Status",
             render: (booking: IBooking) => <StatusBadge status={booking.status} />,
@@ -527,8 +535,18 @@ const BookingsPage = () => {
                         </TooltipProvider>
                     )}
 
-                    {/* Check-Out Button - Only for Staff (Admin/Receptionist) */}
-                    {/* Guests cannot checkout - only staff can perform checkout */}
+                    {/* Check-Out Button for Checked-In Bookings - Available for Guests */}
+                    {booking.status === "checkedin" && (
+                        <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleCheckOutClick(booking)}
+                            className="h-8 px-2 bg-purple-600 hover:bg-purple-700 border-purple-700"
+                            title="Check Out"
+                        >
+                            <CheckCircle className="h-4 w-4" />
+                        </Button>
+                    )}
 
                     {/* Cancel Button for Pending Bookings */}
                     <TooltipProvider>
@@ -936,6 +954,10 @@ const BookingsPage = () => {
                     {selectedBooking && (
                         <CheckInForm
                             bookingId={selectedBooking._id}
+                            totalAmount={selectedBooking.totalAmount || 0}
+                            totalPaid={selectedBooking.totalPaid || 0}
+                            balance={(selectedBooking.totalAmount || 0) - (selectedBooking.totalPaid || 0)}
+                            allowCashPayment={role === "receptionist" || role === "admin"}
                             onSuccess={() => {
                                 setCheckInDialogOpen(false);
                                 fetchBookings(currentPage);

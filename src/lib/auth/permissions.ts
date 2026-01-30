@@ -8,6 +8,7 @@ export const ROUTE_PERMISSIONS: Record<string, UserRole[]> = {
     '/dashboard': ['guest', 'receptionist', 'housekeeping', 'admin'],
     '/dashboard/my-requests': ['guest'],
     '/dashboard/bookings': ['guest', 'receptionist', 'admin'],
+    '/dashboard/payments': ['guest'], // Payment management for guests
     '/dashboard/operations': ['receptionist', 'admin'],
     '/dashboard/service-requests': ['receptionist', 'housekeeping', 'admin'],
     '/dashboard/rooms': ['admin'],

@@ -34,6 +34,12 @@ export interface CreateBookingData {
         phone: string;
         email?: string; // Optional
     };
+    paymentData?: {
+        amount: number;
+        paymentMethod: PaymentMethod;
+        transactionId?: string;
+        notes?: string;
+    }; // Optional payment during booking creation
 }
 
 /**
@@ -295,7 +301,7 @@ export const checkInBooking = async (bookingId: string, data: CheckInData): Prom
 };
 
 /**
- * Check-out a booking (manual action by staff)
+ * Check-out a booking (manual action by staff or guest)
  * PATCH /api/bookings/:id/check-out
  * 
  * @param bookingId - The ID of the booking to check-out
@@ -310,6 +316,30 @@ export const checkOutBooking = async (bookingId: string): Promise<ApiResponse<IB
             return error.response.data as ApiErrorResponse;
         }
         // Handle network errors, auth errors, or any other errors gracefully
+        return {
+            success: false,
+            message: error instanceof AxiosError
+                ? error.message || 'Network error occurred'
+                : 'An unexpected error occurred'
+        };
+    }
+};
+
+/**
+ * Recalculate booking amounts (fix incorrect totals)
+ * POST /api/bookings/:id/recalculate
+ * 
+ * @param bookingId - The ID of the booking to recalculate
+ * @returns Promise with recalculated amounts
+ */
+export const recalculateBookingAmounts = async (bookingId: string): Promise<ApiResponse<any>> => {
+    try {
+        const response = await api.post<ApiResponse<any>>(`/bookings/${bookingId}/recalculate`);
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data) {
+            return error.response.data as ApiErrorResponse;
+        }
         return {
             success: false,
             message: error instanceof AxiosError

@@ -160,6 +160,18 @@ declare global {
 
     // Booking Types
     type BookingStatus = 'pending' | 'confirmed' | 'checkedin' | 'completed' | 'cancelled';
+    type PaymentStatus = 'unpaid' | 'partially_paid' | 'paid';
+    type PaymentMethod = 'card' | 'cash';
+
+    interface IPayment {
+        _id?: string;
+        amount: number;
+        paymentMethod: PaymentMethod;
+        paymentDate: string;
+        processedBy?: IUser | string;
+        transactionId?: string;
+        notes?: string;
+    }
 
     interface IBooking {
         _id: string;
@@ -182,6 +194,11 @@ declare global {
         cancelledBy?: IUser | string;
         cancellationReason?: string;
         cancellationDate?: string;
+        // Payment tracking fields
+        paymentStatus: PaymentStatus;
+        payments: IPayment[];
+        totalPaid: number;
+        totalAmount: number;
     }
 
     // Date filter types for API queries
@@ -191,9 +208,9 @@ declare global {
     }
 
     // Service Request Types
-    type ServiceType = 'cleaning' | 'housekeeping' | 'maintenance' | 'room_service' | 'food_service' | 
-                       'medical_assistance' | 'massage' | 'gym_access' | 'yoga_session' | 'laundry' | 
-                       'spa' | 'transport' | 'room_decoration' | 'other';
+    type ServiceType = 'cleaning' | 'housekeeping' | 'maintenance' | 'room_service' | 'food_service' |
+        'medical_assistance' | 'massage' | 'gym_access' | 'yoga_session' | 'laundry' |
+        'spa' | 'transport' | 'room_decoration' | 'other';
     type ServiceStatus = 'pending' | 'in_progress' | 'completed';
 
     interface IServiceRequest {

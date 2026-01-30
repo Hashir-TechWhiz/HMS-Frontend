@@ -3,11 +3,14 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { generateInvoice, getInvoiceByBookingId, updatePaymentStatus, downloadInvoicePDF, IInvoice } from "@/services/invoiceService";
-import { checkOutBooking } from "@/services/bookingService";
+import { checkOutBooking, getBookingById } from "@/services/bookingService";
+import { getBookingPayments, BookingPaymentsResponse } from "@/services/paymentService";
 import { toast } from "sonner";
-import { FileText, CreditCard, CheckCircle2, Loader2, Printer } from "lucide-react";
+import { FileText, CreditCard, CheckCircle2, Loader2, Printer, AlertCircle, DollarSign } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { MakePaymentDialog } from "@/components/page-components/dashboard";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CheckOutInvoiceFlowProps {
     bookingId: string;
@@ -16,32 +19,42 @@ interface CheckOutInvoiceFlowProps {
 }
 
 const CheckOutInvoiceFlow = ({ bookingId, onSuccess, onCancel }: CheckOutInvoiceFlowProps) => {
+    const { role } = useAuth();
     const [loading, setLoading] = useState(true);
     const [invoice, setInvoice] = useState<IInvoice | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
+    const [paymentData, setPaymentData] = useState<BookingPaymentsResponse | null>(null);
+    const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
-    const fetchInvoice = async () => {
+    // Check if user is staff (can use cash payments)
+    const isStaff = role === "receptionist" || role === "admin";
+
+    const fetchData = async () => {
         try {
             setLoading(true);
-            const response = await getInvoiceByBookingId(bookingId);
-            if (response.success && response.data) {
-                setInvoice(response.data);
+            
+            // Fetch payment data first (always available)
+            const paymentsResponse = await getBookingPayments(bookingId);
+            if (paymentsResponse.success && paymentsResponse.data) {
+                setPaymentData(paymentsResponse.data);
+            }
+            
+            // Then try to fetch invoice (may not exist yet)
+            const invoiceResponse = await getInvoiceByBookingId(bookingId);
+            if (invoiceResponse.success && invoiceResponse.data) {
+                setInvoice(invoiceResponse.data);
             } else {
-                // Invoice not found is expected - guest hasn't generated it yet
-                // Don't show error toast, just set invoice to null
                 setInvoice(null);
             }
         } catch (error) {
-            // Silent fail - invoice not found is expected behavior
-            console.log("No invoice found for this booking (expected on first checkout attempt)");
-            setInvoice(null);
+            console.log("Error fetching checkout data:", error);
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchInvoice();
+        fetchData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [bookingId]);
 
@@ -121,26 +134,165 @@ const CheckOutInvoiceFlow = ({ bookingId, onSuccess, onCancel }: CheckOutInvoice
         );
     }
 
+    const formatCurrency = (amount: number) => {
+        return `LKR ${amount.toLocaleString()}`;
+    };
+
+    // Calculate correct total from individual charges
+    const calculateTotal = () => {
+        if (!paymentData) return 0;
+        const roomCharges = paymentData.roomCharges || 0;
+        let serviceCharges = 0;
+
+        // Sum all individual service charges if available
+        if (paymentData.serviceDetails && paymentData.serviceDetails.length > 0) {
+            serviceCharges = paymentData.serviceDetails.reduce((sum, service) => {
+                return sum + (service.price || 0);
+            }, 0);
+        } else {
+            serviceCharges = paymentData.serviceCharges || 0;
+        }
+
+        return roomCharges + serviceCharges;
+    };
+
+    const totalAmount = calculateTotal();
+    const totalPaid = paymentData?.totalPaid || 0;
+    const balance = totalAmount - totalPaid;
+    const hasUnpaidBalance = balance > 0;
+
     if (!invoice) {
         return (
-            <div className="py-8 text-center space-y-6">
-                <div className="flex flex-col items-center space-y-2">
-                    <FileText className="h-12 w-12 text-gray-500 opacity-50" />
-                    <h3 className="text-lg font-medium text-white">Ready for Checkout</h3>
-                    <p className="text-sm text-gray-400 max-w-sm mx-auto">
-                        Invoice will be generated and finalized during checkout. Click below to proceed with checkout.
-                    </p>
-                </div>
+            <div className="py-6 space-y-6">
+                {/* Payment Summary Card */}
+                {paymentData && (
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-4">
+                        <div className="flex items-center gap-2 mb-2">
+                            <DollarSign className="h-5 w-5 text-primary" />
+                            <h3 className="text-lg font-semibold text-foreground">Payment Summary</h3>
+                        </div>
+
+                        <div className="space-y-3">
+                            {/* Room Charges */}
+                            {paymentData.roomCharges > 0 && (
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Room Charges</span>
+                                    <span className="text-foreground font-medium">{formatCurrency(paymentData.roomCharges)}</span>
+                                </div>
+                            )}
+
+                            {/* Service Charges Breakdown */}
+                            {paymentData.serviceDetails && paymentData.serviceDetails.length > 0 && (
+                                <div className="space-y-2 pl-3 border-l-2 border-white/10">
+                                    <div className="text-xs font-medium text-muted-foreground">Service Charges:</div>
+                                    {paymentData.serviceDetails.map((service, index) => (
+                                        <div key={index} className="flex justify-between text-sm">
+                                            <span className="text-muted-foreground">• {service.description}</span>
+                                            <span className="text-foreground">{formatCurrency(service.price)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            <div className="border-t border-white/10 pt-3 space-y-2">
+                                <div className="flex justify-between">
+                                    <span className="text-foreground font-medium">Total Amount</span>
+                                    <span className="text-foreground font-semibold">{formatCurrency(totalAmount)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Already Paid</span>
+                                    <span className="text-green-500 font-semibold">{formatCurrency(totalPaid)}</span>
+                                </div>
+                                <div className={`flex justify-between items-center p-3 rounded-lg ${hasUnpaidBalance ? 'bg-red-500/10 border border-red-500/20' : 'bg-green-500/10 border border-green-500/20'}`}>
+                                    <span className="font-bold text-foreground">Balance Due</span>
+                                    <span className={`text-lg font-bold ${hasUnpaidBalance ? 'text-red-500' : 'text-green-500'}`}>
+                                        {formatCurrency(balance)}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Warning or Ready Message */}
+                {hasUnpaidBalance ? (
+                    <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 flex gap-3">
+                        <AlertCircle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                        <div className="space-y-2 flex-1">
+                            <h4 className="font-semibold text-yellow-400">Payment Required Before Checkout</h4>
+                            <p className="text-sm text-yellow-300/80">
+                                You have an outstanding balance of <strong>{formatCurrency(balance)}</strong>.
+                                Please complete the payment before proceeding with checkout.
+                            </p>
+                            <Button
+                                onClick={() => setShowPaymentDialog(true)}
+                                className="mt-2 bg-yellow-600 hover:bg-yellow-700 text-white"
+                            >
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                Make Payment Now
+                            </Button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 flex gap-3">
+                        <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                        <div className="space-y-1">
+                            <h4 className="font-semibold text-green-400">Payment Complete!</h4>
+                            <p className="text-sm text-green-300/80">
+                                All charges have been paid. You can proceed with checkout.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Action Buttons */}
                 <div className="flex justify-center gap-3">
                     <Button variant="outline" onClick={onCancel}>Cancel</Button>
                     <Button
                         onClick={handleConfirmCheckOut}
-                        disabled={actionLoading}
-                        className="bg-primary-600 hover:bg-primary-700"
+                        disabled={hasUnpaidBalance || actionLoading}
+                        className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50"
                     >
-                        {actionLoading ? "Processing..." : "Generate Final Invoice & Checkout"}
+                        {actionLoading ? (
+                            <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Processing...
+                            </>
+                        ) : (
+                            <>
+                                <CheckCircle2 className="h-4 w-4 mr-2" />
+                                Generate Invoice & Checkout
+                            </>
+                        )}
                     </Button>
                 </div>
+
+                {hasUnpaidBalance && (
+                    <p className="text-center text-xs text-red-400">
+                        * Checkout is disabled until payment is complete
+                    </p>
+                )}
+
+                {/* Payment Dialog */}
+                {paymentData && (
+                    <MakePaymentDialog
+                        open={showPaymentDialog}
+                        onOpenChange={setShowPaymentDialog}
+                        bookingId={bookingId}
+                        totalAmount={totalAmount}
+                        totalPaid={totalPaid}
+                        balance={balance}
+                        roomCharges={paymentData.roomCharges}
+                        serviceCharges={paymentData.serviceCharges}
+                        serviceDetails={paymentData.serviceDetails || []}
+                        onPaymentSuccess={() => {
+                            setShowPaymentDialog(false);
+                            toast.success("Payment recorded! Refreshing data...");
+                            fetchData(); // Refresh payment data
+                        }}
+                        allowCash={isStaff} // Staff can accept cash, guests can only use card
+                    />
+                )}
             </div>
         );
     }
