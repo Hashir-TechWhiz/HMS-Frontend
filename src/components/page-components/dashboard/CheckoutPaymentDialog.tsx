@@ -18,6 +18,7 @@ interface CheckoutPaymentDialogProps {
     totalPaid: number;
     onPaymentSuccess: () => void;
     onCancel: () => void;
+    userRole?: string; // User role to determine payment method restrictions
 }
 
 const CheckoutPaymentDialog = ({
@@ -29,6 +30,7 @@ const CheckoutPaymentDialog = ({
     totalPaid,
     onPaymentSuccess,
     onCancel,
+    userRole,
 }: CheckoutPaymentDialogProps) => {
     const [paymentMethod, setPaymentMethod] = useState<"card" | "cash">("card");
     const [processing, setProcessing] = useState(false);
@@ -157,15 +159,17 @@ const CheckoutPaymentDialog = ({
 
                 {/* Payment Method Selection */}
                 <Tabs value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as "card" | "cash")}>
-                    <TabsList className="grid w-full grid-cols-2 bg-white/5">
+                    <TabsList className={`grid w-full ${userRole === "guest" ? "grid-cols-1" : "grid-cols-2"} bg-white/5`}>
                         <TabsTrigger value="card" className="data-[state=active]:bg-primary/20">
                             <CreditCard className="h-4 w-4 mr-2" />
                             Card
                         </TabsTrigger>
-                        <TabsTrigger value="cash" className="data-[state=active]:bg-primary/20">
-                            <Wallet className="h-4 w-4 mr-2" />
-                            Cash
-                        </TabsTrigger>
+                        {userRole !== "guest" && (
+                            <TabsTrigger value="cash" className="data-[state=active]:bg-primary/20">
+                                <Wallet className="h-4 w-4 mr-2" />
+                                Cash
+                            </TabsTrigger>
+                        )}
                     </TabsList>
 
                     {/* Card Payment Tab */}
@@ -179,23 +183,24 @@ const CheckoutPaymentDialog = ({
                         />
                     </TabsContent>
 
-                    {/* Cash Payment Tab */}
-                    <TabsContent value="cash" className="space-y-4 mt-4">
-                        <div className="space-y-4">
-                            {/* Cash Payment Instructions */}
-                            <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-                                <div className="flex items-start gap-3">
-                                    <Wallet className="h-5 w-5 text-green-400 mt-0.5" />
-                                    <div className="flex-1">
-                                        <h4 className="text-sm font-semibold text-green-400 mb-1">
-                                            Cash Payment Instructions
-                                        </h4>
-                                        <p className="text-xs text-gray-300">
-                                            Please collect the outstanding balance from the guest before confirming checkout.
-                                        </p>
+                    {/* Cash Payment Tab - Only for Staff */}
+                    {userRole !== "guest" && (
+                        <TabsContent value="cash" className="space-y-4 mt-4">
+                            <div className="space-y-4">
+                                {/* Cash Payment Instructions */}
+                                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                                    <div className="flex items-start gap-3">
+                                        <Wallet className="h-5 w-5 text-green-400 mt-0.5" />
+                                        <div className="flex-1">
+                                            <h4 className="text-sm font-semibold text-green-400 mb-1">
+                                                Cash Payment Instructions
+                                            </h4>
+                                            <p className="text-xs text-gray-300">
+                                                Please collect the outstanding balance from the guest before confirming checkout.
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
                             {/* Cash Confirmation Checkbox */}
                             <div className="p-4 rounded-lg bg-white/5 border border-white/10">
@@ -248,7 +253,8 @@ const CheckoutPaymentDialog = ({
                                 </Button>
                             </div>
                         </div>
-                    </TabsContent>
+                        </TabsContent>
+                    )}
                 </Tabs>
             </div>
         </DialogBox>

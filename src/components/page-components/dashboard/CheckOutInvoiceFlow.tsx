@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { generateInvoice, getInvoiceByBookingId, updatePaymentStatus, downloadInvoicePDF, IInvoice } from "@/services/invoiceService";
 import { checkOutBooking, getBookingById } from "@/services/bookingService";
@@ -18,6 +19,7 @@ interface CheckOutInvoiceFlowProps {
 }
 
 const CheckOutInvoiceFlow = ({ bookingId, onSuccess, onCancel }: CheckOutInvoiceFlowProps) => {
+    const { role } = useAuth();
     const [loading, setLoading] = useState(true);
     const [invoice, setInvoice] = useState<IInvoice | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
@@ -319,6 +321,7 @@ const CheckOutInvoiceFlow = ({ bookingId, onSuccess, onCancel }: CheckOutInvoice
                         totalPaid={totalPaid}
                         onPaymentSuccess={handlePaymentSuccess}
                         onCancel={() => setShowPaymentDialog(false)}
+                        userRole={role}
                     />
                 )}
             </>
@@ -542,6 +545,7 @@ const CheckOutInvoiceFlow = ({ bookingId, onSuccess, onCancel }: CheckOutInvoice
                     totalPaid={totalPaid}
                     onPaymentSuccess={handlePaymentSuccess}
                     onCancel={() => setShowPaymentDialog(false)}
+                    userRole={role}
                 />
             )}
         </>
