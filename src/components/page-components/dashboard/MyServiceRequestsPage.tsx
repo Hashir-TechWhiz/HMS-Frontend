@@ -2,16 +2,15 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getMyServiceRequests, createServiceRequest } from "@/services/serviceRequestService";
+import { getMyServiceRequests } from "@/services/serviceRequestService";
 import { getMyBookings } from "@/services/bookingService";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
 import { Button } from "@/components/ui/button";
 import SelectField from "@/components/forms/SelectField";
-import TextAreaField from "@/components/forms/TextAreaField";
+import ServiceRequestForm from "./ServiceRequestForm";
 import { toast } from "sonner";
 import { Eye, Plus } from "lucide-react";
-import { useForm } from "react-hook-form";
 import { formatDateTime, normalizeDateRange } from "@/lib/utils";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { DateRange } from "react-day-picker";
@@ -35,20 +34,8 @@ const MyServiceRequestsPage = () => {
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
     const [formDialogOpen, setFormDialogOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<IServiceRequest | null>(null);
-    const [formLoading, setFormLoading] = useState(false);
 
     const itemsPerPage = 10;
-
-    const {
-        handleSubmit,
-        formState: { errors },
-        reset,
-        control,
-    } = useForm<{
-        bookingId: string;
-        serviceType: ServiceType;
-        notes: string;
-    }>();
 
     // Fetch service requests
     const fetchServiceRequests = useCallback(async (page: number = 1) => {
@@ -146,80 +133,8 @@ const MyServiceRequestsPage = () => {
     const handleAddClick = async () => {
         // Fetch bookings when opening form
         await fetchBookings();
-
-        reset({
-            bookingId: "",
-            serviceType: "housekeeping",
-            notes: "",
-        });
         setFormDialogOpen(true);
     };
-
-    // Handle form submit
-    const onSubmit = async (data: {
-        bookingId: string;
-        serviceType: ServiceType;
-        notes: string;
-    }) => {
-        try {
-            setFormLoading(true);
-
-            // Find selected booking
-            const selectedBooking = bookings.find(b => b._id === data.bookingId);
-            if (!selectedBooking) {
-                toast.error("Selected booking not found");
-                return;
-            }
-
-            // Validation 1: Ensure booking is checked-in (manual check-in is source of truth)
-            if (selectedBooking.status !== "checkedin") {
-                toast.error("Service requests are only available during an active stay (after check-in)");
-                return;
-            }
-
-            // Validation 2: Check for duplicate pending/in_progress requests
-            const existingRequest = allServiceRequests.find(
-                (request: IServiceRequest) => {
-                    const requestBookingId = typeof request.booking === "object"
-                        ? request.booking._id
-                        : request.booking;
-
-                    return requestBookingId === data.bookingId &&
-                        request.serviceType === data.serviceType &&
-                        (request.status === "pending" || request.status === "in_progress");
-                }
-            );
-
-            if (existingRequest) {
-                const serviceTypeLabel = serviceTypeOptions.find(
-                    opt => opt.value === data.serviceType
-                )?.label || data.serviceType;
-                toast.error(`A ${serviceTypeLabel} request is already in progress for this booking`);
-                return;
-            }
-
-            const requestData = {
-                bookingId: data.bookingId,
-                serviceType: data.serviceType,
-                notes: data.notes || undefined,
-            };
-
-            const response = await createServiceRequest(requestData);
-
-            if (response.success) {
-                toast.success("Service request created successfully");
-                setFormDialogOpen(false);
-                fetchServiceRequests(currentPage);
-            } else {
-                toast.error(response.message || "Failed to create service request");
-            }
-        } catch (error: any) {
-            toast.error(error?.message || "An error occurred");
-        } finally {
-            setFormLoading(false);
-        }
-    };
-
 
     // Get room number
     const getRoomNumber = (request: IServiceRequest): string => {
@@ -266,11 +181,22 @@ const MyServiceRequestsPage = () => {
         );
     };
 
-    // Service type options
+    // Service type options (matching backend enum)
     const serviceTypeOptions: Option[] = [
+        { value: "cleaning", label: "Cleaning" },
         { value: "housekeeping", label: "Housekeeping" },
-        { value: "room_service", label: "Room Service" },
         { value: "maintenance", label: "Maintenance" },
+        { value: "room_service", label: "Room Service" },
+        { value: "food_service", label: "Food Service" },
+        { value: "medical_assistance", label: "Medical Assistance" },
+        { value: "massage", label: "Massage" },
+        { value: "gym_access", label: "Gym Access" },
+        { value: "yoga_session", label: "Yoga Session" },
+        { value: "laundry", label: "Laundry" },
+        { value: "spa", label: "Spa" },
+        { value: "transport", label: "Transport" },
+        { value: "room_decoration", label: "Room Decoration" },
+        { value: "other", label: "Other" },
     ];
 
     // Status filter options
@@ -294,16 +220,6 @@ const MyServiceRequestsPage = () => {
         setTotalItems(filteredServiceRequests.length);
     }, [filteredServiceRequests]);
 
-    // Booking options
-    const bookingOptions: Option[] = bookings.map((booking) => {
-        const roomNumber = typeof booking.room === "object" ? booking.room.roomNumber : "N/A";
-        const checkIn = formatDateTime(booking.checkInDate);
-        return {
-            value: booking._id,
-            label: `Room ${roomNumber} - Check-in: ${checkIn}`,
-        };
-    });
-
     // Define columns
     const columns = [
         {
@@ -316,11 +232,22 @@ const MyServiceRequestsPage = () => {
             label: "Service Type",
             render: (request: IServiceRequest) => {
                 const typeLabels: Record<ServiceType, string> = {
+                    cleaning: "Cleaning",
                     housekeeping: "Housekeeping",
-                    room_service: "Room Service",
                     maintenance: "Maintenance",
+                    room_service: "Room Service",
+                    food_service: "Food Service",
+                    medical_assistance: "Medical Assistance",
+                    massage: "Massage",
+                    gym_access: "Gym Access",
+                    yoga_session: "Yoga Session",
+                    laundry: "Laundry",
+                    spa: "Spa",
+                    transport: "Transport",
+                    room_decoration: "Room Decoration",
+                    other: "Other",
                 };
-                return <span className="font-medium">{typeLabels[request.serviceType]}</span>;
+                return <span className="font-medium">{typeLabels[request.serviceType] || request.serviceType}</span>;
             },
         },
         {
@@ -498,56 +425,29 @@ const MyServiceRequestsPage = () => {
                 onOpenChange={setFormDialogOpen}
                 title="New Service Request"
                 widthClass="max-w-xl"
-                showFooter
-                confirmText="Submit Request"
-                cancelText="Cancel"
-                onConfirm={handleSubmit(onSubmit)}
-                onCancel={() => setFormDialogOpen(false)}
-                disableConfirm={formLoading || bookingsLoading}
-                confirmLoading={formLoading}
             >
-                <form onSubmit={(e) => { e.preventDefault(); handleSubmit(onSubmit)(e); }} className="space-y-4 py-4">
+                <div className="space-y-4 pb-4">
                     {bookingsLoading ? (
                         <div className="text-center py-4 text-gray-400">Loading bookings...</div>
                     ) : bookings.length === 0 ? (
                         <div className="text-center py-4">
                             <p className="text-sm text-gray-400">
-                                Service requests are available only during an active stay. Please check in first to create service requests.
+                                Service requests are available only during an active stay. Please check in first.
                             </p>
                         </div>
                     ) : (
-                        <>
-                            <SelectField
-                                name="bookingId"
-                                label="Select Booking *"
-                                placeholder="Select your Booking"
-                                options={bookingOptions}
-                                control={control}
-                                required
-                                error={errors.bookingId}
-                            />
-
-                            <SelectField
-                                name="serviceType"
-                                label="Service Type *"
-                                options={serviceTypeOptions}
-                                control={control}
-                                required
-                                error={errors.serviceType}
-                            />
-
-                            <TextAreaField
-                                name="notes"
-                                label="Notes"
-                                placeholder="Please provide any additional details about your request (optional)"
-                                register={control.register}
-                                error={errors.notes}
-                                rows={4}
-                            />
-                        </>
+                        <ServiceRequestForm
+                            bookings={bookings}
+                            onSuccess={() => {
+                                setFormDialogOpen(false);
+                                fetchServiceRequests(currentPage);
+                            }}
+                            onCancel={() => setFormDialogOpen(false)}
+                        />
                     )}
-                </form>
+                </div>
             </DialogBox>
+
         </div>
     );
 };

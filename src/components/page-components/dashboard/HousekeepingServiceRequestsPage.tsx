@@ -181,10 +181,14 @@ const HousekeepingServiceRequestsPage = () => {
     };
 
     // Service type labels
-    const serviceTypeLabels: Record<ServiceType, string> = {
+    const serviceTypeLabels: Record<string, string> = {
         housekeeping: "Housekeeping",
         room_service: "Room Service",
         maintenance: "Maintenance",
+        laundry: "Laundry",
+        spa: "Spa",
+        cleaning: "Cleaning",
+        other: "Other"
     };
 
     // Status options for form
@@ -233,10 +237,27 @@ const HousekeepingServiceRequestsPage = () => {
             ),
         },
         {
+            key: "priority",
+            label: "Priority",
+            render: (request: IServiceRequest) => {
+                const colors = {
+                    low: "bg-gray-500/10 text-gray-400 border-gray-500/20",
+                    normal: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+                    high: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+                    urgent: "bg-red-500/10 text-red-400 border-red-500/20",
+                };
+                return (
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase ${colors[request.priority || 'normal']}`}>
+                        {request.priority || 'normal'}
+                    </span>
+                );
+            }
+        },
+        {
             key: "serviceType",
             label: "Service Type",
             render: (request: IServiceRequest) => (
-                <span className="font-medium">{serviceTypeLabels[request.serviceType]}</span>
+                <span className="font-medium">{serviceTypeLabels[request.serviceType] || request.serviceType}</span>
             ),
         },
         {
@@ -327,8 +348,14 @@ const HousekeepingServiceRequestsPage = () => {
                                 <p className="text-sm font-medium">{selectedRequest._id}</p>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-400">Status</p>
-                                <StatusBadge status={selectedRequest.status} />
+                                <p className="text-sm text-gray-400">Priority</p>
+                                <span className="text-sm font-bold uppercase">{selectedRequest.priority || 'normal'}</span>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-400">Price</p>
+                                <p className="text-sm font-semibold text-primary-400">
+                                    {selectedRequest.finalPrice ? `$${selectedRequest.finalPrice.toFixed(2)}` : (selectedRequest.fixedPrice ? `$${selectedRequest.fixedPrice.toFixed(2)}` : 'N/A')}
+                                </p>
                             </div>
                         </div>
 

@@ -12,9 +12,14 @@ const HomeHeroSection: FC = () => {
         checkIn?: Date;
         checkOut?: Date;
         guests?: number;
+        location?: string;
     }) => {
         // Build query parameters from search data
         const params = new URLSearchParams();
+
+        if (data.location) {
+            params.set("location", data.location);
+        }
 
         if (data.checkIn) {
             params.set("checkIn", data.checkIn.toISOString());

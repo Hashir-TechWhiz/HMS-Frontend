@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useHotel } from "@/contexts/HotelContext";
 
 import {
     getAllServiceRequests,
@@ -17,6 +18,7 @@ import {
 
 import { getServiceRequestsReport } from "@/services/reportService";
 import { getUsers } from "@/services/adminUserService";
+import { getActiveHotels } from "@/services/hotelService";
 
 import { DateRange } from "react-day-picker";
 import { useForm } from "react-hook-form";
@@ -33,12 +35,14 @@ import StatCard from "@/components/common/StatCard";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
 import SelectField from "@/components/forms/SelectField";
+import InputField from "@/components/forms/InputField";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 
 import { Eye, RefreshCw, Settings, Clock, Loader2 as LoaderIcon, CheckCircle2, UserPlus } from "lucide-react";
 
 const AdminServiceRequestsPage = () => {
     const { role, loading: authLoading } = useAuth();
+    const { selectedHotel } = useHotel();
 
     const [allServiceRequests, setAllServiceRequests] = useState<IServiceRequest[]>([]);
     const [loading, setLoading] = useState(true);
@@ -47,6 +51,8 @@ const AdminServiceRequestsPage = () => {
     const [totalItems, setTotalItems] = useState(0);
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [hotelFilter, setHotelFilter] = useState<string>("all");
+    const [availableHotels, setAvailableHotels] = useState<IHotel[]>([]);
 
     // KPI states
     const [kpiLoading, setKpiLoading] = useState(false);
@@ -68,9 +74,14 @@ const AdminServiceRequestsPage = () => {
         formState: { errors: statusErrors },
         reset: resetStatus,
         control: statusControl,
+        watch: watchStatus,
+        register: registerStatus,
     } = useForm<{
         status: ServiceStatus;
+        finalPrice?: number;
     }>();
+
+    const currentStatus = watchStatus("status");
 
     const {
         handleSubmit: handleAssignSubmit,
@@ -137,8 +148,8 @@ const AdminServiceRequestsPage = () => {
         }
     }, [role, authLoading]);
 
-    // Fetch housekeeping staff
-    const fetchHousekeepingStaff = useCallback(async () => {
+    // Fetch housekeeping staff (hotel-scoped)
+    const fetchHousekeepingStaff = useCallback(async (hotelId?: string) => {
         try {
             const response = await getUsers({ role: 'housekeeping', isActive: true });
             if (response.success && response.data) {
@@ -146,10 +157,32 @@ const AdminServiceRequestsPage = () => {
                 const usersArray = Array.isArray(usersData)
                     ? usersData
                     : (usersData?.items || usersData?.users || []);
-                setHousekeepingStaff(usersArray);
+
+                // Filter by hotel if hotelId is provided
+                if (hotelId) {
+                    const filteredStaff = usersArray.filter((user: IUser) => {
+                        const userHotelId = typeof user.hotelId === 'string' ? user.hotelId : user.hotelId?._id;
+                        return userHotelId === hotelId;
+                    });
+                    setHousekeepingStaff(filteredStaff);
+                } else {
+                    setHousekeepingStaff(usersArray);
+                }
             }
         } catch (error) {
             console.error("Failed to fetch housekeeping staff:", error);
+        }
+    }, []);
+
+    // Fetch available hotels
+    const fetchAvailableHotels = useCallback(async () => {
+        try {
+            const response = await getActiveHotels();
+            if (response.success && response.data) {
+                setAvailableHotels(response.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch hotels:", error);
         }
     }, []);
 
@@ -158,8 +191,9 @@ const AdminServiceRequestsPage = () => {
             fetchServiceRequests(currentPage);
             fetchServiceRequestStats();
             fetchHousekeepingStaff();
+            fetchAvailableHotels();
         }
-    }, [role, authLoading, currentPage, fetchServiceRequests, fetchServiceRequestStats, fetchHousekeepingStaff]);
+    }, [role, authLoading, currentPage, fetchServiceRequests, fetchServiceRequestStats, fetchHousekeepingStaff, fetchAvailableHotels]);
 
     // Handle page change
     const handlePageChange = (newPage: number) => {
@@ -183,6 +217,7 @@ const AdminServiceRequestsPage = () => {
         setSelectedRequest(request);
         resetStatus({
             status: request.status,
+            finalPrice: request.finalPrice || request.fixedPrice || 0,
         });
         setStatusDialogOpen(true);
     };
@@ -193,17 +228,24 @@ const AdminServiceRequestsPage = () => {
         resetAssign({
             staffId: '',
         });
+
+        // Fetch staff from the same hotel as the service request
+        const requestHotelId = typeof request.hotelId === 'string' ? request.hotelId : request.hotelId?._id;
+        if (requestHotelId) {
+            fetchHousekeepingStaff(requestHotelId);
+        }
+
         setAssignDialogOpen(true);
     };
 
     // Handle status update submit
-    const onStatusSubmit = async (data: { status: ServiceStatus }) => {
+    const onStatusSubmit = async (data: { status: ServiceStatus, finalPrice?: number }) => {
         if (!selectedRequest) return;
 
         try {
             setStatusLoading(true);
 
-            const response = await updateServiceRequestStatus(selectedRequest._id, data.status);
+            const response = await updateServiceRequestStatus(selectedRequest._id, data.status, data.finalPrice);
 
             if (response.success) {
                 toast.success("Service request status updated successfully");
@@ -306,10 +348,12 @@ const AdminServiceRequestsPage = () => {
     };
 
     // Service type labels
-    const serviceTypeLabels: Record<ServiceType, string> = {
+    const serviceTypeLabels: Record<string, string> = {
         housekeeping: "Housekeeping",
         room_service: "Room Service",
         maintenance: "Maintenance",
+        cleaning: "Cleaning",
+        other: "Other"
     };
 
     // Status options for form
@@ -327,13 +371,26 @@ const AdminServiceRequestsPage = () => {
         { value: "completed", label: "Completed" },
     ];
 
-    // Filter service requests based on status filter (client-side)
+    // Filter service requests based on status and hotel filters (client-side)
     const filteredServiceRequests = useMemo(() => {
-        if (statusFilter === "all") {
-            return allServiceRequests;
+        let filtered = allServiceRequests;
+
+        // Filter by status
+        if (statusFilter !== "all") {
+            filtered = filtered.filter((request) => request.status === statusFilter);
         }
-        return allServiceRequests.filter((request) => request.status === statusFilter);
-    }, [allServiceRequests, statusFilter]);
+
+        // Filter by hotel
+        if (hotelFilter !== "all") {
+            filtered = filtered.filter((request) => {
+                if (!request.hotelId) return false;
+                const requestHotelId = typeof request.hotelId === 'string' ? request.hotelId : request.hotelId._id;
+                return requestHotelId === hotelFilter;
+            });
+        }
+
+        return filtered;
+    }, [allServiceRequests, statusFilter, hotelFilter]);
 
     // Update total items when filtered requests change
     useEffect(() => {
@@ -381,6 +438,19 @@ const AdminServiceRequestsPage = () => {
                     </div>
                 </div>
             ),
+        },
+        {
+            key: "priority",
+            label: "Priority",
+            render: (request: IServiceRequest) => {
+                const colors: any = {
+                    low: "bg-gray-500/20 text-gray-400 border-gray-500/50",
+                    normal: "bg-blue-500/20 text-blue-400 border-blue-500/50",
+                    high: "bg-orange-500/20 text-orange-400 border-orange-500/50",
+                    urgent: "bg-red-500/20 text-red-400 border-red-500/50",
+                };
+                return <span className={`px-2 py-0.5 rounded text-[10px] border capitalize ${colors[request.priority || 'normal']}`}>{request.priority || 'normal'}</span>;
+            },
         },
         {
             key: "status",
@@ -485,6 +555,19 @@ const AdminServiceRequestsPage = () => {
                     </div>
 
                     <div className="flex lg:flex-row flex-col gap-5 w-full justify-end md:w-auto">
+                        {role === "admin" && (
+                            <SelectField
+                                name="hotelFilter"
+                                options={[
+                                    { value: "all", label: "All Hotels" },
+                                    ...availableHotels.map(h => ({ value: h._id, label: `${h.name} (${h.code})` }))
+                                ]}
+                                value={hotelFilter}
+                                onChange={(v) => { setHotelFilter(v); setCurrentPage(1); }}
+                                width="md:w-[250px]"
+                                className="text-xs md:text-sm h-11!"
+                            />
+                        )}
                         <SelectField
                             name="statusFilter"
                             options={statusFilterOptions}
@@ -557,6 +640,12 @@ const AdminServiceRequestsPage = () => {
                                         <p className="text-sm text-gray-400">Assigned Staff</p>
                                         <p className={`text-sm ${getAssignedStaffName(selectedRequest) === "Unassigned" ? "text-gray-400" : "font-medium"}`}>
                                             {getAssignedStaffName(selectedRequest)}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-400">Price</p>
+                                        <p className="text-sm font-medium">
+                                            {selectedRequest.finalPrice ? `$${selectedRequest.finalPrice.toFixed(2)}` : selectedRequest.fixedPrice ? `$${selectedRequest.fixedPrice.toFixed(2)}` : "TBD"}
                                         </p>
                                     </div>
                                 </div>
@@ -662,6 +751,22 @@ const AdminServiceRequestsPage = () => {
                             required
                             error={statusErrors.status}
                         />
+                        {currentStatus === "completed" && (
+                            <div className="space-y-4 pt-2">
+                                <InputField
+                                    name="finalPrice"
+                                    label="Final Price ($) *"
+                                    type="number"
+                                    placeholder="0.00"
+                                    register={registerStatus}
+                                    validation={{ valueAsNumber: true, min: 0 }}
+                                    error={statusErrors.finalPrice}
+                                />
+                                <p className="text-xs text-gray-400">
+                                    Confirm the final price for this service. This amount will be added to the guest's invoice.
+                                </p>
+                            </div>
+                        )}
                         <p className="text-xs text-gray-400">
                             Update the status to reflect the current state of the service request.
                         </p>

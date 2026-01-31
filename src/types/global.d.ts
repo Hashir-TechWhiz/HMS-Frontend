@@ -116,7 +116,25 @@ declare global {
         name: string;
         email: string;
         role: UserRole;
+        hotelId?: string | IHotel; // Optional - only for receptionist/housekeeping
         isActive: boolean;
+        createdAt: string;
+        updatedAt: string;
+    }
+
+    // Hotel Types
+    type HotelStatus = 'Active' | 'Inactive';
+
+    interface IHotel {
+        _id: string;
+        name: string;
+        code: string; // Format: HMS-XXX (e.g., HMS-001)
+        address: string;
+        city: string;
+        country: string;
+        contactEmail: string;
+        contactPhone: string;
+        status: HotelStatus;
         createdAt: string;
         updatedAt: string;
     }
@@ -127,6 +145,7 @@ declare global {
 
     interface IRoom {
         _id: string;
+        hotelId: string | IHotel;
         roomNumber: string;
         roomType: RoomType;
         pricePerNight: number;
@@ -141,9 +160,22 @@ declare global {
 
     // Booking Types
     type BookingStatus = 'pending' | 'confirmed' | 'checkedin' | 'completed' | 'cancelled';
+    type PaymentStatus = 'unpaid' | 'partially_paid' | 'paid';
+    type PaymentMethod = 'card' | 'cash';
+
+    interface IPayment {
+        _id?: string;
+        amount: number;
+        paymentMethod: PaymentMethod;
+        paymentDate: string;
+        processedBy?: IUser | string;
+        transactionId?: string;
+        notes?: string;
+    }
 
     interface IBooking {
         _id: string;
+        hotelId: string | IHotel;
         guest?: IUser | string; // Optional - only for guest bookings
         customerDetails?: {
             name: string;
@@ -162,6 +194,11 @@ declare global {
         cancelledBy?: IUser | string;
         cancellationReason?: string;
         cancellationDate?: string;
+        // Payment tracking fields
+        paymentStatus: PaymentStatus;
+        payments: IPayment[];
+        totalPaid: number;
+        totalAmount: number;
     }
 
     // Date filter types for API queries
@@ -171,22 +208,75 @@ declare global {
     }
 
     // Service Request Types
-    type ServiceType = 'housekeeping' | 'room_service' | 'maintenance';
+    type ServiceType = 'cleaning' | 'housekeeping' | 'maintenance' | 'room_service' | 'food_service' |
+        'medical_assistance' | 'massage' | 'gym_access' | 'yoga_session' | 'laundry' |
+        'spa' | 'transport' | 'room_decoration' | 'other';
     type ServiceStatus = 'pending' | 'in_progress' | 'completed';
 
     interface IServiceRequest {
         _id: string;
+        hotelId: string | IHotel;
         booking: IBooking | string;
         guest?: IUser | string;
         room: IRoom | string;
         requestedBy?: IUser | string;
         serviceType: ServiceType;
         status: ServiceStatus;
+        priority: 'low' | 'normal' | 'high' | 'urgent';
         assignedRole?: string;
         assignedTo?: IUser | string;
         notes?: string;
+        fixedPrice?: number;
+        finalPrice?: number;
         createdAt: string;
         updatedAt: string;
+    }
+
+    // Service Catalog Types
+    interface IServiceCatalog {
+        _id: string;
+        hotelId: string | IHotel;
+        serviceType: string;
+        displayName: string;
+        description?: string;
+        fixedPrice?: number;
+        isActive: boolean;
+        category: string;
+    }
+
+    // Invoice Types
+    interface IInvoice {
+        _id: string;
+        hotelId: string | IHotel;
+        booking: string | IBooking;
+        guest?: string | IUser;
+        customerDetails?: {
+            name: string;
+            phone: string;
+            email?: string;
+        };
+        roomCharges: {
+            roomId: string;
+            roomNumber: string;
+            roomType: string;
+            pricePerNight: number;
+            numberOfNights: number;
+            totalRoomCharges: number;
+        };
+        serviceCharges: {
+            serviceRequestId: string;
+            serviceType: string;
+            description: string;
+            price: number;
+            completedAt: string;
+        }[];
+        subtotal: number;
+        tax: number;
+        totalAmount: number;
+        paymentStatus: 'pending' | 'paid' | 'partially_paid';
+        paidAmount: number;
+        generatedAt: string;
+        generatedBy?: string | IUser;
     }
 
     // Service Request filter types for API queries
@@ -314,6 +404,81 @@ declare global {
         isActive: boolean;
         totalBookings: number;
         createdAt: string;
+    }
+
+    // Public Facility Types
+    type FacilityType = 'Event Hall' | 'Pool' | 'Gym' | 'Spa' | 'Conference Room' | 'Sports Court' | 'Game Room' | 'Other';
+    type FacilityStatus = 'available' | 'unavailable' | 'maintenance';
+
+    interface IPublicFacility {
+        _id: string;
+        hotelId: string | IHotel;
+        name: string;
+        facilityType: FacilityType;
+        description: string;
+        capacity: number;
+        pricePerHour: number;
+        pricePerDay?: number;
+        amenities: string[];
+        images: string[]; // Array of image URLs (1-4 images required)
+        operatingHours: {
+            start: string; // HH:MM format
+            end: string; // HH:MM format
+        };
+        status: FacilityStatus;
+        createdAt: string;
+        updatedAt: string;
+    }
+
+    // Public Facility Booking Types
+    type FacilityBookingType = 'hourly' | 'daily';
+    type FacilityBookingStatus = 'pending' | 'confirmed' | 'in_use' | 'completed' | 'cancelled';
+
+    interface IPublicFacilityBooking {
+        _id: string;
+        hotelId: string | IHotel;
+        guest?: IUser | string;
+        customerDetails?: {
+            name: string;
+            phone: string;
+            email?: string;
+        };
+        createdBy?: IUser | string;
+        facility: IPublicFacility | string;
+        bookingType: FacilityBookingType;
+        startDate: string;
+        endDate: string;
+        startTime?: string; // HH:MM format for hourly bookings
+        endTime?: string; // HH:MM format for hourly bookings
+        numberOfGuests: number;
+        purpose?: string;
+        specialRequests?: string;
+        status: FacilityBookingStatus;
+        // Cancellation fields
+        cancellationPenalty?: number;
+        cancelledBy?: IUser | string;
+        cancellationReason?: string;
+        cancellationDate?: string;
+        // Check-in/out fields
+        isCheckedIn: boolean;
+        checkInDetails?: {
+            checkedInAt: string;
+            checkedInBy: IUser | string;
+        };
+        isCheckedOut: boolean;
+        checkOutDetails?: {
+            checkedOutAt: string;
+            checkedOutBy: IUser | string;
+        };
+        // Payment tracking
+        paymentStatus: PaymentStatus;
+        payments: IPayment[];
+        totalPaid: number;
+        facilityCharges: number;
+        serviceCharges: number;
+        totalAmount: number;
+        createdAt: string;
+        updatedAt: string;
     }
 }
 

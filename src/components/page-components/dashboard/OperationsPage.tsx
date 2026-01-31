@@ -1,21 +1,29 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useHotel } from "@/contexts/HotelContext";
 import { getAllBookings, checkInBooking, checkOutBooking } from "@/services/bookingService";
 import { getReportsOverview } from "@/services/reportService";
+import { getActiveHotels } from "@/services/hotelService";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import DialogBox from "@/components/common/DialogBox";
 import StatCard from "@/components/common/StatCard";
+import SelectField from "@/components/forms/SelectField";
+import CheckInForm from "./CheckInForm";
+import CheckOutInvoiceFlow from "./CheckOutInvoiceFlow";
 import { toast } from "sonner";
 import { Eye, CheckCircle2, LogOut, Calendar, Hotel, Clock, Users } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 
 const OperationsPage = () => {
     const { role, loading: authLoading } = useAuth();
+    const { selectedHotel } = useHotel();
 
+    const [availableHotels, setAvailableHotels] = useState<IHotel[]>([]);
+    const [hotelFilter, setHotelFilter] = useState<string>("all");
     const [bookings, setBookings] = useState<IBooking[]>([]);
     const [loading, setLoading] = useState(true);
     const [kpiLoading, setKpiLoading] = useState(true);
@@ -78,6 +86,34 @@ const OperationsPage = () => {
         }
     }, [role, authLoading, fetchBookings, fetchKPIs]);
 
+    // Fetch available hotels
+    const fetchAvailableHotels = useCallback(async () => {
+        try {
+            const response = await getActiveHotels();
+            if (response.success && response.data) {
+                setAvailableHotels(response.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch hotels:", error);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (role && !authLoading && (role === "admin" || role === "receptionist")) {
+            fetchAvailableHotels();
+        }
+    }, [role, authLoading, fetchAvailableHotels]);
+
+    // Filter bookings by hotel
+    const filteredBookings = useMemo(() => {
+        if (hotelFilter === "all") return bookings;
+        return bookings.filter(booking => {
+            if (!booking.hotelId) return false;
+            const bookingHotelId = typeof booking.hotelId === 'string' ? booking.hotelId : booking.hotelId._id;
+            return bookingHotelId === hotelFilter;
+        });
+    }, [bookings, hotelFilter]);
+
     // Filter bookings by operational categories
     const getTodayDate = () => {
         const today = new Date();
@@ -93,21 +129,21 @@ const OperationsPage = () => {
         );
     };
 
-    const arrivalsToday = bookings.filter((booking) => {
+    const arrivalsToday = filteredBookings.filter((booking) => {
         const checkInDate = new Date(booking.checkInDate);
         const today = getTodayDate();
         return booking.status === "confirmed" && isSameDay(checkInDate, today);
     });
 
-    const inHouse = bookings.filter((booking) => booking.status === "checkedin");
+    const inHouse = filteredBookings.filter((booking) => booking.status === "checkedin");
 
-    const departuresToday = bookings.filter((booking) => {
+    const departuresToday = filteredBookings.filter((booking) => {
         const checkOutDate = new Date(booking.checkOutDate);
         const today = getTodayDate();
         return booking.status === "checkedin" && isSameDay(checkOutDate, today);
     });
 
-    const completed = bookings.filter((booking) => booking.status === "completed");
+    const completed = filteredBookings.filter((booking) => booking.status === "completed");
 
     // Get customer name
     const getCustomerName = (booking: IBooking): string => {
@@ -170,56 +206,20 @@ const OperationsPage = () => {
         setCheckInDialogOpen(true);
     };
 
-    const handleCheckInConfirm = async () => {
-        if (!selectedBooking) return;
-
-        try {
-            setActionLoading(true);
-            const response = await checkInBooking(selectedBooking._id);
-
-            if (response.success) {
-                toast.success("Guest checked in successfully!");
-                setCheckInDialogOpen(false);
-                setSelectedBooking(null);
-                fetchBookings();
-                fetchKPIs();
-            } else {
-                toast.error(response.message || "Failed to check in");
-            }
-        } catch {
-            toast.error("An error occurred during check-in");
-        } finally {
-            setActionLoading(false);
-        }
-    };
-
     const handleCheckOutClick = (booking: IBooking) => {
         setSelectedBooking(booking);
         setCheckOutDialogOpen(true);
     };
 
-    const handleCheckOutConfirm = async () => {
-        if (!selectedBooking) return;
-
-        try {
-            setActionLoading(true);
-            const response = await checkOutBooking(selectedBooking._id);
-
-            if (response.success) {
-                toast.success("Guest checked out successfully!");
-                setCheckOutDialogOpen(false);
-                setSelectedBooking(null);
-                fetchBookings();
-                fetchKPIs();
-            } else {
-                toast.error(response.message || "Failed to check out");
-            }
-        } catch {
-            toast.error("An error occurred during check-out");
-        } finally {
-            setActionLoading(false);
-        }
+    const handleCheckInConfirm = async () => {
+        // This is handled by CheckInForm now
     };
+
+    const handleCheckOutConfirm = async () => {
+        // This is handled by CheckOutInvoiceFlow now
+    };
+
+
 
     // Booking Card Component
     const BookingCard = ({ booking }: { booking: IBooking }) => (
@@ -385,6 +385,27 @@ const OperationsPage = () => {
 
             {/* Kanban Board */}
             <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
+                {/* Hotel Filter */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="text-xl font-bold text-white">Operations Hub</h2>
+                        <p className="text-sm text-gray-400 mt-1">Manage check-ins, check-outs, and in-house guests</p>
+                    </div>
+                    {role === "admin" && (
+                        <SelectField
+                            name="hotelFilter"
+                            options={[
+                                { value: "all", label: "All Hotels" },
+                                ...availableHotels.map(h => ({ value: h._id, label: `${h.name} (${h.code})` }))
+                            ]}
+                            value={hotelFilter}
+                            onChange={(v) => setHotelFilter(v)}
+                            width="md:w-[250px]"
+                            className="bg-black-500! border border-white/50 focus:ring-1! focus:ring-primary-800! text-xs md:text-sm h-10!"
+                        />
+                    )}
+                </div>
+
                 <div className="overflow-x-auto">
                     <div className="flex gap-4 pb-4">
                         <Column
@@ -486,30 +507,40 @@ const OperationsPage = () => {
                 open={checkInDialogOpen}
                 onOpenChange={setCheckInDialogOpen}
                 title="Check In Guest"
-                description="Are you sure you want to check in this guest? This confirms that the guest has arrived and taken occupancy of the room."
-                showFooter
-                confirmText="Check In"
-                cancelText="Cancel"
-                onConfirm={handleCheckInConfirm}
-                onCancel={() => setCheckInDialogOpen(false)}
-                confirmLoading={actionLoading}
-                variant="success"
-            />
+                widthClass="max-w-xl"
+            >
+                {selectedBooking && (
+                    <CheckInForm
+                        bookingId={selectedBooking._id}
+                        onSuccess={() => {
+                            setCheckInDialogOpen(false);
+                            fetchBookings();
+                            fetchKPIs();
+                        }}
+                        onCancel={() => setCheckInDialogOpen(false)}
+                    />
+                )}
+            </DialogBox>
 
             {/* Check Out Dialog */}
             <DialogBox
                 open={checkOutDialogOpen}
                 onOpenChange={setCheckOutDialogOpen}
-                title="Check Out Guest"
-                description="Are you sure you want to check out this guest? This confirms that the guest has vacated the room and the booking is complete."
-                showFooter
-                confirmText="Check Out"
-                cancelText="Cancel"
-                onConfirm={handleCheckOutConfirm}
-                onCancel={() => setCheckOutDialogOpen(false)}
-                confirmLoading={actionLoading}
-                variant="success"
-            />
+                title="Check Out and Invoicing"
+                widthClass="max-w-xl"
+            >
+                {selectedBooking && (
+                    <CheckOutInvoiceFlow
+                        bookingId={selectedBooking._id}
+                        onSuccess={() => {
+                            setCheckOutDialogOpen(false);
+                            fetchBookings();
+                            fetchKPIs();
+                        }}
+                        onCancel={() => setCheckOutDialogOpen(false)}
+                    />
+                )}
+            </DialogBox>
         </div>
     );
 };

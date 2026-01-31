@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useHotel } from "@/contexts/HotelContext";
 
 import {
     getUsers,
@@ -16,6 +17,7 @@ import {
     updateUserStatus,
     getUserStatistics
 } from "@/services/adminUserService";
+import { getActiveHotels } from "@/services/hotelService";
 
 import { useForm } from "react-hook-form";
 import { formatDateTime } from "@/lib/utils";
@@ -32,6 +34,9 @@ import { Eye, Pencil, UserCheck, UserX, Plus, Users, CheckCircle2, Ban } from "l
 
 const UsersPage = () => {
     const { role, loading: authLoading, user: currentUser } = useAuth();
+    const { selectedHotel } = useHotel();
+
+    const [availableHotels, setAvailableHotels] = useState<IHotel[]>([]);
 
     const [allUsers, setAllUsers] = useState<IUser[]>([]);
     const [loading, setLoading] = useState(true);
@@ -39,6 +44,7 @@ const UsersPage = () => {
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
     const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [hotelFilter, setHotelFilter] = useState<string>("all");
 
     // KPI states
     const [kpiLoading, setKpiLoading] = useState(false);
@@ -53,6 +59,7 @@ const UsersPage = () => {
     const [formLoading, setFormLoading] = useState(false);
     const [statusLoading, setStatusLoading] = useState(false);
     const [pendingStatus, setPendingStatus] = useState<boolean>(false);
+    const [selectedRole, setSelectedRole] = useState<UserRole>("receptionist");
 
     const {
         register,
@@ -65,6 +72,7 @@ const UsersPage = () => {
         email: string;
         password: string;
         role: UserRole;
+        hotelId?: string;
     }>();
 
     // Fetch users (excluding guests - they are managed separately)
@@ -118,6 +126,31 @@ const UsersPage = () => {
         }
     }, [role, authLoading, fetchUsers, fetchUserStats]);
 
+    // Fetch available hotels for selection
+    const fetchAvailableHotels = useCallback(async () => {
+        try {
+            const response = await getActiveHotels();
+            if (response.success && response.data) {
+                setAvailableHotels(response.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch hotels:", error);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (role === "admin" && !authLoading) {
+            fetchAvailableHotels();
+        }
+    }, [role, authLoading, fetchAvailableHotels]);
+
+    useEffect(() => {
+        if (availableHotels.length > 0 && hotelFilter === "all") {
+            setHotelFilter(availableHotels[0]._id);
+        }
+    }, [availableHotels, hotelFilter]);
+
+
     // Handle page change
     const handlePageChange = (newPage: number) => {
         setCurrentPage(newPage);
@@ -133,11 +166,13 @@ const UsersPage = () => {
     const handleAddClick = () => {
         setIsEditMode(false);
         setSelectedUser(null);
+        setSelectedRole("receptionist");
         reset({
             name: "",
             email: "",
             password: "",
             role: "receptionist",
+            hotelId: selectedHotel?._id || "",
         });
         setFormDialogOpen(true);
     };
@@ -146,11 +181,14 @@ const UsersPage = () => {
     const handleEditClick = (user: IUser) => {
         setIsEditMode(true);
         setSelectedUser(user);
+        setSelectedRole(user.role);
+        const userHotelId = user.hotelId ? (typeof user.hotelId === 'string' ? user.hotelId : user.hotelId._id) : "";
         reset({
             name: user.name,
             email: user.email,
             password: "",
             role: user.role,
+            hotelId: userHotelId,
         });
         setFormDialogOpen(true);
     };
@@ -174,6 +212,7 @@ const UsersPage = () => {
         email: string;
         password: string;
         role: UserRole;
+        hotelId?: string;
     }) => {
         // Prevent changing own role
         if (isEditMode && selectedUser && currentUser && selectedUser._id === currentUser._id) {
@@ -196,11 +235,22 @@ const UsersPage = () => {
 
             let response;
             if (isEditMode && selectedUser) {
-                // Update existing user (name and role only)
-                response = await updateUser(selectedUser._id, {
+                // Update existing user (name, role, and hotelId)
+                const updateData: any = {
                     name: data.name,
                     role: data.role,
-                });
+                };
+
+                // Include hotelId for receptionist and housekeeping
+                if (data.role === "receptionist" || data.role === "housekeeping") {
+                    if (!data.hotelId) {
+                        toast.error("Hotel is required for receptionist and housekeeping staff");
+                        return;
+                    }
+                    updateData.hotelId = data.hotelId;
+                }
+
+                response = await updateUser(selectedUser._id, updateData);
 
                 if (response.success) {
                     toast.success("User updated successfully");
@@ -211,12 +261,23 @@ const UsersPage = () => {
                 }
             } else {
                 // Create new user
-                response = await createUser({
+                const createData: any = {
                     name: data.name,
                     email: data.email,
                     password: data.password,
                     role: data.role,
-                });
+                };
+
+                // Include hotelId for receptionist and housekeeping
+                if (data.role === "receptionist" || data.role === "housekeeping") {
+                    if (!data.hotelId) {
+                        toast.error("Hotel is required for receptionist and housekeeping staff");
+                        return;
+                    }
+                    createData.hotelId = data.hotelId;
+                }
+
+                response = await createUser(createData);
 
                 if (response.success) {
                     toast.success("User created successfully");
@@ -303,19 +364,33 @@ const UsersPage = () => {
         { value: "inactive", label: "Inactive" },
     ];
 
-    // Filter users based on status filter (client-side)
+    // Hotel filter options
+    const hotelFilterOptions: Option[] = [
+        ...availableHotels.map(h => ({ value: h._id, label: `${h.name} (${h.code})` }))
+    ];
+
+    // Filter users based on status and hotel filter (client-side)
     const filteredUsers = useMemo(() => {
-        if (statusFilter === "all") {
-            return allUsers;
-        }
+        let filtered = allUsers;
+
+        // Filter by status
         if (statusFilter === "active") {
-            return allUsers.filter((user) => user.isActive);
+            filtered = filtered.filter((user) => user.isActive);
+        } else if (statusFilter === "inactive") {
+            filtered = filtered.filter((user) => !user.isActive);
         }
-        if (statusFilter === "inactive") {
-            return allUsers.filter((user) => !user.isActive);
+
+        // Filter by hotel
+        if (hotelFilter !== "all") {
+            filtered = filtered.filter((user) => {
+                if (!user.hotelId) return false;
+                const userHotelId = typeof user.hotelId === 'string' ? user.hotelId : user.hotelId._id;
+                return userHotelId === hotelFilter;
+            });
         }
-        return allUsers;
-    }, [allUsers, statusFilter]);
+
+        return filtered;
+    }, [allUsers, statusFilter, hotelFilter]);
 
     // Update total items when filtered users change
     useEffect(() => {
@@ -345,6 +420,26 @@ const UsersPage = () => {
             key: "role",
             label: "Role",
             render: (user: IUser) => <RoleBadge role={user.role} />,
+        },
+        {
+            key: "hotel",
+            label: "Hotel",
+            render: (user: IUser) => {
+                if (!user.hotelId) {
+                    return <span className="text-gray-400 text-sm">—</span>;
+                }
+
+                if (typeof user.hotelId === "string") {
+                    return <span className="text-sm">Assigned</span>;
+                }
+
+                return (
+                    <div className="text-sm">
+                        <div className="font-medium">{user.hotelId.name}</div>
+                        <div className="text-xs text-gray-400">{user.hotelId.code}</div>
+                    </div>
+                );
+            },
         },
         {
             key: "status",
@@ -465,6 +560,14 @@ const UsersPage = () => {
                     </div>
                     <div className="flex items-center gap-3">
                         <SelectField
+                            name="hotelFilter"
+                            options={hotelFilterOptions}
+                            value={hotelFilter}
+                            onChange={(v) => { setHotelFilter(v); setCurrentPage(1); }}
+                            width="md:w-[250px]"
+                            className="bg-black-500! border border-white/50 focus:ring-1! focus:ring-primary-800! text-xs md:text-sm h-10!"
+                        />
+                        <SelectField
                             name="statusFilter"
                             options={statusFilterOptions}
                             value={statusFilter}
@@ -526,6 +629,17 @@ const UsersPage = () => {
                                         <p className="text-sm text-gray-400">Role</p>
                                         <RoleBadge role={selectedUser.role} />
                                     </div>
+                                    {(selectedUser.role === "receptionist" || selectedUser.role === "housekeeping") && selectedUser.hotelId && (
+                                        <div>
+                                            <p className="text-sm text-gray-400">Assigned Hotel</p>
+                                            <p className="text-sm font-medium">
+                                                {typeof selectedUser.hotelId === 'string'
+                                                    ? selectedUser.hotelId
+                                                    : `${selectedUser.hotelId.name} (${selectedUser.hotelId.code})`
+                                                }
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <div className="border-t border-gray-700 pt-4">
@@ -623,6 +737,7 @@ const UsersPage = () => {
                             control={control}
                             required
                             error={errors.role}
+                            onChange={(value) => setSelectedRole(value as UserRole)}
                             disabled={
                                 isEditMode &&
                                 !!selectedUser &&
@@ -630,6 +745,16 @@ const UsersPage = () => {
                                 selectedUser._id === currentUser._id
                             }
                         />
+                        {(selectedRole === "receptionist" || selectedRole === "housekeeping") && (
+                            <SelectField
+                                name="hotelId"
+                                label="Assigned Hotel *"
+                                options={availableHotels.map(h => ({ value: h._id, label: `${h.name} (${h.code})` }))}
+                                control={control}
+                                required
+                                error={errors.hotelId}
+                            />
+                        )}
                         {isEditMode &&
                             selectedUser &&
                             currentUser &&

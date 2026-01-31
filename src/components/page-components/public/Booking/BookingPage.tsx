@@ -41,6 +41,7 @@ const BookingPage: FC = () => {
     const [showPaymentDialog, setShowPaymentDialog] = useState(false);
     const [showWalkInPaymentDialog, setShowWalkInPaymentDialog] = useState(false);
     const [pendingBookingData, setPendingBookingData] = useState<BookingFormData | null>(null);
+    const [paymentChoice, setPaymentChoice] = useState<'pay-now' | 'pay-later' | null>(null);
 
     // Check if user is receptionist or admin (can book for walk-in customers)
     const isReceptionistOrAdmin = role === "receptionist" || role === "admin";
@@ -191,8 +192,7 @@ const BookingPage: FC = () => {
             return;
         }
 
-        // Check availability BEFORE showing payment dialog
-        // Booking will be created AFTER payment succeeds
+        // Check availability BEFORE proceeding
         setSubmitting(true);
 
         try {
@@ -217,19 +217,67 @@ const BookingPage: FC = () => {
                 return;
             }
 
-            // Room is available - store the form data for later booking creation
+            // Room is available - store the form data
             setPendingBookingData(data);
 
-            // Open appropriate payment dialog based on user role
-            // Note: Booking is NOT created yet - it will be created after successful payment
+            // For guest users, check payment choice
             if (!isReceptionistOrAdmin) {
-                setShowPaymentDialog(true);
+                if (!paymentChoice) {
+                    // Payment choice not selected yet - scroll to payment choice section
+                    toast.info("Please select a payment option");
+                    setSubmitting(false);
+                    return;
+                }
+
+                if (paymentChoice === "pay-now") {
+                    // Show payment dialog - booking will be created after payment
+                    setShowPaymentDialog(true);
+                    setSubmitting(false);
+                } else {
+                    // Pay later - create booking immediately without payment
+                    await createBookingWithoutPayment(data);
+                }
             } else {
+                // For staff, show walk-in payment dialog
                 setShowWalkInPaymentDialog(true);
+                setSubmitting(false);
             }
         } catch (err) {
             console.error("Error checking availability:", err);
             toast.error("An unexpected error occurred while checking availability. Please try again.");
+            setSubmitting(false);
+        }
+    };
+
+    // Create booking without payment (pay later option)
+    const createBookingWithoutPayment = async (data: BookingFormData) => {
+        if (!roomId) {
+            toast.error("Room information is missing");
+            setSubmitting(false);
+            return;
+        }
+
+        try {
+            const bookingData: CreateBookingData = {
+                roomId,
+                checkInDate: new Date(data.checkInDate).toISOString(),
+                checkOutDate: new Date(data.checkOutDate).toISOString(),
+                // No paymentData - booking will be created with unpaid status
+            };
+
+            const response = await createBooking(bookingData);
+
+            if (response.success && response.data) {
+                toast.success("Booking created successfully! You can make payment anytime from your dashboard.");
+                setPendingBookingData(null);
+                setPaymentChoice(null);
+                router.push("/dashboard");
+            } else {
+                toast.error(response.message || "Failed to create booking");
+            }
+        } catch (err) {
+            console.error("Error creating booking:", err);
+            toast.error("Failed to create booking. Please try again.");
         } finally {
             setSubmitting(false);
         }
@@ -238,8 +286,8 @@ const BookingPage: FC = () => {
     const handlePaymentSuccess = async () => {
         setShowPaymentDialog(false);
 
-        // Payment successful - NOW create the booking
-        if (!pendingBookingData || !roomId) {
+        // Payment successful - NOW create the booking with payment data
+        if (!pendingBookingData || !roomId || !room) {
             toast.error("Booking data not found");
             return;
         }
@@ -247,29 +295,41 @@ const BookingPage: FC = () => {
         try {
             setSubmitting(true);
 
-            // Prepare booking data
+            // Calculate total amount
+            const nights = differenceInDays(
+                new Date(pendingBookingData.checkOutDate),
+                new Date(pendingBookingData.checkInDate)
+            );
+            const totalAmount = nights * room.pricePerNight;
+
+            // Prepare booking data with payment
             const bookingData: CreateBookingData = {
                 roomId,
                 checkInDate: new Date(pendingBookingData.checkInDate).toISOString(),
                 checkOutDate: new Date(pendingBookingData.checkOutDate).toISOString(),
+                paymentData: {
+                    amount: totalAmount,
+                    paymentMethod: "card",
+                    transactionId: `TXN-${Date.now()}`,
+                    notes: "Payment made during booking",
+                },
             };
 
-            // Create the booking (payment already processed)
+            // Create the booking with payment
             const response = await createBooking(bookingData);
 
             if (response.success && response.data) {
-                // Booking created successfully after payment
-                const successMessage = "Booking request submitted successfully! Awaiting confirmation.";
-                toast.success(successMessage);
+                // Booking created successfully with payment
+                toast.success("Booking and payment completed successfully!");
 
                 // Clear temporary data
                 setPendingBookingData(null);
+                setPaymentChoice(null);
 
                 router.push("/dashboard");
             } else {
-                // Booking creation failed (e.g., room unavailable due to race condition)
+                // Booking creation failed
                 toast.error(response.message || "Failed to create booking. Please contact support as payment was processed.");
-                // Note: In production, this would require refund handling
             }
         } catch (err) {
             console.error("Error creating booking after payment:", err);
@@ -566,7 +626,11 @@ const BookingPage: FC = () => {
                                                                     }
                                                                 }
                                                             }}
-                                                            disabled={(date) => date < new Date()}
+                                                            disabled={(date) => {
+                                                                const today = new Date();
+                                                                today.setHours(0, 0, 0, 0);
+                                                                return date < today;
+                                                            }}
                                                         />
                                                     </PopoverContent>
                                                 </Popover>
@@ -620,6 +684,74 @@ const BookingPage: FC = () => {
                                                     </p>
                                                 )}
                                             </div>
+
+                                            {/* Payment Choice - Only for Guest Users */}
+                                            {!isReceptionistOrAdmin && checkInDate && checkOutDate && (
+                                                <div className="space-y-3 pt-2">
+                                                    <Label className="text-sm font-medium text-foreground">
+                                                        Payment Option *
+                                                    </Label>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setPaymentChoice('pay-now')}
+                                                            className={`p-4 rounded-lg border-2 transition-all duration-300 text-left ${paymentChoice === 'pay-now'
+                                                                ? 'border-primary bg-primary/10'
+                                                                : 'border-white/20 bg-white/5 hover:bg-white/10 hover:border-primary/30'
+                                                                }`}
+                                                        >
+                                                            <div className="flex items-start gap-3">
+                                                                <div className={`mt-0.5 h-5 w-5 rounded-full border-2 flex items-center justify-center ${paymentChoice === 'pay-now'
+                                                                    ? 'border-primary'
+                                                                    : 'border-gray-500'
+                                                                    }`}>
+                                                                    {paymentChoice === 'pay-now' && (
+                                                                        <div className="h-2.5 w-2.5 rounded-full bg-primary" />
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <p className="font-semibold text-foreground mb-1">
+                                                                        Pay Now
+                                                                        <Badge className="ml-2 bg-green-500/10 text-green-500 border-green-500/20 text-xs">
+                                                                            Recommended
+                                                                        </Badge>
+                                                                    </p>
+                                                                    <p className="text-xs text-muted-foreground">
+                                                                        Complete payment now to secure your booking instantly
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setPaymentChoice('pay-later')}
+                                                            className={`p-4 rounded-lg border-2 transition-all duration-300 text-left ${paymentChoice === 'pay-later'
+                                                                ? 'border-primary bg-primary/10'
+                                                                : 'border-white/20 bg-white/5 hover:bg-white/10 hover:border-primary/30'
+                                                                }`}
+                                                        >
+                                                            <div className="flex items-start gap-3">
+                                                                <div className={`mt-0.5 h-5 w-5 rounded-full border-2 flex items-center justify-center ${paymentChoice === 'pay-later'
+                                                                    ? 'border-primary'
+                                                                    : 'border-gray-500'
+                                                                    }`}>
+                                                                    {paymentChoice === 'pay-later' && (
+                                                                        <div className="h-2.5 w-2.5 rounded-full bg-primary" />
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <p className="font-semibold text-foreground mb-1">
+                                                                        Pay Later
+                                                                    </p>
+                                                                    <p className="text-xs text-muted-foreground">
+                                                                        Reserve now and pay anytime before check-in
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
 
                                             {/* Submit Button */}
                                             <Button

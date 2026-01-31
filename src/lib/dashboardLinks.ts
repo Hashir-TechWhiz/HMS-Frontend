@@ -45,6 +45,18 @@ export const DASHBOARD_LINKS = {
                     roles: getAllowedRoles("/dashboard/bookings")!,
                 },
                 {
+                    label: "Facility Bookings",
+                    href: "/dashboard/facility-bookings",
+                    icon: "/icons/Bookings.svg",
+                    roles: ["guest", "receptionist", "admin"],
+                },
+                {
+                    label: "Payments",
+                    href: "/dashboard/payments",
+                    icon: "/icons/Bookings.svg",
+                    roles: ["guest"], // Only for guests
+                },
+                {
                     label: "My Service Requests",
                     href: "/dashboard/my-requests",
                     icon: "/icons/Housekeeping.svg",
@@ -55,6 +67,24 @@ export const DASHBOARD_LINKS = {
                     href: "/dashboard/service-requests",
                     icon: "/icons/Housekeeping.svg",
                     roles: getAllowedRoles("/dashboard/service-requests")!,
+                },
+                {
+                    label: "Housekeeping Roster",
+                    href: "/dashboard/roster",
+                    icon: "/icons/Housekeeping.svg",
+                    roles: getAllowedRoles("/dashboard/roster")!,
+                },
+                {
+                    label: "Service Catalog",
+                    href: "/dashboard/service-catalog",
+                    icon: "/icons/Operations.svg",
+                    roles: getAllowedRoles("/dashboard/service-catalog")!,
+                },
+                {
+                    label: "Public Facilities",
+                    href: "/dashboard/public-facilities",
+                    icon: "/icons/Rooms.svg",
+                    roles: ["admin", "receptionist"],
                 },
                 {
                     label: "Rooms",
@@ -84,6 +114,12 @@ export const DASHBOARD_LINKS = {
         {
             title: "Administration",
             links: [
+                {
+                    label: "Hotels",
+                    href: "/dashboard/hotels",
+                    icon: "/icons/Rooms.svg",
+                    roles: getAllowedRoles("/dashboard/hotels")!,
+                },
                 {
                     label: "User Management",
                     href: "/dashboard/users",

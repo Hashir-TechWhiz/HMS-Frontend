@@ -28,6 +28,9 @@ const mapRoomToCardProps = (room: IRoom): Omit<RoomCardProps, "userRole" | "onAc
     ? room.images[0]
     : "/images/SampleHotel.jpg";
 
+  // Extract hotel information (hotelId can be populated object or string)
+  const hotel = typeof room.hotelId === 'object' ? room.hotelId : null;
+
   return {
     id: room._id,
     name: name,
@@ -38,6 +41,9 @@ const mapRoomToCardProps = (room: IRoom): Omit<RoomCardProps, "userRole" | "onAc
     capacity: room.capacity,
     beds: Math.ceil(room.capacity / 2), // Estimate beds based on capacity
     pricePerNight: room.pricePerNight,
+    hotelName: hotel?.name,
+    hotelCity: hotel?.city,
+    hotelCountry: hotel?.country,
   };
 };
 
