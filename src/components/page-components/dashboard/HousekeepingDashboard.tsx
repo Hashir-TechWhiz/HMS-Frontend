@@ -33,22 +33,9 @@ export const HousekeepingDashboard = () => {
                         ? serviceRequestsData
                         : (serviceRequestsData?.items || serviceRequestsData?.data || []);
 
-                    // Filter to show:
-                    // 1. Unassigned pending requests (available to accept)
-                    // 2. Requests assigned to the current user (any status)
-                    const relevantRequests = serviceRequestsArray.filter((request: IServiceRequest) => {
-                        // Show unassigned pending requests
-                        if (request.status === "pending" && !request.assignedTo) {
-                            return true;
-                        }
-                        // Show requests assigned to current user
-                        if (request.assignedTo && typeof request.assignedTo === "object") {
-                            return request.assignedTo._id === user._id;
-                        }
-                        return false;
-                    });
-
-                    setServiceRequests(relevantRequests);
+                    // Backend already filters to return only requests assigned to current user
+                    // No additional filtering needed - use all returned requests
+                    setServiceRequests(serviceRequestsArray);
                 } else {
                     setServiceRequests([]);
                     if (!response.success) {
@@ -66,39 +53,23 @@ export const HousekeepingDashboard = () => {
     }, [user]);
 
     // Calculate statistics from service requests
+    // All requests are already filtered by backend to show only those assigned to current user
     const stats = {
         total: serviceRequests.length,
-        // Pending = unassigned new requests (available to accept)
-        pending: serviceRequests.filter((sr) => sr.status === "pending" && !sr.assignedTo).length,
-        // In Progress = assigned to me and in progress
-        in_progress: serviceRequests.filter((sr) => {
-            if (sr.status !== "in_progress") return false;
-            if (sr.assignedTo && typeof sr.assignedTo === "object") {
-                return sr.assignedTo._id === user?._id;
-            }
-            return false;
-        }).length,
-        // Completed = assigned to me and completed
-        completed: serviceRequests.filter((sr) => {
-            if (sr.status !== "completed") return false;
-            if (sr.assignedTo && typeof sr.assignedTo === "object") {
-                return sr.assignedTo._id === user?._id;
-            }
-            return false;
-        }).length,
+        // Pending = my assigned requests that are pending
+        pending: serviceRequests.filter((sr) => sr.status === "pending").length,
+        // In Progress = my assigned requests that are in progress
+        in_progress: serviceRequests.filter((sr) => sr.status === "in_progress").length,
+        // Completed = my assigned requests that are completed
+        completed: serviceRequests.filter((sr) => sr.status === "completed").length,
     };
 
-    // Get today's completed tasks (only those assigned to current user)
+    // Get today's completed tasks
+    // All requests are already filtered to show only those assigned to current user
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const completedToday = serviceRequests.filter((sr) => {
         if (sr.status !== "completed") return false;
-        // Only count if assigned to current user
-        if (sr.assignedTo && typeof sr.assignedTo === "object") {
-            if (sr.assignedTo._id !== user?._id) return false;
-        } else {
-            return false;
-        }
         const completedDate = new Date(sr.updatedAt);
         completedDate.setHours(0, 0, 0, 0);
         return completedDate.getTime() === today.getTime();
@@ -158,7 +129,7 @@ export const HousekeepingDashboard = () => {
                     iconColor="text-orange-400"
                     iconBg="bg-orange-500/10"
                     gradient="linear-gradient(79.74deg, rgba(255, 165, 0, 0.15) 0%, rgba(0, 0, 0, 0.12) 100%)"
-                    description="New requests available to accept"
+                    description="Your assigned pending requests"
                 />
                 <KPICard
                     title="In Progress"
@@ -211,9 +182,9 @@ export const HousekeepingDashboard = () => {
             {stats.total === 0 && (
                 <div className="rounded-lg border border-border bg-card/50 p-12 text-center">
                     <ClipboardCheck className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <h3 className="text-lg font-semibold mb-2">No Available Tasks</h3>
+                    <h3 className="text-lg font-semibold mb-2">No Assigned Tasks</h3>
                     <p className="text-muted-foreground">
-                        There are no pending requests to accept and no tasks assigned to you at the moment.
+                        You have no service requests assigned to you at the moment. New tasks will appear here when assigned by the admin.
                     </p>
                 </div>
             )}

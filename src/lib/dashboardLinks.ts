@@ -45,6 +45,18 @@ export const DASHBOARD_LINKS = {
                     roles: getAllowedRoles("/dashboard/bookings")!,
                 },
                 {
+                    label: "Invoices",
+                    href: "/dashboard/invoices",
+                    icon: "/icons/Reports.svg",
+                    roles: getAllowedRoles("/dashboard/invoices")!,
+                },
+                {
+                    label: "My Payments",
+                    href: "/dashboard/my-payments",
+                    icon: "/icons/Dashboard.svg",
+                    roles: getAllowedRoles("/dashboard/my-payments")!,
+                },
+                {
                     label: "My Service Requests",
                     href: "/dashboard/my-requests",
                     icon: "/icons/Housekeeping.svg",

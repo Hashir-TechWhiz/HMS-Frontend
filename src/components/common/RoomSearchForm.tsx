@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { CalendarIcon, Users, Search } from "lucide-react";
 import { format } from "date-fns";
 import ComboBoxField from "@/components/forms/ComboField";
-import { getActiveHotels } from "@/services/hotelService";
+import { getPublicActiveHotels } from "@/services/hotelService";
 
 interface RoomSearchFormProps {
     variant?: "hero" | "compact";
@@ -56,12 +56,12 @@ const RoomSearchForm: FC<RoomSearchFormProps> = ({
     const [cityOptions, setCityOptions] = useState<{ value: string; label: string }[]>([]);
     const [loadingCities, setLoadingCities] = useState(false);
 
-    // Fetch hotels and extract unique cities
+    // Fetch hotels and extract unique cities (public endpoint - no auth required)
     useEffect(() => {
         const fetchCities = async () => {
             try {
                 setLoadingCities(true);
-                const response = await getActiveHotels();
+                const response = await getPublicActiveHotels();
 
                 if (response.success && response.data) {
                     // Extract unique cities from hotels

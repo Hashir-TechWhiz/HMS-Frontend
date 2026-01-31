@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SlidersHorizontal, X } from "lucide-react";
 import { GetRoomsParams } from "@/services/roomService";
-import { getActiveHotels } from "@/services/hotelService";
+import { getPublicActiveHotels } from "@/services/hotelService";
 
 interface RoomsFiltersProps {
   onFilterChange?: (filters: GetRoomsParams, selectedRoomTypes?: RoomType[]) => void;
@@ -23,7 +23,7 @@ const RoomsFilters: FC<RoomsFiltersProps> = ({ onFilterChange, availableHotels: 
   const [showFilters, setShowFilters] = useState(true);
   const [loadingHotels, setLoadingHotels] = useState(false);
 
-  // Use passed hotels if available, otherwise fetch all hotels
+  // Use passed hotels if available, otherwise fetch all hotels (public endpoint - no auth required)
   useEffect(() => {
     if (passedHotels) {
       // Use hotels filtered by location from parent
@@ -34,7 +34,7 @@ const RoomsFilters: FC<RoomsFiltersProps> = ({ onFilterChange, availableHotels: 
       const fetchHotels = async () => {
         try {
           setLoadingHotels(true);
-          const response = await getActiveHotels();
+          const response = await getPublicActiveHotels();
           if (response.success && response.data) {
             setHotels(response.data);
           }

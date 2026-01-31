@@ -84,6 +84,24 @@ export const getActiveHotels = async (): Promise<ApiResponse<IHotel[]>> => {
 };
 
 /**
+ * Get all active hotels for public browsing (no authentication required)
+ * GET /hotels/public/active
+ * Used on home page for city/destination selection
+ * Available to all users (public access)
+ */
+export const getPublicActiveHotels = async (): Promise<ApiResponse<IHotel[]>> => {
+    try {
+        const response = await api.get<ApiResponse<IHotel[]>>('/hotels/public/active');
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data) {
+            return error.response.data as ApiErrorResponse;
+        }
+        throw error;
+    }
+};
+
+/**
  * Get single hotel by ID (Admin only)
  * GET /hotels/:id
  */
