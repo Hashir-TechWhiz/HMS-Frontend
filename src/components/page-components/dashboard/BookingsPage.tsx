@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useHotel } from "@/contexts/HotelContext";
 import { getAllBookings, getMyBookings, cancelBooking, confirmBooking } from "@/services/bookingService";
 import { getBookingsReport } from "@/services/reportService";
 import { getActiveHotels } from "@/services/hotelService";
@@ -28,7 +27,6 @@ import {
 
 const BookingsPage = () => {
     const { role, loading: authLoading, user } = useAuth();
-    const { selectedHotel } = useHotel();
 
     const [allBookings, setAllBookings] = useState<IBooking[]>([]);
     const [loading, setLoading] = useState(true);
@@ -583,8 +581,18 @@ const BookingsPage = () => {
                         </TooltipProvider>
                     )}
 
-                    {/* Check-Out Button - Only for Staff (Admin/Receptionist) */}
-                    {/* Guests cannot checkout - only staff can perform checkout */}
+                    {/* Check-Out Button for Checked-In Bookings */}
+                    {booking.status === "checkedin" && (
+                        <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleCheckOutClick(booking)}
+                            className="h-8 px-2 bg-purple-600 hover:bg-purple-700 border-purple-700"
+                            title="Check Out"
+                        >
+                            <CheckCircle className="h-4 w-4" />
+                        </Button>
+                    )}
 
                     {/* Cancel Button for Pending Bookings */}
                     <TooltipProvider>
