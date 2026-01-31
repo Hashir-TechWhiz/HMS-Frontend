@@ -13,6 +13,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
 
+// Predefined shift templates
+const SHIFT_TEMPLATES = {
+    morning: { start: "06:00", end: "14:00", label: "Morning (6am-2pm)" },
+    afternoon: { start: "14:00", end: "22:00", label: "Afternoon (2pm-10pm)" },
+    night: { start: "22:00", end: "06:00", label: "Night (10pm-6am)" },
+};
+
 const MyRosterPage = () => {
     const { user, loading: authLoading } = useAuth();
 
@@ -41,7 +48,7 @@ const MyRosterPage = () => {
 
         try {
             setLoading(true);
-            
+
             const { start, end } = getWeekRange(currentDate);
 
             const response = await getMyRoster({
@@ -89,13 +96,13 @@ const MyRosterPage = () => {
     const getWeekDays = () => {
         const { start } = getWeekRange(currentDate);
         const days = [];
-        
+
         for (let i = 0; i < 7; i++) {
             const day = new Date(start);
             day.setDate(start.getDate() + i);
             days.push(day);
         }
-        
+
         return days;
     };
 
@@ -113,15 +120,13 @@ const MyRosterPage = () => {
     const getShiftColor = (shiftType: ShiftType) => {
         switch (shiftType) {
             case "morning":
-                return "bg-amber-100 text-amber-800 border-amber-300";
+                return "bg-amber-500/20 text-amber-300 border-amber-500/40";
             case "afternoon":
-                return "bg-blue-100 text-blue-800 border-blue-300";
-            case "evening":
-                return "bg-purple-100 text-purple-800 border-purple-300";
+                return "bg-blue-500/20 text-blue-300 border-blue-500/40";
             case "night":
-                return "bg-indigo-100 text-indigo-800 border-indigo-300";
+                return "bg-indigo-500/20 text-indigo-300 border-indigo-500/40";
             default:
-                return "bg-gray-100 text-gray-800 border-gray-300";
+                return "bg-gray-500/20 text-gray-300 border-gray-500/40";
         }
     };
 
@@ -220,8 +225,8 @@ const MyRosterPage = () => {
                                             </div>
                                         ) : (
                                             dayRosters.map((roster) => {
-                                                const hotel = typeof roster.hotelId === 'string' 
-                                                    ? null 
+                                                const hotel = typeof roster.hotelId === 'string'
+                                                    ? null
                                                     : roster.hotelId;
 
                                                 return (
@@ -264,25 +269,27 @@ const MyRosterPage = () => {
             )}
 
             {/* Legend */}
-            <div className="p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient">
-                <h3 className="text-sm font-semibold text-primary-100 mb-3">Shift Types</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded bg-amber-100 border border-amber-300"></div>
-                        <span className="text-sm text-primary-200">Morning</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded bg-blue-100 border border-blue-300"></div>
-                        <span className="text-sm text-primary-200">Afternoon</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded bg-purple-100 border border-purple-300"></div>
-                        <span className="text-sm text-primary-200">Evening</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded bg-indigo-100 border border-indigo-300"></div>
-                        <span className="text-sm text-primary-200">Night</span>
-                    </div>
+            <div className="p-6 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/10">
+                <div className="flex items-center gap-2 mb-5">
+                    <Clock className="h-5 w-5 text-primary-400" />
+                    <h3 className="text-base font-semibold text-primary-100">Shift Types Legend</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {Object.entries(SHIFT_TEMPLATES).map(([key, template]) => (
+                        <div
+                            key={key}
+                            className={`p-4 rounded-lg border-2 transition-all hover:shadow-lg hover:scale-[1.02] ${getShiftColor(key as ShiftType)}`}
+                        >
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className={`w-4 h-4 rounded border-2 ${getShiftColor(key as ShiftType)}`}></div>
+                                <span className="text-sm font-semibold capitalize tracking-wide">{key} Shift</span>
+                            </div>
+                            <div className="flex items-center gap-2 pl-7">
+                                <Clock className="h-3.5 w-3.5 opacity-80" />
+                                <span className="text-xs font-medium opacity-90">{template.start} - {template.end}</span>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
 
@@ -295,7 +302,7 @@ const MyRosterPage = () => {
                             No Shifts Scheduled
                         </h3>
                         <p className="text-primary-300 max-w-md">
-                            You don't have any shifts scheduled for this week. 
+                            You don&apos;t have any shifts scheduled for this week.
                             Please contact your manager if you believe this is an error.
                         </p>
                     </div>

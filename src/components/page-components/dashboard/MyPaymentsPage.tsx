@@ -5,10 +5,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getMyPayments } from "@/services/paymentService";
 import DataTable from "@/components/common/DataTable";
 import DialogBox from "@/components/common/DialogBox";
+import StatCard from "@/components/common/StatCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Eye, CreditCard, Clock, CheckCircle, XCircle, Wallet } from "lucide-react";
+import { Eye, CreditCard, Clock, CheckCircle, XCircle, Receipt } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 
 const MyPaymentsPage = () => {
@@ -71,28 +72,28 @@ const MyPaymentsPage = () => {
     const getPaymentStatusBadge = (status: string) => {
         switch (status) {
             case "paid":
-                return <Badge className="bg-green-600"><CheckCircle className="h-3 w-3 mr-1" />Paid</Badge>;
+                return <Badge className="bg-green-500/20 text-green-400 border border-green-500/30"><CheckCircle className="h-3 w-3 mr-1" />Paid</Badge>;
             case "partially_paid":
-                return <Badge className="bg-yellow-600"><Clock className="h-3 w-3 mr-1" />Partially Paid</Badge>;
+                return <Badge className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"><Clock className="h-3 w-3 mr-1" />Partially Paid</Badge>;
             case "unpaid":
-                return <Badge className="bg-red-300"><XCircle className="h-3 w-3 mr-1" />Unpaid</Badge>;
+                return <Badge className="bg-red-500/20 text-red-400 border border-red-500/30"><XCircle className="h-3 w-3 mr-1" />Unpaid</Badge>;
             default:
-                return <Badge className="bg-gray-600">{status}</Badge>;
+                return <Badge className="bg-gray-500/20 text-gray-400 border border-gray-500/30">{status}</Badge>;
         }
     };
 
     // Booking status badge
     const getBookingStatusBadge = (status: string) => {
         const statusColors: Record<string, string> = {
-            pending: "bg-yellow-600",
-            confirmed: "bg-blue-600 text-white",
-            checkedin: "bg-green-600",
-            completed: "bg-gray-600",
-            cancelled: "bg-red-600",
+            pending: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+            confirmed: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+            checkedin: "bg-green-500/20 text-green-400 border-green-500/30",
+            completed: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+            cancelled: "bg-red-500/20 text-red-400 border-red-500/30",
         };
 
         return (
-            <Badge className={statusColors[status] || "bg-gray-600"}>
+            <Badge className={`${statusColors[status] || "bg-gray-500/20 text-gray-400 border-gray-500/30"} border`}>
                 {status.charAt(0).toUpperCase() + status.slice(1)}
             </Badge>
         );
@@ -105,8 +106,8 @@ const MyPaymentsPage = () => {
             label: "Room",
             render: (booking: any) => (
                 <div>
-                    <p className="font-medium">{booking.room?.roomType}</p>
-                    <p className="text-xs text-muted-foreground">Room {booking.room?.roomNumber}</p>
+                    <p className="font-medium text-white">{booking.room?.roomType}</p>
+                    <p className="text-xs text-gray-400">Room {booking.room?.roomNumber}</p>
                 </div>
             ),
         },
@@ -115,8 +116,8 @@ const MyPaymentsPage = () => {
             label: "Check-In / Check-Out",
             render: (booking: any) => (
                 <div className="text-xs">
-                    <p>{new Date(booking.checkInDate).toLocaleDateString()}</p>
-                    <p className="text-muted-foreground">{new Date(booking.checkOutDate).toLocaleDateString()}</p>
+                    <p className="text-white">{new Date(booking.checkInDate).toLocaleDateString()}</p>
+                    <p className="text-gray-400">{new Date(booking.checkOutDate).toLocaleDateString()}</p>
                 </div>
             ),
         },
@@ -129,14 +130,14 @@ const MyPaymentsPage = () => {
             key: "totalAmount",
             label: "Total Amount",
             render: (booking: any) => (
-                <span className="font-semibold">LKR {booking.totalAmount?.toLocaleString() || 0}</span>
+                <span className="font-semibold text-white">LKR {booking.totalAmount?.toLocaleString() || 0}</span>
             ),
         },
         {
             key: "totalPaid",
             label: "Paid",
             render: (booking: any) => (
-                <span className="text-green-500">LKR {booking.totalPaid?.toLocaleString() || 0}</span>
+                <span className="text-green-400 font-medium">LKR {booking.totalPaid?.toLocaleString() || 0}</span>
             ),
         },
         {
@@ -145,7 +146,7 @@ const MyPaymentsPage = () => {
             render: (booking: any) => {
                 const balance = (booking.totalAmount || 0) - (booking.totalPaid || 0);
                 return (
-                    <span className={balance > 0 ? "text-yellow-500" : "text-green-500"}>
+                    <span className={balance > 0 ? "text-yellow-400 font-medium" : "text-green-400 font-medium"}>
                         LKR {balance.toLocaleString()}
                     </span>
                 );
@@ -164,9 +165,9 @@ const MyPaymentsPage = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => handleViewDetails(booking)}
-                    className="gap-1"
+                    className="gap-1 h-8 px-2"
                 >
-                    <Eye className="h-3 w-3" />
+                    <Eye className="h-4 w-4" />
                 </Button>
             ),
         },
@@ -176,80 +177,74 @@ const MyPaymentsPage = () => {
     if (authLoading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <p className="text-gray-400">Loading...</p>
+            </div>
+        );
+    }
+
+    if (role !== "guest") {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <p className="text-gray-400">Access denied. This page is only for guests.</p>
             </div>
         );
     }
 
     return (
         <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold text-foreground">My Payments</h1>
-                    <p className="text-muted-foreground mt-1">View your bookings and payment status</p>
-                </div>
-            </div>
-
             {/* Summary Cards */}
             {paymentsData.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-4 rounded-lg bg-linear-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-blue-500/20">
-                                <Wallet className="h-5 w-5 text-blue-400" />
-                            </div>
-                            <div>
-                                <p className="text-sm text-muted-foreground">Total Bookings</p>
-                                <p className="text-2xl font-bold text-foreground">{totalItems}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="p-4 rounded-lg bg-linear-to-br from-green-500/10 to-green-600/10 border border-green-500/20">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-green-500/20">
-                                <CheckCircle className="h-5 w-5 text-green-400" />
-                            </div>
-                            <div>
-                                <p className="text-sm text-muted-foreground">Fully Paid</p>
-                                <p className="text-2xl font-bold text-foreground">
-                                    {paymentsData.filter(b => b.paymentStatus === 'paid').length}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="p-4 rounded-lg bg-linear-to-br from-yellow-500/10 to-yellow-600/10 border border-yellow-500/20">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-yellow-500/20">
-                                <Clock className="h-5 w-5 text-yellow-400" />
-                            </div>
-                            <div>
-                                <p className="text-sm text-muted-foreground">Pending Payment</p>
-                                <p className="text-2xl font-bold text-foreground">
-                                    {paymentsData.filter(b => b.paymentStatus !== 'paid').length}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+                    <StatCard
+                        title="Total Bookings"
+                        value={totalItems}
+                        icon={Receipt}
+                        iconColor="text-blue-400"
+                        iconBg="bg-blue-500/10"
+                        loading={loading}
+                    />
+                    <StatCard
+                        title="Fully Paid"
+                        value={paymentsData.filter(b => b.paymentStatus === 'paid').length}
+                        icon={CheckCircle}
+                        iconColor="text-green-400"
+                        iconBg="bg-green-500/10"
+                        loading={loading}
+                    />
+                    <StatCard
+                        title="Pending Payment"
+                        value={paymentsData.filter(b => b.paymentStatus !== 'paid').length}
+                        icon={Clock}
+                        iconColor="text-yellow-400"
+                        iconBg="bg-yellow-500/10"
+                        loading={loading}
+                    />
                 </div>
             )}
 
             {/* Data Table */}
-            <DataTable
-                columns={columns}
-                data={paymentsData}
-                loading={loading}
-                pagination={{
-                    page: currentPage,
-                    totalPages: totalPages,
-                    total: totalItems,
-                    onPageChange: setCurrentPage,
-                }}
-                emptyMessage="No bookings found"
-                selectable={false}
-            />
+            <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
+                <div className="flex items-start justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-white">My Payments</h1>
+                        <p className="text-sm text-gray-400 mt-1">View your bookings and payment status</p>
+                    </div>
+                </div>
+
+                <DataTable
+                    columns={columns}
+                    data={paymentsData}
+                    loading={loading}
+                    pagination={{
+                        page: currentPage,
+                        totalPages: totalPages,
+                        total: totalItems,
+                        onPageChange: setCurrentPage,
+                    }}
+                    emptyMessage="No bookings found"
+                    selectable={false}
+                />
+            </div>
 
             {/* View Details Dialog */}
             <DialogBox
@@ -263,61 +258,61 @@ const MyPaymentsPage = () => {
                 {selectedBooking && (
                     <div className="space-y-6 py-4">
                         {/* Booking Info */}
-                        <div className="space-y-4">
-                            <h3 className="font-semibold text-foreground">Booking Information</h3>
+                        <div className="bg-primary-900/20 rounded-lg p-4 border border-primary-900/40">
+                            <h3 className="text-sm font-semibold text-white mb-4">Booking Information</h3>
                             <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
-                                    <p className="text-muted-foreground">Room</p>
-                                    <p className="font-medium">{selectedBooking.room?.roomType} - Room {selectedBooking.room?.roomNumber}</p>
+                                    <p className="text-xs text-gray-400 mb-1">Room</p>
+                                    <p className="font-medium text-white">{selectedBooking.room?.roomType} - Room {selectedBooking.room?.roomNumber}</p>
                                 </div>
                                 <div>
-                                    <p className="text-muted-foreground">Booking Status</p>
+                                    <p className="text-xs text-gray-400 mb-1">Booking Status</p>
                                     {getBookingStatusBadge(selectedBooking.bookingStatus)}
                                 </div>
                                 <div>
-                                    <p className="text-muted-foreground">Check-In</p>
-                                    <p className="font-medium">{new Date(selectedBooking.checkInDate).toLocaleDateString()}</p>
+                                    <p className="text-xs text-gray-400 mb-1">Check-In</p>
+                                    <p className="font-medium text-white">{new Date(selectedBooking.checkInDate).toLocaleDateString()}</p>
                                 </div>
                                 <div>
-                                    <p className="text-muted-foreground">Check-Out</p>
-                                    <p className="font-medium">{new Date(selectedBooking.checkOutDate).toLocaleDateString()}</p>
+                                    <p className="text-xs text-gray-400 mb-1">Check-Out</p>
+                                    <p className="font-medium text-white">{new Date(selectedBooking.checkOutDate).toLocaleDateString()}</p>
                                 </div>
                             </div>
                         </div>
 
                         {/* Charges Breakdown */}
-                        <div className="space-y-4">
-                            <h3 className="font-semibold text-foreground">Charges Breakdown</h3>
+                        <div className="bg-primary-900/20 rounded-lg p-4 border border-primary-900/40">
+                            <h3 className="text-sm font-semibold text-white mb-4">Charges Breakdown</h3>
                             <div className="space-y-2 text-sm">
-                                <div className="flex justify-between p-3 rounded-lg bg-white/5">
-                                    <span className="text-muted-foreground">Room Charges</span>
-                                    <span className="font-medium">LKR {selectedBooking.roomCharges?.toLocaleString() || 0}</span>
+                                <div className="flex justify-between p-3 rounded-lg bg-primary-900/40">
+                                    <span className="text-gray-400">Room Charges</span>
+                                    <span className="font-medium text-white">LKR {selectedBooking.roomCharges?.toLocaleString() || 0}</span>
                                 </div>
-                                <div className="flex justify-between p-3 rounded-lg bg-white/5">
-                                    <span className="text-muted-foreground">Service Charges</span>
-                                    <span className="font-medium">LKR {selectedBooking.serviceCharges?.toLocaleString() || 0}</span>
+                                <div className="flex justify-between p-3 rounded-lg bg-primary-900/40">
+                                    <span className="text-gray-400">Service Charges</span>
+                                    <span className="font-medium text-white">LKR {selectedBooking.serviceCharges?.toLocaleString() || 0}</span>
                                 </div>
-                                <div className="flex justify-between p-3 rounded-lg bg-primary/10 border border-primary/20">
-                                    <span className="font-semibold text-foreground">Total Amount</span>
-                                    <span className="font-bold text-primary">LKR {selectedBooking.totalAmount?.toLocaleString() || 0}</span>
+                                <div className="flex justify-between p-3 rounded-lg bg-primary-600/20 border border-primary-500/30">
+                                    <span className="font-semibold text-white">Total Amount</span>
+                                    <span className="font-bold text-primary-400">LKR {selectedBooking.totalAmount?.toLocaleString() || 0}</span>
                                 </div>
                             </div>
                         </div>
 
                         {/* Service Details */}
                         {selectedBooking.serviceDetails && selectedBooking.serviceDetails.length > 0 && (
-                            <div className="space-y-4">
-                                <h3 className="font-semibold text-foreground">Service Requests</h3>
+                            <div className="bg-primary-900/20 rounded-lg p-4 border border-primary-900/40">
+                                <h3 className="text-sm font-semibold text-white mb-4">Service Requests</h3>
                                 <div className="space-y-2">
                                     {selectedBooking.serviceDetails.map((service: any, index: number) => (
-                                        <div key={index} className="flex justify-between items-center p-3 rounded-lg bg-white/5 text-sm">
+                                        <div key={index} className="flex justify-between items-center p-3 rounded-lg bg-primary-900/40 text-sm">
                                             <div>
-                                                <p className="font-medium">{service.description}</p>
-                                                <p className="text-xs text-muted-foreground">
+                                                <p className="font-medium text-white">{service.description}</p>
+                                                <p className="text-xs text-gray-400">
                                                     {new Date(service.completedAt).toLocaleDateString()}
                                                 </p>
                                             </div>
-                                            <span className="font-medium">LKR {service.price?.toLocaleString()}</span>
+                                            <span className="font-medium text-white">LKR {service.price?.toLocaleString()}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -325,21 +320,21 @@ const MyPaymentsPage = () => {
                         )}
 
                         {/* Payment Summary */}
-                        <div className="space-y-4">
-                            <h3 className="font-semibold text-foreground">Payment Summary</h3>
+                        <div className="bg-primary-900/20 rounded-lg p-4 border border-primary-900/40">
+                            <h3 className="text-sm font-semibold text-white mb-4">Payment Summary</h3>
                             <div className="space-y-2 text-sm">
-                                <div className="flex justify-between p-3 rounded-lg bg-white/5">
-                                    <span className="text-muted-foreground">Total Paid</span>
-                                    <span className="font-medium text-green-500">LKR {selectedBooking.totalPaid?.toLocaleString() || 0}</span>
+                                <div className="flex justify-between p-3 rounded-lg bg-primary-900/40">
+                                    <span className="text-gray-400">Total Paid</span>
+                                    <span className="font-medium text-green-400">LKR {selectedBooking.totalPaid?.toLocaleString() || 0}</span>
                                 </div>
-                                <div className="flex justify-between p-3 rounded-lg bg-white/5">
-                                    <span className="text-muted-foreground">Outstanding Balance</span>
-                                    <span className={`font-medium ${selectedBooking.balance > 0 ? 'text-yellow-500' : 'text-green-500'}`}>
+                                <div className="flex justify-between p-3 rounded-lg bg-primary-900/40">
+                                    <span className="text-gray-400">Outstanding Balance</span>
+                                    <span className={`font-medium ${selectedBooking.balance > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
                                         LKR {selectedBooking.balance?.toLocaleString() || 0}
                                     </span>
                                 </div>
-                                <div className="flex justify-between p-3 rounded-lg bg-white/5">
-                                    <span className="text-muted-foreground">Payment Status</span>
+                                <div className="flex justify-between p-3 rounded-lg bg-primary-900/40">
+                                    <span className="text-gray-400">Payment Status</span>
                                     {getPaymentStatusBadge(selectedBooking.paymentStatus)}
                                 </div>
                             </div>
@@ -347,21 +342,21 @@ const MyPaymentsPage = () => {
 
                         {/* Payment History */}
                         {selectedBooking.payments && selectedBooking.payments.length > 0 && (
-                            <div className="space-y-4">
-                                <h3 className="font-semibold text-foreground">Payment History</h3>
+                            <div className="bg-primary-900/20 rounded-lg p-4 border border-primary-900/40">
+                                <h3 className="text-sm font-semibold text-white mb-4">Payment History</h3>
                                 <div className="space-y-2">
                                     {selectedBooking.payments.map((payment: any, index: number) => (
-                                        <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-white/5 text-sm">
+                                        <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-primary-900/40 text-sm">
                                             <div className="flex items-center gap-3">
-                                                <CreditCard className="h-4 w-4 text-primary" />
+                                                <CreditCard className="h-4 w-4 text-primary-400" />
                                                 <div>
-                                                    <p className="font-medium">LKR {payment.amount?.toLocaleString()}</p>
-                                                    <p className="text-xs text-muted-foreground">
+                                                    <p className="font-medium text-white">LKR {payment.amount?.toLocaleString()}</p>
+                                                    <p className="text-xs text-gray-400">
                                                         {formatDateTime(payment.paymentDate)}
                                                     </p>
                                                 </div>
                                             </div>
-                                            <Badge className="bg-green-600">{payment.paymentMethod}</Badge>
+                                            <Badge className="bg-green-500/20 text-green-400 border border-green-500/30">{payment.paymentMethod}</Badge>
                                         </div>
                                     ))}
                                 </div>

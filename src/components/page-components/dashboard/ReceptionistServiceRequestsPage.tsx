@@ -267,7 +267,8 @@ const ReceptionistServiceRequestsPage = () => {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
+
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl font-bold text-white">Service Requests</h1>
@@ -281,8 +282,8 @@ const ReceptionistServiceRequestsPage = () => {
                         options={statusFilterOptions}
                         value={statusFilter}
                         onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
-                        width="md:w-[150px]"
-                        className="bg-black-500! border border-white/50 focus:ring-1! focus:ring-primary-800! text-xs md:text-sm h-10!"
+                        width="md:w-[250px]"
+                        className="bg-black-500! border border-white/50 focus:ring-1! focus:ring-primary-800! text-xs md:text-sm h-11!"
                     />
                     <DateRangePicker
                         value={dateRange}

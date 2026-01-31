@@ -42,7 +42,6 @@ import { Eye, RefreshCw, Settings, Clock, Loader2 as LoaderIcon, CheckCircle2, U
 
 const AdminServiceRequestsPage = () => {
     const { role, loading: authLoading } = useAuth();
-    const { selectedHotel } = useHotel();
 
     const [allServiceRequests, setAllServiceRequests] = useState<IServiceRequest[]>([]);
     const [loading, setLoading] = useState(true);
@@ -564,8 +563,8 @@ const AdminServiceRequestsPage = () => {
                                 ]}
                                 value={hotelFilter}
                                 onChange={(v) => { setHotelFilter(v); setCurrentPage(1); }}
-                                width="md:w-[250px]"
-                                className="text-xs md:text-sm h-11!"
+                                width="md:w-[350px]"
+                                className="bg-black-500! border border-white/50 focus:ring-1! focus:ring-primary-800! text-xs md:text-sm h-10!"
                             />
                         )}
                         <SelectField
@@ -574,12 +573,12 @@ const AdminServiceRequestsPage = () => {
                             value={statusFilter}
                             onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
                             width="md:w-[250px]"
-                            className="text-xs md:text-sm h-11!"
+                            className="bg-black-500! border border-white/50 focus:ring-1! focus:ring-primary-800! text-xs md:text-sm h-10!"
                         />
                         <DateRangePicker
                             value={dateRange}
                             onChange={handleDateRangeChange}
-                            className="w-full max-w-sm"
+                            className="w-full max-w-xs"
                         />
                     </div>
                 </div>
@@ -763,7 +762,7 @@ const AdminServiceRequestsPage = () => {
                                     error={statusErrors.finalPrice}
                                 />
                                 <p className="text-xs text-gray-400">
-                                    Confirm the final price for this service. This amount will be added to the guest's invoice.
+                                    Confirm the final price for this service. This amount will be added to the guest&apos;s invoice.
                                 </p>
                             </div>
                         )}

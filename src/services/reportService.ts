@@ -107,19 +107,22 @@ export const getServiceRequestsReport = async (): Promise<ApiResponse<IServiceRe
  * @param limit - Items per page (default: 10)
  * @param dateFilter - Optional date range filter { from, to }
  * @param status - Optional status filter
+ * @param hotelId - Optional hotel ID filter (admin only)
  * @returns Promise with paginated booking data
  */
 export const getDetailedBookingReport = async (
     page: number = 1,
     limit: number = 10,
     dateFilter?: { from?: string; to?: string },
-    status?: string
+    status?: string,
+    hotelId?: string
 ): Promise<ApiResponse<PaginatedResponse<IDetailedBookingReport>>> => {
     try {
         let url = `/reports/bookings/detailed?page=${page}&limit=${limit}`;
         if (dateFilter?.from) url += `&from=${dateFilter.from}`;
         if (dateFilter?.to) url += `&to=${dateFilter.to}`;
         if (status) url += `&status=${status}`;
+        if (hotelId) url += `&hotelId=${hotelId}`;
 
         const response = await api.get<ApiResponse<PaginatedResponse<IDetailedBookingReport>>>(url);
         return response.data;
@@ -144,19 +147,22 @@ export const getDetailedBookingReport = async (
  * @param limit - Items per page (default: 10)
  * @param dateFilter - Optional date range filter { from, to }
  * @param status - Optional status filter
+ * @param hotelId - Optional hotel ID filter (admin only)
  * @returns Promise with paginated payment data
  */
 export const getDetailedPaymentReport = async (
     page: number = 1,
     limit: number = 10,
     dateFilter?: { from?: string; to?: string },
-    status?: string
+    status?: string,
+    hotelId?: string
 ): Promise<ApiResponse<PaginatedResponse<IPaymentReport>>> => {
     try {
         let url = `/reports/payments/detailed?page=${page}&limit=${limit}`;
         if (dateFilter?.from) url += `&from=${dateFilter.from}`;
         if (dateFilter?.to) url += `&to=${dateFilter.to}`;
         if (status) url += `&status=${status}`;
+        if (hotelId) url += `&hotelId=${hotelId}`;
 
         const response = await api.get<ApiResponse<PaginatedResponse<IPaymentReport>>>(url);
         return response.data;
@@ -180,16 +186,19 @@ export const getDetailedPaymentReport = async (
  * @param page - Page number (default: 1)
  * @param limit - Items per page (default: 10)
  * @param status - Optional status filter
+ * @param hotelId - Optional hotel ID filter (admin only)
  * @returns Promise with paginated room data
  */
 export const getDetailedRoomReport = async (
     page: number = 1,
     limit: number = 10,
-    status?: string
+    status?: string,
+    hotelId?: string
 ): Promise<ApiResponse<PaginatedResponse<IRoomUtilizationReport>>> => {
     try {
         let url = `/reports/rooms/detailed?page=${page}&limit=${limit}`;
         if (status) url += `&status=${status}`;
+        if (hotelId) url += `&hotelId=${hotelId}`;
 
         const response = await api.get<ApiResponse<PaginatedResponse<IRoomUtilizationReport>>>(url);
         return response.data;
@@ -214,19 +223,22 @@ export const getDetailedRoomReport = async (
  * @param limit - Items per page (default: 10)
  * @param dateFilter - Optional date range filter { from, to }
  * @param status - Optional status filter
+ * @param hotelId - Optional hotel ID filter (admin only)
  * @returns Promise with paginated service request data
  */
 export const getDetailedServiceRequestReport = async (
     page: number = 1,
     limit: number = 10,
     dateFilter?: { from?: string; to?: string },
-    status?: string
+    status?: string,
+    hotelId?: string
 ): Promise<ApiResponse<PaginatedResponse<IDetailedServiceRequestReport>>> => {
     try {
         let url = `/reports/service-requests/detailed?page=${page}&limit=${limit}`;
         if (dateFilter?.from) url += `&from=${dateFilter.from}`;
         if (dateFilter?.to) url += `&to=${dateFilter.to}`;
         if (status) url += `&status=${status}`;
+        if (hotelId) url += `&hotelId=${hotelId}`;
 
         const response = await api.get<ApiResponse<PaginatedResponse<IDetailedServiceRequestReport>>>(url);
         return response.data;
@@ -259,6 +271,46 @@ export const getDetailedGuestReport = async (
         const response = await api.get<ApiResponse<PaginatedResponse<IGuestReport>>>(
             `/reports/guests/detailed?page=${page}&limit=${limit}`
         );
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data) {
+            return error.response.data as ApiErrorResponse;
+        }
+        return {
+            success: false,
+            message: error instanceof AxiosError
+                ? error.message || 'Network error occurred'
+                : 'An unexpected error occurred'
+        };
+    }
+};
+
+/**
+ * Get detailed revenue report with pagination
+ * GET /api/reports/revenue/detailed
+ * 
+ * @param page - Page number (default: 1)
+ * @param limit - Items per page (default: 10)
+ * @param dateFilter - Optional date range filter { from, to }
+ * @param paymentStatus - Optional payment status filter
+ * @param hotelId - Optional hotel ID filter (admin only)
+ * @returns Promise with paginated revenue data
+ */
+export const getDetailedRevenueReport = async (
+    page: number = 1,
+    limit: number = 10,
+    dateFilter?: { from?: string; to?: string },
+    paymentStatus?: string,
+    hotelId?: string
+): Promise<ApiResponse<PaginatedResponse<IRevenueReport>>> => {
+    try {
+        let url = `/reports/revenue/detailed?page=${page}&limit=${limit}`;
+        if (dateFilter?.from) url += `&from=${dateFilter.from}`;
+        if (dateFilter?.to) url += `&to=${dateFilter.to}`;
+        if (paymentStatus) url += `&paymentStatus=${paymentStatus}`;
+        if (hotelId) url += `&hotelId=${hotelId}`;
+
+        const response = await api.get<ApiResponse<PaginatedResponse<IRevenueReport>>>(url);
         return response.data;
     } catch (error) {
         if (error instanceof AxiosError && error.response?.data) {

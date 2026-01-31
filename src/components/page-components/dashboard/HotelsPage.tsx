@@ -28,7 +28,7 @@ import DialogBox from "@/components/common/DialogBox";
 import InputField from "@/components/forms/InputField";
 import SelectField from "@/components/forms/SelectField";
 
-import { Eye, Pencil, Trash2, Plus, Building2, CheckCircle2, XCircle } from "lucide-react";
+import { Eye, Pencil, Trash2, Plus, Building2, CheckCircle2, XCircle, MapPin, Mail, Phone, Calendar, Globe, Hash } from "lucide-react";
 
 const HotelsPage = () => {
     const { role, loading: authLoading } = useAuth();
@@ -301,11 +301,6 @@ const HotelsPage = () => {
             render: (hotel: IHotel) => <span>{hotel.city}</span>,
         },
         {
-            key: "country",
-            label: "Country",
-            render: (hotel: IHotel) => <span>{hotel.country}</span>,
-        },
-        {
             key: "contactEmail",
             label: "Contact Email",
             render: (hotel: IHotel) => (
@@ -454,58 +449,109 @@ const HotelsPage = () => {
                     open={viewDialogOpen}
                     onOpenChange={setViewDialogOpen}
                     title="Hotel Details"
-                    widthClass="md:min-w-2xl!"
+                    widthClass="max-w-4xl"
                 >
                     {selectedHotel && (
-                        <div className="space-y-4 py-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-sm text-gray-400">Hotel Code</label>
-                                    <p className="text-white font-medium">{selectedHotel.code}</p>
-                                </div>
-                                <div>
-                                    <label className="text-sm text-gray-400">Status</label>
-                                    <div className="mt-1">
+                        <div className="space-y-6 py-4">
+                            {/* Header Section - Hotel Name & Status */}
+                            <div className="pb-4 border-b border-white/10">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <div className="p-2 rounded-lg bg-primary-500/20">
+                                                <Building2 className="h-6 w-6 text-primary-400" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-2xl font-bold text-white">{selectedHotel.name}</h3>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <Hash className="h-4 w-4 text-gray-400" />
+                                                    <span className="text-sm text-gray-400 font-mono">{selectedHotel.code}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex-shrink-0">
                                         <StatusBadge status={selectedHotel.status} />
                                     </div>
                                 </div>
                             </div>
-                            <div>
-                                <label className="text-sm text-gray-400">Hotel Name</label>
-                                <p className="text-white font-medium">{selectedHotel.name}</p>
+
+                            {/* Location Information */}
+                            <div className="bg-primary-900/20 border border-primary-500/20 rounded-lg p-5">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <MapPin className="h-5 w-5 text-primary-400" />
+                                    <h4 className="text-lg font-semibold text-white">Location Information</h4>
+                                </div>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-xs text-gray-400 uppercase tracking-wider mb-1 block">Address</label>
+                                        <p className="text-white font-medium">{selectedHotel.address}</p>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-xs text-gray-400 uppercase tracking-wider mb-1 block">City</label>
+                                            <p className="text-white font-medium">{selectedHotel.city}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-400 uppercase tracking-wider mb-1 block">Country</label>
+                                            <div className="flex items-center gap-2">
+                                                <Globe className="h-4 w-4 text-gray-400" />
+                                                <p className="text-white font-medium">{selectedHotel.country}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <label className="text-sm text-gray-400">Address</label>
-                                <p className="text-white">{selectedHotel.address}</p>
+
+                            {/* Contact Information */}
+                            <div className="bg-primary-900/20 border border-primary-500/20 rounded-lg p-5">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Phone className="h-5 w-5 text-primary-400" />
+                                    <h4 className="text-lg font-semibold text-white">Contact Information</h4>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs text-gray-400 uppercase tracking-wider block">Email Address</label>
+                                        <div className="flex items-center gap-2">
+                                            <Mail className="h-4 w-4 text-gray-400" />
+                                            <a 
+                                                href={`mailto:${selectedHotel.contactEmail}`}
+                                                className="text-primary-400 hover:text-primary-300 font-medium transition-colors"
+                                            >
+                                                {selectedHotel.contactEmail}
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs text-gray-400 uppercase tracking-wider block">Phone Number</label>
+                                        <div className="flex items-center gap-2">
+                                            <Phone className="h-4 w-4 text-gray-400" />
+                                            <a 
+                                                href={`tel:${selectedHotel.contactPhone}`}
+                                                className="text-primary-400 hover:text-primary-300 font-medium transition-colors"
+                                            >
+                                                {selectedHotel.contactPhone}
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-sm text-gray-400">City</label>
-                                    <p className="text-white">{selectedHotel.city}</p>
+
+                            {/* Metadata Section */}
+                            <div className="bg-primary-900/10 border border-white/5 rounded-lg p-5">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Calendar className="h-5 w-5 text-gray-400" />
+                                    <h4 className="text-lg font-semibold text-white">Metadata</h4>
                                 </div>
-                                <div>
-                                    <label className="text-sm text-gray-400">Country</label>
-                                    <p className="text-white">{selectedHotel.country}</p>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-sm text-gray-400">Contact Email</label>
-                                    <p className="text-white">{selectedHotel.contactEmail}</p>
-                                </div>
-                                <div>
-                                    <label className="text-sm text-gray-400">Contact Phone</label>
-                                    <p className="text-white">{selectedHotel.contactPhone}</p>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-sm text-gray-400">Created At</label>
-                                    <p className="text-white">{formatDateTime(selectedHotel.createdAt)}</p>
-                                </div>
-                                <div>
-                                    <label className="text-sm text-gray-400">Updated At</label>
-                                    <p className="text-white">{formatDateTime(selectedHotel.updatedAt)}</p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-xs text-gray-400 uppercase tracking-wider mb-1 block">Created At</label>
+                                        <p className="text-white font-medium">{formatDateTime(selectedHotel.createdAt)}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-400 uppercase tracking-wider mb-1 block">Last Updated</label>
+                                        <p className="text-white font-medium">{formatDateTime(selectedHotel.updatedAt)}</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>

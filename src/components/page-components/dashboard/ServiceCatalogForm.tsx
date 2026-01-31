@@ -17,7 +17,7 @@ const serviceCatalogSchema = z.object({
     serviceType: z.string().min(1, "Service type is required"),
     displayName: z.string().min(2, "Display name is required"),
     description: z.string().optional(),
-    fixedPrice: z.coerce.number().min(0, "Price cannot be negative"),
+    fixedPrice: z.number().min(0, "Price cannot be negative"),
     isActive: z.boolean(),
 });
 
@@ -46,7 +46,7 @@ const ServiceCatalogForm = ({ hotelId, initialData, onSuccess, onCancel }: Servi
             serviceType: initialData.serviceType,
             displayName: initialData.displayName,
             description: initialData.description || "",
-            fixedPrice: initialData.fixedPrice || 0,
+            fixedPrice: Number(initialData.fixedPrice) || 0,
             isActive: !!initialData.isActive,
         } : {
             serviceType: "",
@@ -70,7 +70,7 @@ const ServiceCatalogForm = ({ hotelId, initialData, onSuccess, onCancel }: Servi
             } else {
                 toast.error(response.message || "Failed to save service");
             }
-        } catch (error) {
+        } catch {
             toast.error("An error occurred during save");
         } finally {
             setLoading(false);
@@ -113,11 +113,11 @@ const ServiceCatalogForm = ({ hotelId, initialData, onSuccess, onCancel }: Servi
             />
 
             <InputField
-                label="Fixed Price ($)"
+                label="Fixed Price (LKR)"
                 name="fixedPrice"
                 type="number"
                 register={register}
-                validation={{ valueAsNumber: true, min: 0 }}
+                validation={{ valueAsNumber: true, min: { value: 0, message: "Price cannot be negative" } }}
                 error={errors.fixedPrice}
                 placeholder="0.00"
             />
@@ -130,7 +130,7 @@ const ServiceCatalogForm = ({ hotelId, initialData, onSuccess, onCancel }: Servi
                 placeholder="Briefly describe the service..."
             />
 
-            <div className="flex items-center space-x-2 py-2">
+            <div className="flex items-center space-x-2 w-full">
                 <Switch
                     id="isActive"
                     checked={isActive}
@@ -140,10 +140,10 @@ const ServiceCatalogForm = ({ hotelId, initialData, onSuccess, onCancel }: Servi
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
-                <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+                <Button type="button" variant="outline" onClick={onCancel} disabled={loading} className="flex-1 h-10">
                     Cancel
                 </Button>
-                <Button type="submit" className="bg-primary-600 hover:bg-primary-700" disabled={loading}>
+                <Button type="submit" className="flex-1 main-button-gradient" disabled={loading}>
                     {loading ? "Saving..." : initialData ? "Update Service" : "Add Service"}
                 </Button>
             </div>

@@ -22,7 +22,7 @@ declare global {
     type NavLink = {
         label: string;
         href: string;
-        icon: string;
+        icon: React.ComponentType<{ className?: string }>;
         roles: UserRole[];
     };
 
@@ -188,10 +188,8 @@ declare global {
             checkedInAt: string;
             checkedInBy: string | IUser;
             nicPassport?: string;
-            nationality?: string;
             phoneNumber?: string;
             country?: string;
-            visaDetails?: string;
         };
         checkOutDetails?: {
             checkedOutAt: string;
@@ -411,8 +409,29 @@ declare global {
         createdAt: string;
     }
 
+    interface IRevenueReport {
+        _id: string;
+        invoiceNumber: string;
+        hotelName: string;
+        hotelCode: string;
+        guestName: string;
+        guestEmail: string;
+        roomNumber: string;
+        roomType: string;
+        checkInDate: string | null;
+        checkOutDate: string | null;
+        numberOfNights: number;
+        roomChargesTotal: number;
+        serviceChargesTotal: number;
+        subtotal: number;
+        tax: number;
+        grandTotal: number;
+        paymentStatus: string;
+        createdAt: string;
+    }
+
     // Roster Types (Staff Shift Scheduling)
-    type ShiftType = 'morning' | 'afternoon' | 'evening' | 'night';
+    type ShiftType = 'morning' | 'afternoon' | 'night';
     type RosterRole = 'receptionist' | 'housekeeping';
 
     interface IRoster {
@@ -437,6 +456,99 @@ declare global {
         date?: string;
         shiftType?: ShiftType;
         role?: RosterRole;
+    }
+
+    // Public Facility Types
+    type FacilityType = 'Event Hall' | 'Pool' | 'Gym' | 'Spa' | 'Conference Room' | 'Sports Court' | 'Game Room' | 'Other';
+    type FacilityStatus = 'available' | 'unavailable' | 'maintenance';
+
+    interface IPublicFacility {
+        _id: string;
+        hotelId: string | IHotel;
+        name: string;
+        facilityType: FacilityType;
+        description?: string;
+        capacity: number;
+        pricePerHour?: number;
+        pricePerDay?: number;
+        amenities?: string[];
+        images: string[]; // Array of image URLs (1-4 images)
+        operatingHours?: {
+            open: string; // HH:MM format (e.g., "09:00")
+            close: string; // HH:MM format (e.g., "22:00")
+        };
+        status: FacilityStatus;
+        createdAt: string;
+        updatedAt: string;
+    }
+
+    // Public Facility Booking Types
+    type FacilityBookingType = 'hourly' | 'daily';
+    type FacilityBookingStatus = 'pending' | 'confirmed' | 'in_use' | 'completed' | 'cancelled';
+
+    interface IPublicFacilityBooking {
+        _id: string;
+        hotelId: string | IHotel;
+        facility: string | IPublicFacility;
+        guest?: string | IUser; // Optional - only for guest bookings
+        customerDetails?: {
+            name: string;
+            phone: string;
+            email?: string;
+        }; // Optional - only for walk-in bookings
+        createdBy?: string | IUser; // Optional - only for staff-created bookings
+        bookingType: FacilityBookingType;
+        // For hourly bookings
+        bookingDate?: string; // ISO date string
+        startTime?: string; // HH:MM format
+        endTime?: string; // HH:MM format
+        // For daily bookings
+        startDate?: string; // ISO date string
+        endDate?: string; // ISO date string
+        status: FacilityBookingStatus;
+        // Payment and charges fields
+        baseCharge: number;
+        additionalCharges?: number;
+        totalAmount: number;
+        totalPaid?: number;
+        paymentStatus?: 'unpaid' | 'partially_paid' | 'paid';
+        // Check-in/Check-out fields
+        isCheckedIn?: boolean;
+        isCheckedOut?: boolean;
+        checkInDetails?: {
+            checkedInAt: string;
+            checkedInBy: string | IUser;
+        };
+        checkOutDetails?: {
+            checkedOutAt: string;
+            checkedOutBy: string | IUser;
+        };
+        createdAt: string;
+        updatedAt: string;
+        // Cancellation fields
+        cancellationPenalty?: number;
+        cancelledBy?: string | IUser;
+        cancellationReason?: string;
+        cancellationDate?: string;
+    }
+
+    // Facility booking filter types for API queries
+    interface IFacilityBookingFilters extends IDateRangeFilter {
+        status?: FacilityBookingStatus;
+        facilityId?: string;
+        facilityType?: FacilityType;
+        bookingType?: FacilityBookingType;
+    }
+
+    // Facility availability check params
+    interface IFacilityAvailabilityParams {
+        facilityId: string;
+        bookingType: FacilityBookingType;
+        bookingDate?: string; // For hourly bookings
+        startTime?: string; // For hourly bookings
+        endTime?: string; // For hourly bookings
+        startDate?: string; // For daily bookings
+        endDate?: string; // For daily bookings
     }
 }
 

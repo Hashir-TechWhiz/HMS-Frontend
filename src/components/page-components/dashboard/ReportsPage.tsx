@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { DateRange } from "react-day-picker";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 import DataTable from "@/components/common/DataTable";
 import StatCard from "@/components/common/StatCard";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
@@ -14,7 +15,9 @@ import {
     getDetailedPaymentReport,
     getDetailedRoomReport,
     getDetailedServiceRequestReport,
+    getDetailedRevenueReport,
 } from "@/services/reportService";
+import { getActiveHotels } from "@/services/hotelService";
 import {
     exportToCSV,
     exportToPDF,
@@ -29,9 +32,23 @@ import {
     DollarSign,
     Calendar,
     XCircle,
+    CreditCard,
+    Home,
+    Wrench,
+    TrendingUp,
 } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const ReportsPage = () => {
+    const { role } = useAuth();
+
+    // Active tab state
+    const [activeTab, setActiveTab] = useState<string>("bookings");
+
+    // Hotel filter state (admin only)
+    const [hotelFilter, setHotelFilter] = useState<string>("all");
+    const [availableHotels, setAvailableHotels] = useState<IHotel[]>([]);
+
     // Overview KPIs
     const [overview, setOverview] = useState<IReportOverview | null>(null);
     const [overviewLoading, setOverviewLoading] = useState(true);
@@ -67,6 +84,31 @@ const ReportsPage = () => {
     const [serviceRequestsDateRange, setServiceRequestsDateRange] = useState<DateRange | undefined>(undefined);
     const [serviceRequestsStatus, setServiceRequestsStatus] = useState<string>("all");
 
+    // Revenue Report State
+    const [revenue, setRevenue] = useState<IRevenueReport[]>([]);
+    const [revenueLoading, setRevenueLoading] = useState(false);
+    const [revenuePage, setRevenuePage] = useState(1);
+    const [revenuePagination, setRevenuePagination] = useState<PaginationMeta | null>(null);
+    const [revenueDateRange, setRevenueDateRange] = useState<DateRange | undefined>(undefined);
+    const [revenuePaymentStatus, setRevenuePaymentStatus] = useState<string>("all");
+
+    // Fetch available hotels for admin
+    useEffect(() => {
+        if (role === "admin") {
+            const fetchHotels = async () => {
+                try {
+                    const response = await getActiveHotels();
+                    if (response.success && response.data) {
+                        setAvailableHotels(response.data);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch hotels:", error);
+                }
+            };
+            fetchHotels();
+        }
+    }, [role]);
+
     // Fetch Overview KPIs
     useEffect(() => {
         const fetchOverview = async () => {
@@ -92,7 +134,8 @@ const ReportsPage = () => {
                 bookingsPage,
                 10,
                 dateFilter.from || dateFilter.to ? dateFilter : undefined,
-                bookingsStatus !== "all" ? bookingsStatus : undefined
+                bookingsStatus !== "all" ? bookingsStatus : undefined,
+                hotelFilter !== "all" ? hotelFilter : undefined
             );
             if (response.success && response.data) {
                 setBookings(response.data.items);
@@ -104,7 +147,7 @@ const ReportsPage = () => {
         };
 
         fetchBookings();
-    }, [bookingsPage, bookingsDateRange, bookingsStatus]);
+    }, [bookingsPage, bookingsDateRange, bookingsStatus, hotelFilter]);
 
     // Reset booking pagination when filters change
     useEffect(() => {
@@ -112,7 +155,7 @@ const ReportsPage = () => {
             setBookingsPage(1);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [bookingsDateRange, bookingsStatus]);
+    }, [bookingsDateRange, bookingsStatus, hotelFilter]);
 
     // Fetch Payment Report
     useEffect(() => {
@@ -123,7 +166,8 @@ const ReportsPage = () => {
                 paymentsPage,
                 10,
                 dateFilter.from || dateFilter.to ? dateFilter : undefined,
-                paymentsStatus !== "all" ? paymentsStatus : undefined
+                paymentsStatus !== "all" ? paymentsStatus : undefined,
+                hotelFilter !== "all" ? hotelFilter : undefined
             );
             if (response.success && response.data) {
                 setPayments(response.data.items);
@@ -135,7 +179,7 @@ const ReportsPage = () => {
         };
 
         fetchPayments();
-    }, [paymentsPage, paymentsDateRange, paymentsStatus]);
+    }, [paymentsPage, paymentsDateRange, paymentsStatus, hotelFilter]);
 
     // Reset payment pagination when filters change
     useEffect(() => {
@@ -143,7 +187,7 @@ const ReportsPage = () => {
             setPaymentsPage(1);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [paymentsDateRange, paymentsStatus]);
+    }, [paymentsDateRange, paymentsStatus, hotelFilter]);
 
     // Fetch Room Report
     useEffect(() => {
@@ -152,7 +196,8 @@ const ReportsPage = () => {
             const response = await getDetailedRoomReport(
                 roomsPage,
                 10,
-                roomsStatus !== "all" ? roomsStatus : undefined
+                roomsStatus !== "all" ? roomsStatus : undefined,
+                hotelFilter !== "all" ? hotelFilter : undefined
             );
             if (response.success && response.data) {
                 setRooms(response.data.items);
@@ -164,15 +209,15 @@ const ReportsPage = () => {
         };
 
         fetchRooms();
-    }, [roomsPage, roomsStatus]);
+    }, [roomsPage, roomsStatus, hotelFilter]);
 
-    // Reset room pagination when status changes
+    // Reset room pagination when filters change
     useEffect(() => {
         if (roomsPage !== 1) {
             setRoomsPage(1);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [roomsStatus]);
+    }, [roomsStatus, hotelFilter]);
 
     // Fetch Service Request Report
     useEffect(() => {
@@ -183,7 +228,8 @@ const ReportsPage = () => {
                 serviceRequestsPage,
                 10,
                 dateFilter.from || dateFilter.to ? dateFilter : undefined,
-                serviceRequestsStatus !== "all" ? serviceRequestsStatus : undefined
+                serviceRequestsStatus !== "all" ? serviceRequestsStatus : undefined,
+                hotelFilter !== "all" ? hotelFilter : undefined
             );
             if (response.success && response.data) {
                 setServiceRequests(response.data.items);
@@ -195,7 +241,7 @@ const ReportsPage = () => {
         };
 
         fetchServiceRequests();
-    }, [serviceRequestsPage, serviceRequestsDateRange, serviceRequestsStatus]);
+    }, [serviceRequestsPage, serviceRequestsDateRange, serviceRequestsStatus, hotelFilter]);
 
     // Reset service request pagination when filters change
     useEffect(() => {
@@ -203,7 +249,39 @@ const ReportsPage = () => {
             setServiceRequestsPage(1);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [serviceRequestsDateRange, serviceRequestsStatus]);
+    }, [serviceRequestsDateRange, serviceRequestsStatus, hotelFilter]);
+
+    // Fetch Revenue Report
+    useEffect(() => {
+        const fetchRevenue = async () => {
+            setRevenueLoading(true);
+            const dateFilter = normalizeDateRange(revenueDateRange);
+            const response = await getDetailedRevenueReport(
+                revenuePage,
+                10,
+                dateFilter.from || dateFilter.to ? dateFilter : undefined,
+                revenuePaymentStatus !== "all" ? revenuePaymentStatus : undefined,
+                hotelFilter !== "all" ? hotelFilter : undefined
+            );
+            if (response.success && response.data) {
+                setRevenue(response.data.items);
+                setRevenuePagination(response.data.pagination);
+            } else {
+                toast.error(response.message || "Failed to load revenue report");
+            }
+            setRevenueLoading(false);
+        };
+
+        fetchRevenue();
+    }, [revenuePage, revenueDateRange, revenuePaymentStatus, hotelFilter]);
+
+    // Reset revenue pagination when filters change
+    useEffect(() => {
+        if (revenuePage !== 1) {
+            setRevenuePage(1);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [revenueDateRange, revenuePaymentStatus, hotelFilter]);
 
     // Export Handlers
     const handleExportBookings = (format: 'csv' | 'pdf') => {
@@ -339,6 +417,81 @@ const ReportsPage = () => {
         toast.success(`Service request report exported as ${format.toUpperCase()}`);
     };
 
+    const handleExportRevenue = (format: 'csv' | 'pdf') => {
+        const columns = [
+            { header: 'Invoice #', dataKey: 'invoiceNumber' },
+            { header: 'Hotel', dataKey: 'hotelName' },
+            { header: 'Guest Name', dataKey: 'guestName' },
+            { header: 'Room', dataKey: 'roomNumber' },
+            { header: 'Room Type', dataKey: 'roomType' },
+            {
+                header: 'Check-in',
+                dataKey: 'checkInDate',
+                formatter: formatDateForExport
+            },
+            {
+                header: 'Check-out',
+                dataKey: 'checkOutDate',
+                formatter: formatDateForExport
+            },
+            { header: 'Nights', dataKey: 'numberOfNights' },
+            {
+                header: 'Room Charges',
+                dataKey: 'roomChargesTotal',
+                formatter: formatCurrencyForExport
+            },
+            {
+                header: 'Service Charges',
+                dataKey: 'serviceChargesTotal',
+                formatter: formatCurrencyForExport
+            },
+            {
+                header: 'Tax',
+                dataKey: 'tax',
+                formatter: formatCurrencyForExport
+            },
+            {
+                header: 'Grand Total',
+                dataKey: 'grandTotal',
+                formatter: formatCurrencyForExport
+            },
+            {
+                header: 'Payment Status',
+                dataKey: 'paymentStatus',
+                formatter: formatStatusForExport
+            },
+            {
+                header: 'Created',
+                dataKey: 'createdAt',
+                formatter: formatDateTimeForExport
+            },
+        ];
+
+        const dataWithFormatted = revenue.map(item => ({
+            invoiceNumber: item.invoiceNumber,
+            hotelName: item.hotelName,
+            guestName: item.guestName,
+            roomNumber: item.roomNumber,
+            roomType: item.roomType,
+            checkInDate: item.checkInDate,
+            checkOutDate: item.checkOutDate,
+            numberOfNights: item.numberOfNights,
+            roomChargesTotal: item.roomChargesTotal,
+            serviceChargesTotal: item.serviceChargesTotal,
+            tax: item.tax,
+            grandTotal: item.grandTotal,
+            paymentStatus: item.paymentStatus,
+            createdAt: item.createdAt,
+        }));
+
+        if (format === 'csv') {
+            exportToCSV(dataWithFormatted, columns, `revenue-report-${new Date().toISOString().split('T')[0]}`);
+        } else {
+            exportToPDF(dataWithFormatted, columns, `revenue-report-${new Date().toISOString().split('T')[0]}`, 'Revenue Report');
+        }
+        toast.success(`Revenue report exported as ${format.toUpperCase()}`);
+    };
+
     // Calculate active bookings (current date between check-in and check-out)
     const getActiveBookings = () => {
         if (!overview) return 0;
@@ -388,372 +541,552 @@ const ReportsPage = () => {
                 />
             </div>
 
-            {/* Booking Report */}
-            <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
-                <div className="flex items-start justify-between gap-4">
-                    <div>
-                        <h2 className="text-2xl font-semibold mb-1">Booking Report</h2>
-                        <p className="text-sm text-muted-foreground">
-                            Detailed list of all bookings with guest and room information
-                        </p>
-                    </div>
-                    <div className="flex gap-2 items-center flex-wrap justify-end">
-                        <DateRangePicker
-                            value={bookingsDateRange}
-                            onChange={setBookingsDateRange}
-                            placeholder="Filter by date range"
-                            className="w-[280px] h-10! min-h-10! max-h-10!"
-                        />
-                        <div>
-                            <SelectField
-                                value={bookingsStatus}
-                                onChange={setBookingsStatus}
-                                placeholder="All statuses"
-                                options={[
-                                    { value: "all", label: "All statuses" },
-                                    { value: "pending", label: "Pending" },
-                                    { value: "confirmed", label: "Confirmed" },
-                                    { value: "checkedin", label: "Checked In" },
-                                    { value: "completed", label: "Completed" },
-                                    { value: "cancelled", label: "Cancelled" },
-                                ]}
-                                className="w-[180px] h-10! min-h-10! max-h-10! search-gradient"
-                            />
-                        </div>
-                        <ExportActions
-                            onExport={handleExportBookings}
-                            disabled={bookingsLoading || bookings.length === 0}
-                        />
-                    </div>
+            {/* Common Hotel Filter (Admin Only) */}
+            {role === "admin" && (
+                <div className="flex items-center gap-3 p-4 rounded-lg border border-primary-900/40 bg-linear-to-r from-primary-900/5 to-primary-800/5">
+                    <label className="text-sm font-medium whitespace-nowrap">Filter by Hotel:</label>
+                    <SelectField
+                        name="hotelFilter"
+                        options={[
+                            { value: "all", label: "All Hotels" },
+                            ...availableHotels.map(h => ({ value: h._id, label: `${h.name} (${h.code})` }))
+                        ]}
+                        value={hotelFilter}
+                        onChange={(v) => setHotelFilter(v)}
+                        className="w-[300px] h-10! min-h-10! max-h-10! text-xs md:text-sm"
+                    />
                 </div>
-                <DataTable
-                    columns={[
-                        {
-                            key: 'type',
-                            label: 'Type',
-                            render: (row) => {
-                                const isOnline = row.guest && row.guest._id;
-                                return (
-                                    <span
-                                        className={`px-2 py-1 rounded-full text-xs font-medium ${isOnline
-                                            ? 'bg-blue-500/10 text-blue-400'
-                                            : 'bg-purple-500/10 text-purple-400'
+            )}
+
+            {/* Reports Tabs */}
+            <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
+                <div className="mb-6">
+                    <h1 className="text-2xl font-bold text-white mb-2">Reports</h1>
+                    <p className="text-sm text-gray-400">View detailed reports and analytics</p>
+                </div>
+
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                    <TabsList className="grid w-full grid-cols-5 bg-primary-900/20 border border-primary-500/20 p-1">
+                        <TabsTrigger 
+                            value="bookings" 
+                            className="data-[state=active]:bg-primary-600 data-[state=active]:text-white"
+                        >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Bookings
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="payments"
+                            className="data-[state=active]:bg-primary-600 data-[state=active]:text-white"
+                        >
+                            <CreditCard className="h-4 w-4 mr-2" />
+                            Payments
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="revenue"
+                            className="data-[state=active]:bg-primary-600 data-[state=active]:text-white"
+                        >
+                            <TrendingUp className="h-4 w-4 mr-2" />
+                            Revenue
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="rooms"
+                            className="data-[state=active]:bg-primary-600 data-[state=active]:text-white"
+                        >
+                            <Home className="h-4 w-4 mr-2" />
+                            Rooms
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="service-requests"
+                            className="data-[state=active]:bg-primary-600 data-[state=active]:text-white"
+                        >
+                            <Wrench className="h-4 w-4 mr-2" />
+                            Services
+                        </TabsTrigger>
+                    </TabsList>
+
+                    {/* Booking Report Tab */}
+                    <TabsContent value="bookings" className="mt-6 space-y-4">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <h2 className="text-xl font-semibold mb-1 text-white">Booking Report</h2>
+                                <p className="text-sm text-muted-foreground">
+                                    Detailed list of all bookings with guest and room information
+                                </p>
+                            </div>
+                            <div className="flex gap-2 items-center flex-wrap justify-end">
+                                <DateRangePicker
+                                    value={bookingsDateRange}
+                                    onChange={setBookingsDateRange}
+                                    placeholder="Filter by date range"
+                                    className="w-[280px] h-10! min-h-10! max-h-10!"
+                                />
+                                <div>
+                                    <SelectField
+                                        value={bookingsStatus}
+                                        onChange={setBookingsStatus}
+                                        placeholder="All statuses"
+                                        options={[
+                                            { value: "all", label: "All statuses" },
+                                            { value: "pending", label: "Pending" },
+                                            { value: "confirmed", label: "Confirmed" },
+                                            { value: "checkedin", label: "Checked In" },
+                                            { value: "completed", label: "Completed" },
+                                            { value: "cancelled", label: "Cancelled" },
+                                        ]}
+                                        className="w-[180px] h-10! min-h-10! max-h-10! search-gradient"
+                                    />
+                                </div>
+                                <ExportActions
+                                    onExport={handleExportBookings}
+                                    disabled={bookingsLoading || bookings.length === 0}
+                                />
+                            </div>
+                        </div>
+                        <DataTable
+                            columns={[
+                                {
+                                    key: 'type',
+                                    label: 'Type',
+                                    render: (row) => {
+                                        const isOnline = row.guest && row.guest._id;
+                                        return (
+                                            <span
+                                                className={`px-2 py-1 rounded-full text-xs font-medium ${isOnline
+                                                    ? 'bg-blue-500/10 text-blue-400'
+                                                    : 'bg-purple-500/10 text-purple-400'
+                                                    }`}
+                                            >
+                                                {isOnline ? 'Online' : 'Walk-in'}
+                                            </span>
+                                        );
+                                    },
+                                },
+                                {
+                                    key: 'guest',
+                                    label: 'Guest / Customer',
+                                    render: (row) => {
+                                        if (row.guest?.name) return row.guest.name;
+                                        if (row.customerDetails?.name) return row.customerDetails.name;
+                                        return 'N/A';
+                                    },
+                                },
+                                {
+                                    key: 'room',
+                                    label: 'Room',
+                                    render: (row) => row.room?.roomNumber || 'N/A',
+                                },
+                                {
+                                    key: 'checkInDate',
+                                    label: 'Check-in',
+                                    render: (row) => new Date(row.checkInDate).toLocaleDateString(),
+                                },
+                                {
+                                    key: 'checkOutDate',
+                                    label: 'Check-out',
+                                    render: (row) => new Date(row.checkOutDate).toLocaleDateString(),
+                                },
+                                {
+                                    key: 'status',
+                                    label: 'Status',
+                                    render: (row) => (
+                                        <span
+                                            className={`px-2 py-1 rounded-full text-xs font-medium ${row.status === 'confirmed'
+                                                ? 'bg-green-500/10 text-green-400'
+                                                : row.status === 'pending'
+                                                    ? 'bg-yellow-500/10 text-yellow-400'
+                                                    : row.status === 'cancelled'
+                                                        ? 'bg-red-500/10 text-red-400'
+                                                        : 'bg-blue-500/10 text-blue-400'
+                                                }`}
+                                        >
+                                            {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
+                                        </span>
+                                    ),
+                                },
+                                {
+                                    key: 'createdAt',
+                                    label: 'Created',
+                                    render: (row) => new Date(row.createdAt).toLocaleDateString(),
+                                },
+                            ]}
+                            data={bookings}
+                            loading={bookingsLoading}
+                            emptyMessage="No bookings found"
+                            pagination={
+                                bookingsPagination
+                                    ? {
+                                        page: bookingsPagination.currentPage,
+                                        totalPages: bookingsPagination.totalPages,
+                                        total: bookingsPagination.totalItems,
+                                        onPageChange: setBookingsPage,
+                                    }
+                                    : undefined
+                            }
+                            selectable={false}
+                        />
+                    </TabsContent>
+
+                    {/* Payment Report Tab */}
+                    <TabsContent value="payments" className="mt-6 space-y-4">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <h2 className="text-xl font-semibold mb-1 text-white">Payment Report</h2>
+                                <p className="text-sm text-muted-foreground">
+                                    Payment transactions for confirmed and completed bookings
+                                </p>
+                            </div>
+                            <div className="flex gap-2 items-center flex-wrap justify-end">
+                                <DateRangePicker
+                                    value={paymentsDateRange}
+                                    onChange={setPaymentsDateRange}
+                                    placeholder="Filter by date range"
+                                    className="w-[280px] h-10! min-h-10! max-h-10!"
+                                />
+                                <div>
+                                    <SelectField
+                                        value={paymentsStatus}
+                                        onChange={setPaymentsStatus}
+                                        placeholder="All statuses"
+                                        options={[
+                                            { value: "all", label: "All statuses" },
+                                            { value: "completed", label: "Completed" },
+                                        ]}
+                                        className="w-[180px] h-10! min-h-10! max-h-10! search-gradient"
+                                    />
+                                </div>
+                                <ExportActions
+                                    onExport={handleExportPayments}
+                                    disabled={paymentsLoading || payments.length === 0}
+                                />
+                            </div>
+                        </div>
+                        <DataTable
+                            columns={[
+                                { key: 'bookingId', label: 'Booking ID' },
+                                { key: 'guestName', label: 'Guest / Customer' },
+                                {
+                                    key: 'amount',
+                                    label: 'Amount',
+                                    render: (row) => `LKR ${row.amount.toLocaleString()}`,
+                                },
+                                { key: 'paymentMethod', label: 'Payment Method' },
+                                {
+                                    key: 'paymentStatus',
+                                    label: 'Status',
+                                    render: (row) => (
+                                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-400">
+                                            {row.paymentStatus}
+                                        </span>
+                                    ),
+                                },
+                                {
+                                    key: 'createdAt',
+                                    label: 'Date',
+                                    render: (row) => new Date(row.createdAt).toLocaleDateString(),
+                                },
+                            ]}
+                            data={payments}
+                            loading={paymentsLoading}
+                            emptyMessage="No payments found"
+                            pagination={
+                                paymentsPagination
+                                    ? {
+                                        page: paymentsPagination?.currentPage || 1,
+                                        totalPages: paymentsPagination?.totalPages || 1,
+                                        total: paymentsPagination?.totalItems || 0,
+                                        onPageChange: setPaymentsPage,
+                                    }
+                                    : undefined
+                            }
+                            selectable={false}
+                        />
+                    </TabsContent>
+
+                    {/* Room Utilization Report Tab */}
+                    <TabsContent value="rooms" className="mt-6 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-semibold mb-1 text-white">Room Utilization Report</h2>
+                                <p className="text-sm text-muted-foreground">
+                                    Room occupancy status and booking statistics
+                                </p>
+                            </div>
+                            <div className="flex gap-2">
+                                <div>
+                                    <SelectField
+                                        value={roomsStatus}
+                                        onChange={setRoomsStatus}
+                                        placeholder="All statuses"
+                                        options={[
+                                            { value: "all", label: "All statuses" },
+                                            { value: "available", label: "Available" },
+                                            { value: "unavailable", label: "Unavailable" },
+                                            { value: "maintenance", label: "Maintenance" },
+                                        ]}
+                                        className="w-[180px] h-10! min-h-10! max-h-10! search-gradient"
+                                    />
+                                </div>
+                                <ExportActions
+                                    onExport={handleExportRooms}
+                                    disabled={roomsLoading || rooms.length === 0}
+                                />
+                            </div>
+                        </div>
+                        <DataTable
+                            columns={[
+                                { key: 'roomNumber', label: 'Room Number' },
+                                { key: 'roomType', label: 'Room Type' },
+                                { key: 'totalBookings', label: 'Total Bookings' },
+                                {
+                                    key: 'status',
+                                    label: 'Status',
+                                    render: (row) => (
+                                        <span
+                                            className={`px-2 py-1 rounded-full text-xs font-medium ${row.status === 'available'
+                                                ? 'bg-green-500/10 text-green-400'
+                                                : row.status === 'maintenance'
+                                                    ? 'bg-yellow-500/10 text-yellow-400'
+                                                    : 'bg-red-500/10 text-red-400'
+                                                }`}
+                                        >
+                                            {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
+                                        </span>
+                                    ),
+                                },
+                            ]}
+                            data={rooms}
+                            loading={roomsLoading}
+                            emptyMessage="No rooms found"
+                            pagination={
+                                roomsPagination
+                                    ? {
+                                        page: roomsPagination?.currentPage || 1,
+                                        totalPages: roomsPagination?.totalPages || 1,
+                                        total: roomsPagination?.totalItems || 0,
+                                        onPageChange: setRoomsPage,
+                                    }
+                                    : undefined
+                            }
+                            selectable={false}
+                        />
+                    </TabsContent>
+
+                    {/* Service Request Report Tab */}
+                    <TabsContent value="service-requests" className="mt-6 space-y-4">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <h2 className="text-xl font-semibold mb-1 text-white">Service Request Report</h2>
+                                <p className="text-sm text-muted-foreground">
+                                    Service requests with assignment and status information
+                                </p>
+                            </div>
+                            <div className="flex gap-2 items-center flex-wrap justify-end">
+                                <DateRangePicker
+                                    value={serviceRequestsDateRange}
+                                    onChange={setServiceRequestsDateRange}
+                                    placeholder="Filter by date range"
+                                    className="w-[280px] h-10! min-h-10! max-h-10!"
+                                />
+                                <div>
+                                    <SelectField
+                                        value={serviceRequestsStatus}
+                                        onChange={setServiceRequestsStatus}
+                                        placeholder="All statuses"
+                                        options={[
+                                            { value: "all", label: "All statuses" },
+                                            { value: "pending", label: "Pending" },
+                                            { value: "in_progress", label: "In Progress" },
+                                            { value: "completed", label: "Completed" },
+                                        ]}
+                                        className="w-[180px] h-10! min-h-10! max-h-10! search-gradient"
+                                    />
+                                </div>
+                                <ExportActions
+                                    onExport={handleExportServiceRequests}
+                                    disabled={serviceRequestsLoading || serviceRequests.length === 0}
+                                />
+                            </div>
+                        </div>
+                        <DataTable
+                            columns={[
+                                { key: '_id', label: 'Request ID' },
+                                {
+                                    key: 'serviceType',
+                                    label: 'Service Type',
+                                    render: (row) =>
+                                        row.serviceType
+                                            .split('_')
+                                            .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                                            .join(' '),
+                                },
+                                {
+                                    key: 'room',
+                                    label: 'Room',
+                                    render: (row) => row.room?.roomNumber || 'N/A',
+                                },
+                                {
+                                    key: 'assignedTo',
+                                    label: 'Assigned Staff',
+                                    render: (row) => row.assignedTo?.name || 'Unassigned',
+                                },
+                                {
+                                    key: 'status',
+                                    label: 'Status',
+                                    render: (row) => (
+                                        <span
+                                            className={`px-2 py-1 rounded-full text-xs font-medium ${row.status === 'completed'
+                                                ? 'bg-green-500/10 text-green-400'
+                                                : row.status === 'in_progress'
+                                                    ? 'bg-blue-500/10 text-blue-400'
+                                                    : 'bg-yellow-500/10 text-yellow-400'
+                                                }`}
+                                        >
+                                            {row.status
+                                                .split('_')
+                                                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                                                .join(' ')}
+                                        </span>
+                                    ),
+                                },
+                                {
+                                    key: 'createdAt',
+                                    label: 'Created',
+                                    render: (row) => new Date(row.createdAt).toLocaleDateString(),
+                                },
+                            ]}
+                            data={serviceRequests}
+                            loading={serviceRequestsLoading}
+                            emptyMessage="No service requests found"
+                            pagination={
+                                serviceRequestsPagination
+                                    ? {
+                                        page: serviceRequestsPagination?.currentPage || 1,
+                                        totalPages: serviceRequestsPagination?.totalPages || 1,
+                                        total: serviceRequestsPagination?.totalItems || 0,
+                                        onPageChange: setServiceRequestsPage,
+                                    }
+                                    : undefined
+                            }
+                            selectable={false}
+                        />
+                    </TabsContent>
+
+                    {/* Revenue Report Tab */}
+                    <TabsContent value="revenue" className="mt-6 space-y-4">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <h2 className="text-xl font-semibold mb-1 text-white">Revenue Report</h2>
+                                <p className="text-sm text-muted-foreground">
+                                    Detailed revenue breakdown from invoices with payment status
+                                </p>
+                            </div>
+                            <div className="flex gap-2 items-center flex-wrap justify-end">
+                                <DateRangePicker
+                                    value={revenueDateRange}
+                                    onChange={setRevenueDateRange}
+                                    placeholder="Filter by date range"
+                                    className="w-[280px] h-10! min-h-10! max-h-10!"
+                                />
+                                <div>
+                                    <SelectField
+                                        value={revenuePaymentStatus}
+                                        onChange={setRevenuePaymentStatus}
+                                        placeholder="All statuses"
+                                        options={[
+                                            { value: "all", label: "All statuses" },
+                                            { value: "pending", label: "Pending" },
+                                            { value: "paid", label: "Paid" },
+                                            { value: "partially_paid", label: "Partially Paid" },
+                                            { value: "refunded", label: "Refunded" },
+                                        ]}
+                                        className="w-[180px] h-10! min-h-10! max-h-10! search-gradient"
+                                    />
+                                </div>
+                                <ExportActions
+                                    onExport={handleExportRevenue}
+                                    disabled={revenueLoading || revenue.length === 0}
+                                />
+                            </div>
+                        </div>
+                        <DataTable
+                            columns={[
+                                { 
+                                    key: 'invoiceNumber', 
+                                    label: 'Invoice #',
+                                    render: (row) => (
+                                        <span className="font-medium text-white">{row.invoiceNumber}</span>
+                                    ),
+                                },
+                                {
+                                    key: 'guestName',
+                                    label: 'Guest Name',
+                                },
+                                {
+                                    key: 'roomNumber',
+                                    label: 'Room',
+                                },
+                                {
+                                    key: 'checkInDate',
+                                    label: 'Check-in',
+                                    render: (row) => row.checkInDate ? new Date(row.checkInDate).toLocaleDateString() : 'N/A',
+                                },
+                                {
+                                    key: 'checkOutDate',
+                                    label: 'Check-out',
+                                    render: (row) => row.checkOutDate ? new Date(row.checkOutDate).toLocaleDateString() : 'N/A',
+                                },
+                                {
+                                    key: 'grandTotal',
+                                    label: 'Total Amount',
+                                    render: (row) => (
+                                        <span className="font-bold text-green-400">
+                                            LKR {(row.grandTotal || 0).toLocaleString()}
+                                        </span>
+                                    ),
+                                },
+                                {
+                                    key: 'paymentStatus',
+                                    label: 'Status',
+                                    render: (row) => (
+                                        <span
+                                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                row.paymentStatus === 'paid'
+                                                    ? 'bg-green-500/10 text-green-400'
+                                                    : row.paymentStatus === 'pending'
+                                                    ? 'bg-yellow-500/10 text-yellow-400'
+                                                    : row.paymentStatus === 'partially_paid'
+                                                    ? 'bg-orange-500/10 text-orange-400'
+                                                    : 'bg-red-500/10 text-red-400'
                                             }`}
-                                    >
-                                        {isOnline ? 'Online' : 'Walk-in'}
-                                    </span>
-                                );
-                            },
-                        },
-                        {
-                            key: 'guest',
-                            label: 'Guest / Customer',
-                            render: (row) => {
-                                if (row.guest?.name) return row.guest.name;
-                                if (row.customerDetails?.name) return row.customerDetails.name;
-                                return 'N/A';
-                            },
-                        },
-                        {
-                            key: 'room',
-                            label: 'Room',
-                            render: (row) => row.room?.roomNumber || 'N/A',
-                        },
-                        {
-                            key: 'checkInDate',
-                            label: 'Check-in',
-                            render: (row) => new Date(row.checkInDate).toLocaleDateString(),
-                        },
-                        {
-                            key: 'checkOutDate',
-                            label: 'Check-out',
-                            render: (row) => new Date(row.checkOutDate).toLocaleDateString(),
-                        },
-                        {
-                            key: 'status',
-                            label: 'Status',
-                            render: (row) => (
-                                <span
-                                    className={`px-2 py-1 rounded-full text-xs font-medium ${row.status === 'confirmed'
-                                        ? 'bg-green-500/10 text-green-400'
-                                        : row.status === 'pending'
-                                            ? 'bg-yellow-500/10 text-yellow-400'
-                                            : row.status === 'cancelled'
-                                                ? 'bg-red-500/10 text-red-400'
-                                                : 'bg-blue-500/10 text-blue-400'
-                                        }`}
-                                >
-                                    {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
-                                </span>
-                            ),
-                        },
-                        {
-                            key: 'createdAt',
-                            label: 'Created',
-                            render: (row) => new Date(row.createdAt).toLocaleDateString(),
-                        },
-                    ]}
-                    data={bookings}
-                    loading={bookingsLoading}
-                    emptyMessage="No bookings found"
-                    pagination={
-                        bookingsPagination
-                            ? {
-                                page: bookingsPagination.currentPage,
-                                totalPages: bookingsPagination.totalPages,
-                                total: bookingsPagination.totalItems,
-                                onPageChange: setBookingsPage,
+                                        >
+                                            {row.paymentStatus.replace('_', ' ').charAt(0).toUpperCase() + 
+                                             row.paymentStatus.replace('_', ' ').slice(1)}
+                                        </span>
+                                    ),
+                                },
+                                {
+                                    key: 'createdAt',
+                                    label: 'Date',
+                                    render: (row) => new Date(row.createdAt).toLocaleDateString(),
+                                },
+                            ]}
+                            data={revenue}
+                            loading={revenueLoading}
+                            emptyMessage="No revenue data found"
+                            pagination={
+                                revenuePagination
+                                    ? {
+                                        page: revenuePagination?.currentPage || 1,
+                                        totalPages: revenuePagination?.totalPages || 1,
+                                        total: revenuePagination?.totalItems || 0,
+                                        onPageChange: setRevenuePage,
+                                    }
+                                    : undefined
                             }
-                            : undefined
-                    }
-                    selectable={false}
-                />
-            </div>
-
-            {/* Payment Report */}
-            <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
-                <div className="flex items-start justify-between gap-4">
-                    <div>
-                        <h2 className="text-2xl font-semibold mb-1">Payment Report</h2>
-                        <p className="text-sm text-muted-foreground">
-                            Payment transactions for confirmed and completed bookings
-                        </p>
-                    </div>
-                    <div className="flex gap-2 items-center flex-wrap justify-end">
-
-                        <DateRangePicker
-                            value={paymentsDateRange}
-                            onChange={setPaymentsDateRange}
-                            placeholder="Filter by date range"
-                            className="w-[280px] h-10! min-h-10! max-h-10!"
+                            selectable={false}
                         />
-                        <div>
-                            <SelectField
-                                value={paymentsStatus}
-                                onChange={setPaymentsStatus}
-                                placeholder="All statuses"
-                                options={[
-                                    { value: "all", label: "All statuses" },
-                                    { value: "completed", label: "Completed" },
-                                ]}
-                                className="w-[180px] h-10! min-h-10! max-h-10! search-gradient"
-                            />
-                        </div>
-                        <ExportActions
-                            onExport={handleExportPayments}
-                            disabled={paymentsLoading || payments.length === 0}
-                        />
-                    </div>
-                </div>
-                <DataTable
-                    columns={[
-                        { key: 'bookingId', label: 'Booking ID' },
-                        { key: 'guestName', label: 'Guest / Customer' },
-                        {
-                            key: 'amount',
-                            label: 'Amount',
-                            render: (row) => `LKR ${row.amount.toLocaleString()}`,
-                        },
-                        { key: 'paymentMethod', label: 'Payment Method' },
-                        {
-                            key: 'paymentStatus',
-                            label: 'Status',
-                            render: (row) => (
-                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-400">
-                                    {row.paymentStatus}
-                                </span>
-                            ),
-                        },
-                        {
-                            key: 'createdAt',
-                            label: 'Date',
-                            render: (row) => new Date(row.createdAt).toLocaleDateString(),
-                        },
-                    ]}
-                    data={payments}
-                    loading={paymentsLoading}
-                    emptyMessage="No payments found"
-                    pagination={
-                        paymentsPagination
-                            ? {
-                                page: paymentsPagination.currentPage,
-                                totalPages: paymentsPagination.totalPages,
-                                total: paymentsPagination.totalItems,
-                                onPageChange: setPaymentsPage,
-                            }
-                            : undefined
-                    }
-                    selectable={false}
-                />
-            </div>
-
-            {/* Room Utilization Report */}
-            <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h2 className="text-2xl font-semibold mb-1">Room Utilization Report</h2>
-                        <p className="text-sm text-muted-foreground">
-                            Room occupancy status and booking statistics
-                        </p>
-                    </div>
-                    <div className="flex gap-2">
-                        <div>
-                            <SelectField
-                                value={roomsStatus}
-                                onChange={setRoomsStatus}
-                                placeholder="All statuses"
-                                options={[
-                                    { value: "all", label: "All statuses" },
-                                    { value: "available", label: "Available" },
-                                    { value: "unavailable", label: "Unavailable" },
-                                    { value: "maintenance", label: "Maintenance" },
-                                ]}
-                                className="w-[180px] h-10! min-h-10! max-h-10! search-gradient"
-                            />
-                        </div>
-                        <ExportActions
-                            onExport={handleExportRooms}
-                            disabled={roomsLoading || rooms.length === 0}
-                        />
-                    </div>
-                </div>
-                <DataTable
-                    columns={[
-                        { key: 'roomNumber', label: 'Room Number' },
-                        { key: 'roomType', label: 'Room Type' },
-                        { key: 'totalBookings', label: 'Total Bookings' },
-                        {
-                            key: 'status',
-                            label: 'Status',
-                            render: (row) => (
-                                <span
-                                    className={`px-2 py-1 rounded-full text-xs font-medium ${row.status === 'available'
-                                        ? 'bg-green-500/10 text-green-400'
-                                        : row.status === 'maintenance'
-                                            ? 'bg-yellow-500/10 text-yellow-400'
-                                            : 'bg-red-500/10 text-red-400'
-                                        }`}
-                                >
-                                    {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
-                                </span>
-                            ),
-                        },
-                    ]}
-                    data={rooms}
-                    loading={roomsLoading}
-                    emptyMessage="No rooms found"
-                    pagination={
-                        roomsPagination
-                            ? {
-                                page: roomsPagination.currentPage,
-                                totalPages: roomsPagination.totalPages,
-                                total: roomsPagination.totalItems,
-                                onPageChange: setRoomsPage,
-                            }
-                            : undefined
-                    }
-                    selectable={false}
-                />
-            </div>
-
-            {/* Service Request Report */}
-            <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
-                <div className="flex items-start justify-between gap-4">
-                    <div>
-                        <h2 className="text-2xl font-semibold mb-1">Service Request Report</h2>
-                        <p className="text-sm text-muted-foreground">
-                            Service requests with assignment and status information
-                        </p>
-                    </div>
-                    <div className="flex gap-2 items-center flex-wrap justify-end">
-                        <DateRangePicker
-                            value={serviceRequestsDateRange}
-                            onChange={setServiceRequestsDateRange}
-                            placeholder="Filter by date range"
-                            className="w-[280px] h-10! min-h-10! max-h-10!"
-                        />
-                        <div>
-                            <SelectField
-                                value={serviceRequestsStatus}
-                                onChange={setServiceRequestsStatus}
-                                placeholder="All statuses"
-                                options={[
-                                    { value: "all", label: "All statuses" },
-                                    { value: "pending", label: "Pending" },
-                                    { value: "in_progress", label: "In Progress" },
-                                    { value: "completed", label: "Completed" },
-                                ]}
-                                className="w-[180px] h-10! min-h-10! max-h-10! search-gradient"
-                            />
-                        </div>
-                        <ExportActions
-                            onExport={handleExportServiceRequests}
-                            disabled={serviceRequestsLoading || serviceRequests.length === 0}
-                        />
-                    </div>
-                </div>
-                <DataTable
-                    columns={[
-                        { key: '_id', label: 'Request ID' },
-                        {
-                            key: 'serviceType',
-                            label: 'Service Type',
-                            render: (row) =>
-                                row.serviceType
-                                    .split('_')
-                                    .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
-                                    .join(' '),
-                        },
-                        {
-                            key: 'room',
-                            label: 'Room',
-                            render: (row) => row.room?.roomNumber || 'N/A',
-                        },
-                        {
-                            key: 'assignedTo',
-                            label: 'Assigned Staff',
-                            render: (row) => row.assignedTo?.name || 'Unassigned',
-                        },
-                        {
-                            key: 'status',
-                            label: 'Status',
-                            render: (row) => (
-                                <span
-                                    className={`px-2 py-1 rounded-full text-xs font-medium ${row.status === 'completed'
-                                        ? 'bg-green-500/10 text-green-400'
-                                        : row.status === 'in_progress'
-                                            ? 'bg-blue-500/10 text-blue-400'
-                                            : 'bg-yellow-500/10 text-yellow-400'
-                                        }`}
-                                >
-                                    {row.status
-                                        .split('_')
-                                        .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
-                                        .join(' ')}
-                                </span>
-                            ),
-                        },
-                        {
-                            key: 'createdAt',
-                            label: 'Created',
-                            render: (row) => new Date(row.createdAt).toLocaleDateString(),
-                        },
-                    ]}
-                    data={serviceRequests}
-                    loading={serviceRequestsLoading}
-                    emptyMessage="No service requests found"
-                    pagination={
-                        serviceRequestsPagination
-                            ? {
-                                page: serviceRequestsPagination.currentPage,
-                                totalPages: serviceRequestsPagination.totalPages,
-                                total: serviceRequestsPagination.totalItems,
-                                onPageChange: setServiceRequestsPage,
-                            }
-                            : undefined
-                    }
-                    selectable={false}
-                />
+                    </TabsContent>
+                </Tabs>
             </div>
         </div>
     );

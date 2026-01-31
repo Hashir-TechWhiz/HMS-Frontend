@@ -178,7 +178,7 @@ const CheckoutPaymentDialog = ({
                             totalAmount={outstandingBalance}
                             onPaymentSuccess={handleCardPaymentSuccess}
                             onPaymentCancel={handleCardPaymentCancel}
-                            submitButtonText="Process Payment & Continue Checkout"
+                            submitButtonText="Pay & Checkout"
                             showTestModeNotice={true}
                         />
                     </TabsContent>
@@ -223,7 +223,7 @@ const CheckoutPaymentDialog = ({
                             </div>
 
                             {/* Action Buttons */}
-                            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                            <div className="flex flex-col sm:flex-row gap-3 pt-2 w-full">
                                 <Button
                                     type="button"
                                     variant="outline"

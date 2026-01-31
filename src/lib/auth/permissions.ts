@@ -13,6 +13,8 @@ export const ROUTE_PERMISSIONS: Record<string, UserRole[]> = {
     '/dashboard/operations': ['receptionist', 'admin'],
     '/dashboard/service-requests': ['receptionist', 'housekeeping', 'admin'],
     '/dashboard/rooms': ['admin'],
+    '/dashboard/facilities': ['admin'],
+    '/dashboard/facility-bookings': ['guest', 'receptionist', 'admin'],
     '/dashboard/service-catalog': ['admin'],
     '/dashboard/hotels': ['admin'],
     '/dashboard/guests': ['admin'],
@@ -22,6 +24,7 @@ export const ROUTE_PERMISSIONS: Record<string, UserRole[]> = {
     '/dashboard/roster': ['admin'],
     '/dashboard/my-roster': ['receptionist', 'housekeeping'],
     '/rooms': ['guest', 'receptionist', 'admin'],
+    '/facilities': ['guest', 'receptionist', 'admin'],
 };
 
 /**
@@ -35,6 +38,8 @@ export const PUBLIC_ROUTES: string[] = [
     '/sign-up',
     '/forgot-password',
     '/rooms',
+    '/facilities',
+    '/book-facility',
     '/services',
     '/about',
     '/contact-us',
