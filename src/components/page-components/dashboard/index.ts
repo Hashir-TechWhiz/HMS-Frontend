@@ -9,4 +9,4 @@ export { default as CheckoutPaymentDialog } from "./CheckoutPaymentDialog";
 export { default as CancellationPenaltyDialog } from "./CancellationPenaltyDialog";
 export { default as MyPaymentsPage } from "./MyPaymentsPage";
 export { default as InvoicesPage } from "./InvoicesPage";
-export { default as InvoicePreviewDialog } from "./InvoicePreviewDialog";
+export { default as InvoicePreviewContent } from "./InvoicePreviewContent";

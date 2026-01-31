@@ -2,17 +2,18 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getAllInvoices, IInvoice } from "@/services/invoiceService";
+import { getAllInvoices, IInvoice, downloadInvoicePDF } from "@/services/invoiceService";
 import { getActiveHotels } from "@/services/hotelService";
 import DataTable from "@/components/common/DataTable";
 import StatCard from "@/components/common/StatCard";
 import SelectField from "@/components/forms/SelectField";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
-import InvoicePreviewDialog from "./InvoicePreviewDialog";
+import DialogBox from "@/components/common/DialogBox";
+import InvoicePreviewContent from "./InvoicePreviewContent";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Eye, FileText, Building2, Calendar, DollarSign, Receipt } from "lucide-react";
+import { Eye, FileText, Building2, Calendar, DollarSign, Receipt, Printer, X } from "lucide-react";
 import { formatDateTime, normalizeDateRange } from "@/lib/utils";
 import { DateRange } from "react-day-picker";
 import {
@@ -38,6 +39,7 @@ const InvoicesPage = () => {
     // Dialog states
     const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
     const [selectedInvoice, setSelectedInvoice] = useState<IInvoice | null>(null);
+    const [downloading, setDownloading] = useState(false);
 
     const itemsPerPage = 10;
 
@@ -135,6 +137,21 @@ const InvoicesPage = () => {
     const handleViewInvoice = (invoice: IInvoice) => {
         setSelectedInvoice(invoice);
         setPreviewDialogOpen(true);
+    };
+
+    // Handle print invoice
+    const handlePrintInvoice = async () => {
+        if (!selectedInvoice) return;
+
+        try {
+            setDownloading(true);
+            await downloadInvoicePDF(selectedInvoice._id, selectedInvoice.invoiceNumber);
+            toast.success("Invoice PDF downloaded successfully!");
+        } catch {
+            toast.error("Failed to download invoice PDF");
+        } finally {
+            setDownloading(false);
+        }
     };
 
     // Get payment status badge color
@@ -276,7 +293,7 @@ const InvoicesPage = () => {
 
     // Filter options
     const paymentStatusOptions = [
-        { value: "all", label: "All Payment Statuses" },
+        { value: "all", label: "All Payments" },
         { value: "paid", label: "Paid" },
         { value: "partially_paid", label: "Partially Paid" },
         { value: "pending", label: "Pending" },
@@ -349,7 +366,7 @@ const InvoicesPage = () => {
                                     setHotelFilter(v);
                                     setCurrentPage(1);
                                 }}
-                                width="md:w-[350px]"
+                                width="md:w-[260px]"
                                 className="text-xs md:text-sm h-11!"
                             />
                         )}
@@ -361,7 +378,7 @@ const InvoicesPage = () => {
                                 setPaymentStatusFilter(v);
                                 setCurrentPage(1);
                             }}
-                            width="md:w-[180px]"
+                            width="md:w-[250px]"
                             className="text-xs md:text-sm h-11!"
                         />
                         <DateRangePicker
@@ -370,7 +387,7 @@ const InvoicesPage = () => {
                                 setDateRange(v);
                                 setCurrentPage(1);
                             }}
-                            className="w-full md:max-w-sm"
+                            className="w-full md:max-w-xs"
                         />
                     </div>
                 </div>
@@ -391,14 +408,47 @@ const InvoicesPage = () => {
             </div>
 
             {/* Invoice Preview Dialog */}
-            <InvoicePreviewDialog
-                invoice={selectedInvoice}
+            <DialogBox
                 open={previewDialogOpen}
-                onClose={() => {
-                    setPreviewDialogOpen(false);
-                    setSelectedInvoice(null);
+                onOpenChange={(isOpen) => {
+                    if (!isOpen) {
+                        setPreviewDialogOpen(false);
+                        setSelectedInvoice(null);
+                    }
                 }}
-            />
+                title="Invoice Preview"
+                widthClass="max-w-3xl"
+                showFooter={false}
+            >
+                {selectedInvoice && (
+                    <>
+                        <InvoicePreviewContent invoice={selectedInvoice} />
+
+                        {/* Custom action buttons */}
+                        <div className="flex justify-end gap-2 pt-4 border-t">
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setPreviewDialogOpen(false);
+                                    setSelectedInvoice(null);
+                                }}
+                                className="flex items-center gap-2"
+                            >
+                                <X className="h-4 w-4" />
+                                Close
+                            </Button>
+                            <Button
+                                onClick={handlePrintInvoice}
+                                disabled={downloading}
+                                className="flex items-center gap-2"
+                            >
+                                <Printer className="h-4 w-4" />
+                                {downloading ? "Downloading..." : "Print Invoice"}
+                            </Button>
+                        </div>
+                    </>
+                )}
+            </DialogBox>
         </div>
     );
 };

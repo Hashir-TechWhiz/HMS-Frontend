@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import InputField from "@/components/forms/InputField";
 import FlexiblePaymentDialog, { PaymentChoice } from "@/components/page-components/dashboard/FlexiblePaymentDialog";
-import WalkInPaymentDialog from "@/components/page-components/dashboard/WalkInPaymentDialog";
+import WalkInPaymentDialog, { WalkInPaymentChoice } from "@/components/page-components/dashboard/WalkInPaymentDialog";
 
 interface BookingFormData {
     checkInDate: Date;
@@ -303,10 +303,9 @@ const BookingPage: FC = () => {
         toast.info("Booking cancelled");
     };
 
-    const handleWalkInPaymentSuccess = async (paymentMethod: "card" | "cash") => {
+    const handleWalkInPaymentSuccess = async (choice: WalkInPaymentChoice) => {
         setShowWalkInPaymentDialog(false);
 
-        // Payment successful - NOW create the walk-in booking
         if (!pendingBookingData || !roomId) {
             toast.error("Booking data not found");
             return;
@@ -327,29 +326,48 @@ const BookingPage: FC = () => {
                 },
             };
 
-            // Create the walk-in booking (payment already processed)
+            // Add payment data if payment was collected
+            if (choice.type !== 'skip' && choice.amount && choice.amount > 0 && choice.paymentMethod) {
+                const totalAmount = calculateTotalPrice();
+                bookingData.paymentData = {
+                    amount: choice.amount,
+                    paymentMethod: choice.paymentMethod,
+                    notes: choice.type === 'partial' 
+                        ? `Partial ${choice.paymentMethod} payment at booking (${choice.amount} of ${totalAmount})` 
+                        : `Full ${choice.paymentMethod} payment at booking`,
+                };
+            }
+
+            // Create the walk-in booking
             const response = await createBooking(bookingData);
 
             if (response.success && response.data) {
-                // Walk-in booking created successfully after payment
                 const customerName = pendingBookingData.customerName;
-                const successMessage = customerName
+                let successMessage = customerName
                     ? `Walk-in booking created successfully for ${customerName}!`
                     : "Walk-in booking created successfully!";
+                
+                if (choice.type === 'skip') {
+                    successMessage += " Customer can pay anytime before checkout.";
+                } else if (choice.type === 'partial') {
+                    const remaining = calculateTotalPrice() - (choice.amount || 0);
+                    successMessage += ` ${choice.paymentMethod === 'card' ? 'Card' : 'Cash'} payment of LKR ${choice.amount?.toLocaleString()} received. Remaining balance: LKR ${remaining.toLocaleString()}.`;
+                } else if (choice.type === 'full') {
+                    successMessage += ` Full ${choice.paymentMethod === 'card' ? 'card' : 'cash'} payment received. No balance due at checkout.`;
+                }
 
-                toast.success(`${paymentMethod === "card" ? "Card" : "Cash"} payment confirmed. ${successMessage}`);
+                toast.success(successMessage);
 
                 // Clear temporary data
                 setPendingBookingData(null);
 
                 router.push("/dashboard");
             } else {
-                // Booking creation failed
-                toast.error(response.message || "Failed to create walk-in booking. Please contact support as payment was processed.");
+                toast.error(response.message || "Failed to create walk-in booking.");
             }
         } catch (err) {
-            console.error("Error creating walk-in booking after payment:", err);
-            toast.error("Failed to create booking. Please contact support as payment was processed.");
+            console.error("Error creating walk-in booking:", err);
+            toast.error("Failed to create booking. Please try again.");
         } finally {
             setSubmitting(false);
         }
