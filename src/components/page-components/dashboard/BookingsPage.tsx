@@ -590,7 +590,7 @@ const BookingsPage = () => {
                             className="h-8 px-2 bg-purple-600 hover:bg-purple-700 border-purple-700"
                             title="Check Out"
                         >
-                            <CheckCircle className="h-4 w-4" />
+                            <CheckCircle className="h-4 w-4 text-white" />
                         </Button>
                     )}
 
@@ -733,7 +733,7 @@ const BookingsPage = () => {
                             onClick={() => handleCheckOutClick(booking)}
                             className="h-8 px-2 bg-purple-600 hover:bg-purple-700 border-purple-700"
                         >
-                            <CheckCircle className="h-4 w-4" />
+                            <CheckCircle className="h-4 w-4 text-white" />
                         </Button>
                     )}
                     <Button
@@ -834,8 +834,8 @@ const BookingsPage = () => {
                                         ]}
                                         value={hotelFilter}
                                         onChange={(v) => { setHotelFilter(v); setCurrentPage(1); }}
-                                        width="md:w-[250px]"
-                                        className="text-xs md:text-sm h-11!"
+                                        width="md:w-[350px]"
+                                        className="bg-black-500! border border-white/50 focus:ring-1! focus:ring-primary-800! text-xs md:text-sm h-11!"
                                     />
                                 )}
                                 <SelectField
@@ -843,15 +843,15 @@ const BookingsPage = () => {
                                     options={statusFilterOptions}
                                     value={statusFilter}
                                     onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
-                                    width="md:w-[150px]"
-                                    className="text-xs md:text-sm h-11!"
+                                    width="md:w-[250px]"
+                                    className="bg-black-500! border border-white/50 focus:ring-1! focus:ring-primary-800! text-xs md:text-sm h-11!"
                                 />
                             </>
                         )}
                         <DateRangePicker
                             value={dateRange}
                             onChange={handleDateRangeChange}
-                            className="w-full md:max-w-sm"
+                            className="w-full md:max-w-xs"
                         />
                     </div>
                 </div>
@@ -1009,10 +1009,10 @@ const BookingsPage = () => {
                                             <div className="flex justify-between items-center mt-2">
                                                 <p className="text-xs text-gray-400">Payment Status</p>
                                                 <span className={`px-2 py-1 rounded text-xs font-medium ${selectedBooking.paymentStatus === 'paid'
-                                                        ? 'bg-green-500/20 text-green-400 border border-green-500/50'
-                                                        : selectedBooking.paymentStatus === 'partially_paid'
-                                                            ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50'
-                                                            : 'bg-red-500/20 text-red-400 border border-red-500/50'
+                                                    ? 'bg-green-500/20 text-green-400 border border-green-500/50'
+                                                    : selectedBooking.paymentStatus === 'partially_paid'
+                                                        ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50'
+                                                        : 'bg-red-500/20 text-red-400 border border-red-500/50'
                                                     }`}>
                                                     {selectedBooking.paymentStatus === 'paid' ? 'Fully Paid' :
                                                         selectedBooking.paymentStatus === 'partially_paid' ? 'Partially Paid' : 'Unpaid'}

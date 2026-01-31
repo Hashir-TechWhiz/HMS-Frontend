@@ -367,7 +367,7 @@ const InvoicesPage = () => {
                                     setCurrentPage(1);
                                 }}
                                 width="md:w-[260px]"
-                                className="text-xs md:text-sm h-11!"
+                                className="bg-black-500! border border-white/50 focus:ring-1! focus:ring-primary-800! text-xs md:text-sm h-10!"
                             />
                         )}
                         <SelectField
@@ -379,7 +379,7 @@ const InvoicesPage = () => {
                                 setCurrentPage(1);
                             }}
                             width="md:w-[250px]"
-                            className="text-xs md:text-sm h-11!"
+                            className="bg-black-500! border border-white/50 focus:ring-1! focus:ring-primary-800! text-xs md:text-sm h-10!"
                         />
                         <DateRangePicker
                             value={dateRange}
@@ -387,7 +387,7 @@ const InvoicesPage = () => {
                                 setDateRange(v);
                                 setCurrentPage(1);
                             }}
-                            className="w-full md:max-w-xs"
+                            className="w-full md:max-w-xs h-10!"
                         />
                     </div>
                 </div>
@@ -425,14 +425,14 @@ const InvoicesPage = () => {
                         <InvoicePreviewContent invoice={selectedInvoice} />
 
                         {/* Custom action buttons */}
-                        <div className="flex justify-end gap-2 pt-4 border-t">
+                        <div className="flex gap-2 py-4 border-t w-full">
                             <Button
                                 variant="outline"
                                 onClick={() => {
                                     setPreviewDialogOpen(false);
                                     setSelectedInvoice(null);
                                 }}
-                                className="flex items-center gap-2"
+                                className="flex-1 items-center gap-2 h-10"
                             >
                                 <X className="h-4 w-4" />
                                 Close
@@ -440,7 +440,7 @@ const InvoicesPage = () => {
                             <Button
                                 onClick={handlePrintInvoice}
                                 disabled={downloading}
-                                className="flex items-center gap-2"
+                                className="flex-1 main-button-gradient"
                             >
                                 <Printer className="h-4 w-4" />
                                 {downloading ? "Downloading..." : "Print Invoice"}

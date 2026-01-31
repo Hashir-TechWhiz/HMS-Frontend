@@ -274,10 +274,8 @@ export const confirmBooking = async (bookingId: string): Promise<ApiResponse<IBo
  */
 export interface CheckInData {
     nicPassport: string;
-    nationality: string;
     phoneNumber: string;
     country: string;
-    visaDetails?: string;
 }
 
 /**

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -72,14 +71,7 @@ const SidebarNavigations = ({ items }: { items: NavSection[] }) => {
                         : "text-primary-100 hover:bg-white/10 hover:text-primary-300"
                     )}
                   >
-                    <div className="relative w-5 h-5 shrink-0">
-                      <Image
-                        src={link.icon}
-                        alt={link.label}
-                        fill
-                        className="object-contain"
-                      />
-                    </div>
+                    <link.icon className="w-4.5 h-4.5 shrink-0 text-primary-100" />
 
                     {!isCollapsed && <span>{link.label}</span>}
                   </Link>

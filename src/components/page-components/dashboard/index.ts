@@ -10,3 +10,5 @@ export { default as CancellationPenaltyDialog } from "./CancellationPenaltyDialo
 export { default as MyPaymentsPage } from "./MyPaymentsPage";
 export { default as InvoicesPage } from "./InvoicesPage";
 export { default as InvoicePreviewContent } from "./InvoicePreviewContent";
+export { default as FacilitiesPage } from "./FacilitiesPage";
+export { default as FacilityBookingsPage } from "./FacilityBookingsPage";

@@ -29,13 +29,12 @@ import SelectField from "@/components/forms/SelectField";
 import InputField from "@/components/forms/InputField";
 import TextAreaField from "@/components/forms/TextAreaField";
 
-import { ChevronLeft, ChevronRight, CalendarDays, UserCircle, Trash2, Edit2, Info, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, UserCircle, Trash2, Edit2, Info, Plus, Clock } from "lucide-react";
 
 // Predefined shift templates
 const SHIFT_TEMPLATES = {
     morning: { start: "06:00", end: "14:00", label: "Morning (6am-2pm)" },
     afternoon: { start: "14:00", end: "22:00", label: "Afternoon (2pm-10pm)" },
-    evening: { start: "18:00", end: "02:00", label: "Evening (6pm-2am)" },
     night: { start: "22:00", end: "06:00", label: "Night (10pm-6am)" },
 };
 
@@ -472,8 +471,6 @@ const RosterPage = () => {
                 return "bg-amber-500/20 text-amber-300 border-amber-500/40";
             case "afternoon":
                 return "bg-blue-500/20 text-blue-300 border-blue-500/40";
-            case "evening":
-                return "bg-purple-500/20 text-purple-300 border-purple-500/40";
             case "night":
                 return "bg-indigo-500/20 text-indigo-300 border-indigo-500/40";
             default:
@@ -491,7 +488,6 @@ const RosterPage = () => {
     const shiftTypeOptions: Option[] = [
         { value: "morning", label: SHIFT_TEMPLATES.morning.label },
         { value: "afternoon", label: SHIFT_TEMPLATES.afternoon.label },
-        { value: "evening", label: SHIFT_TEMPLATES.evening.label },
         { value: "night", label: SHIFT_TEMPLATES.night.label },
     ];
 
@@ -505,14 +501,14 @@ const RosterPage = () => {
                         Weekly shift planning and scheduling
                     </p>
                 </div>
-                <Button
+                {/* <Button
                     onClick={handleQuickAssignClick}
                     className="flex items-center gap-2"
                     disabled={!selectedHotelId || filteredStaff.length === 0}
                 >
                     <Plus className="h-4 w-4" />
                     Assign Shift
-                </Button>
+                </Button> */}
             </div>
 
             {/* Controls */}
@@ -703,14 +699,25 @@ const RosterPage = () => {
             </div>
 
             {/* Legend */}
-            <div className="p-4 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient">
-                <h3 className="text-sm font-semibold text-primary-100 mb-3">Shift Types</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="p-6 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/10">
+                <div className="flex items-center gap-2 mb-5">
+                    <Clock className="h-5 w-5 text-primary-400" />
+                    <h3 className="text-base font-semibold text-primary-100">Shift Types Legend</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {Object.entries(SHIFT_TEMPLATES).map(([key, template]) => (
-                        <div key={key} className="flex items-center gap-2">
-                            <div className={`w-4 h-4 rounded border ${getShiftColor(key as ShiftType)}`}></div>
-                            <span className="text-sm text-primary-200 capitalize">{key}</span>
-                            <span className="text-xs text-primary-500">({template.start}-{template.end})</span>
+                        <div
+                            key={key}
+                            className={`p-4 rounded-lg border-2 transition-all hover:shadow-lg hover:scale-[1.02] ${getShiftColor(key as ShiftType)}`}
+                        >
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className={`w-4 h-4 rounded border-2 ${getShiftColor(key as ShiftType)}`}></div>
+                                <span className="text-sm font-semibold capitalize tracking-wide">{key} Shift</span>
+                            </div>
+                            <div className="flex items-center gap-2 pl-7">
+                                <Clock className="h-3.5 w-3.5 opacity-80" />
+                                <span className="text-xs font-medium opacity-90">{template.start} - {template.end}</span>
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -763,16 +770,16 @@ const RosterPage = () => {
                             )}
                         </div>
 
-                        <div className="flex justify-end gap-3 pt-4 border-t border-primary-800/50">
+                        <div className="flex gap-3 py-4 border-t border-primary-800/50">
                             <Button
                                 variant="outline"
                                 onClick={handleDeleteShift}
-                                className="text-red-400 hover:text-red-300"
+                                className="flex-1 text-red-400 hover:text-red-300 h-10"
                             >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Remove Shift
                             </Button>
-                            <Button onClick={handleEditShift}>
+                            <Button onClick={handleEditShift} className="flex-1 main-button-gradient">
                                 <Edit2 className="h-4 w-4 mr-2" />
                                 Edit Shift
                             </Button>
@@ -830,16 +837,17 @@ const RosterPage = () => {
                         rows={3}
                     />
 
-                    <div className="flex justify-end gap-3 pt-4">
+                    <div className="flex gap-3 py-4 w-full border-t">
                         <Button
                             type="button"
                             variant="outline"
                             onClick={() => setShiftDialogOpen(false)}
                             disabled={formLoading}
+                            className="flex-1 h-10"
                         >
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={formLoading}>
+                        <Button type="submit" disabled={formLoading} className="flex-1 main-button-gradient">
                             {formLoading ? "Saving..." : selectedCell?.existingRoster ? "Update Shift" : "Assign Shift"}
                         </Button>
                     </div>
@@ -943,7 +951,7 @@ const RosterPage = () => {
                         rows={3}
                     />
 
-                    <div className="flex justify-end gap-3 pt-4">
+                    <div className="flex gap-3 pt-4 w-full">
                         <Button
                             type="button"
                             variant="outline"

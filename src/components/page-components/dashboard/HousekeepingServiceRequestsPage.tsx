@@ -315,7 +315,7 @@ const HousekeepingServiceRequestsPage = () => {
                     value={statusFilter}
                     onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
                     width="md:w-[250px]"
-                    className="text-xs md:text-sm h-11!"
+                    className="bg-black-500! border border-white/50 focus:ring-1! focus:ring-primary-800! text-xs md:text-sm h-10!"
                 />
             </div>
 

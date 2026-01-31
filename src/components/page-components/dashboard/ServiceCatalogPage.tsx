@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, CheckCircle2, XCircle } from "lucide-react";
 import ServiceCatalogForm from "./ServiceCatalogForm";
-import { Badge } from "@/components/ui/badge";
 
 const ServiceCatalogPage = () => {
     const { role, user } = useAuth();
@@ -21,6 +20,8 @@ const ServiceCatalogPage = () => {
     const [catalog, setCatalog] = useState<IServiceCatalog[]>([]);
     const [loading, setLoading] = useState(true);
     const [dialogOpen, setDialogOpen] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [deleteLoading, setDeleteLoading] = useState(false);
     const [selectedService, setSelectedService] = useState<IServiceCatalog | null>(null);
     const [availableHotels, setAvailableHotels] = useState<IHotel[]>([]);
     const [filterHotel, setFilterHotel] = useState<string>("");
@@ -66,7 +67,7 @@ const ServiceCatalogPage = () => {
             if (response.success && response.data) {
                 setCatalog(response.data);
             }
-        } catch (error) {
+        } catch {
             toast.error("Failed to fetch service catalog");
         } finally {
             setLoading(false);
@@ -89,20 +90,28 @@ const ServiceCatalogPage = () => {
         setDialogOpen(true);
     };
 
-    const handleDeleteClick = async (id: string) => {
-        if (!hotelId) return;
-        if (!confirm("Are you sure you want to delete this service?")) return;
+    const handleDeleteClick = (service: IServiceCatalog) => {
+        setSelectedService(service);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!hotelId || !selectedService) return;
 
         try {
-            const response = await deleteServiceCatalog(hotelId, id);
+            setDeleteLoading(true);
+            const response = await deleteServiceCatalog(hotelId, selectedService._id);
             if (response.success) {
                 toast.success("Service deleted successfully");
+                setDeleteDialogOpen(false);
                 fetchCatalog();
             } else {
                 toast.error(response.message || "Failed to delete service");
             }
-        } catch (error) {
+        } catch {
             toast.error("An error occurred");
+        } finally {
+            setDeleteLoading(false);
         }
     };
 
@@ -147,7 +156,7 @@ const ServiceCatalogPage = () => {
                     <Button size="sm" variant="outline" onClick={() => handleEditClick(item)} className="h-8 px-2">
                         <Edit className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" variant="destructive" onClick={() => handleDeleteClick(item._id)} className="h-8 px-2">
+                    <Button size="sm" variant="destructive" onClick={() => handleDeleteClick(item)} className="h-8 px-2">
                         <Trash2 className="h-4 w-4" />
                     </Button>
                 </div>
@@ -156,7 +165,8 @@ const ServiceCatalogPage = () => {
     ];
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 p-5 rounded-xl border-2 border-gradient border-primary-900/40 table-bg-gradient shadow-lg shadow-primary-900/15">
+
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-white">Service Catalog</h1>
@@ -171,31 +181,29 @@ const ServiceCatalogPage = () => {
                             ]}
                             value={filterHotel}
                             onChange={setFilterHotel}
-                            width="md:w-[200px]"
-                            className="text-xs md:text-sm h-11!"
+                            width="md:w-[250px]"
+                            className="bg-black-500! border border-white/50 focus:ring-1! focus:ring-primary-800! text-xs md:text-sm h-10!"
                         />
                     )}
                     <Button onClick={handleAddClick} className="main-button-gradient gap-2">
                         <Plus className="h-4 w-4" />
-                        Add Service
+                        Add a Service
                     </Button>
                 </div>
             </div>
 
-            <div className="bg-primary-900/10 border border-white/10 rounded-xl p-5">
-                <DataTable
-                    columns={columns}
-                    data={catalog}
-                    loading={loading}
-                    emptyMessage="No services defined in the catalog."
-                    pagination={{
-                        page: 1,
-                        totalPages: 1,
-                        total: catalog.length,
-                        onPageChange: () => { },
-                    }}
-                />
-            </div>
+            <DataTable
+                columns={columns}
+                data={catalog}
+                loading={loading}
+                emptyMessage="No services defined in the catalog."
+                pagination={{
+                    page: 1,
+                    totalPages: 1,
+                    total: catalog.length,
+                    onPageChange: () => { },
+                }}
+            />
 
             <DialogBox
                 open={dialogOpen}
@@ -213,6 +221,21 @@ const ServiceCatalogPage = () => {
                     onCancel={() => setDialogOpen(false)}
                 />
             </DialogBox>
+
+            {/* Delete Confirmation Dialog */}
+            <DialogBox
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
+                title="Delete Service"
+                description={`Are you sure you want to delete "${selectedService?.displayName}"? This action cannot be undone.`}
+                showFooter
+                confirmText="Delete Service"
+                cancelText="Cancel"
+                onConfirm={handleDeleteConfirm}
+                onCancel={() => setDeleteDialogOpen(false)}
+                confirmLoading={deleteLoading}
+                variant="danger"
+            />
         </div>
     );
 };
