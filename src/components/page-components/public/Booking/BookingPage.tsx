@@ -17,8 +17,8 @@ import { createBooking, CreateBookingData, checkAvailability } from "@/services/
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import InputField from "@/components/forms/InputField";
-import PaymentDialog from "@/components/page-components/dashboard/PaymentDialog";
-import WalkInPaymentDialog from "@/components/page-components/dashboard/WalkInPaymentDialog";
+import FlexiblePaymentDialog, { PaymentChoice } from "@/components/page-components/dashboard/FlexiblePaymentDialog";
+import WalkInPaymentDialog, { WalkInPaymentChoice } from "@/components/page-components/dashboard/WalkInPaymentDialog";
 
 interface BookingFormData {
     checkInDate: Date;
@@ -38,7 +38,7 @@ const BookingPage: FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
-    const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+    const [showFlexiblePaymentDialog, setShowFlexiblePaymentDialog] = useState(false);
     const [showWalkInPaymentDialog, setShowWalkInPaymentDialog] = useState(false);
     const [pendingBookingData, setPendingBookingData] = useState<BookingFormData | null>(null);
 
@@ -221,10 +221,11 @@ const BookingPage: FC = () => {
             setPendingBookingData(data);
 
             // Open appropriate payment dialog based on user role
-            // Note: Booking is NOT created yet - it will be created after successful payment
             if (!isReceptionistOrAdmin) {
-                setShowPaymentDialog(true);
+                // Guest: Show flexible payment dialog (skip, partial, full)
+                setShowFlexiblePaymentDialog(true);
             } else {
+                // Staff: Show walk-in payment dialog (always full payment)
                 setShowWalkInPaymentDialog(true);
             }
         } catch (err) {
@@ -235,10 +236,9 @@ const BookingPage: FC = () => {
         }
     };
 
-    const handlePaymentSuccess = async () => {
-        setShowPaymentDialog(false);
+    const handlePaymentChoice = async (choice: PaymentChoice) => {
+        setShowFlexiblePaymentDialog(false);
 
-        // Payment successful - NOW create the booking
         if (!pendingBookingData || !roomId) {
             toast.error("Booking data not found");
             return;
@@ -254,12 +254,32 @@ const BookingPage: FC = () => {
                 checkOutDate: new Date(pendingBookingData.checkOutDate).toISOString(),
             };
 
-            // Create the booking (payment already processed)
+            // Add payment data if payment was made
+            if (choice.type !== 'skip' && choice.amount && choice.amount > 0) {
+                bookingData.paymentData = {
+                    amount: choice.amount,
+                    paymentMethod: 'card',
+                    notes: choice.type === 'partial' 
+                        ? `Partial payment at booking (${choice.amount} of ${calculateTotalPrice()})` 
+                        : 'Full payment at booking',
+                };
+            }
+
+            // Create the booking
             const response = await createBooking(bookingData);
 
             if (response.success && response.data) {
-                // Booking created successfully after payment
-                const successMessage = "Booking request submitted successfully! Awaiting confirmation.";
+                let successMessage = "Booking request submitted successfully! Awaiting confirmation.";
+                
+                if (choice.type === 'skip') {
+                    successMessage += " You can make payment anytime before checkout.";
+                } else if (choice.type === 'partial') {
+                    const remaining = calculateTotalPrice() - (choice.amount || 0);
+                    successMessage += ` Partial payment of LKR ${choice.amount?.toLocaleString()} received. Remaining balance: LKR ${remaining.toLocaleString()}.`;
+                } else if (choice.type === 'full') {
+                    successMessage += " Full payment received. No balance due at checkout.";
+                }
+                
                 toast.success(successMessage);
 
                 // Clear temporary data
@@ -267,32 +287,25 @@ const BookingPage: FC = () => {
 
                 router.push("/dashboard");
             } else {
-                // Booking creation failed (e.g., room unavailable due to race condition)
-                toast.error(response.message || "Failed to create booking. Please contact support as payment was processed.");
-                // Note: In production, this would require refund handling
+                toast.error(response.message || "Failed to create booking");
             }
         } catch (err) {
-            console.error("Error creating booking after payment:", err);
-            toast.error("Failed to create booking. Please contact support as payment was processed.");
+            console.error("Error creating booking:", err);
+            toast.error("Failed to create booking. Please try again.");
         } finally {
             setSubmitting(false);
         }
     };
 
-    const handlePaymentCancel = () => {
-        setShowPaymentDialog(false);
-
-        // Clear temporary booking data
-        // Note: No booking was created yet, so nothing to cancel in the database
+    const handleFlexiblePaymentCancel = () => {
+        setShowFlexiblePaymentDialog(false);
         setPendingBookingData(null);
-
-        toast.info("Payment cancelled. No booking was created.");
+        toast.info("Booking cancelled");
     };
 
-    const handleWalkInPaymentSuccess = async (paymentMethod: "card" | "cash") => {
+    const handleWalkInPaymentSuccess = async (choice: WalkInPaymentChoice) => {
         setShowWalkInPaymentDialog(false);
 
-        // Payment successful - NOW create the walk-in booking
         if (!pendingBookingData || !roomId) {
             toast.error("Booking data not found");
             return;
@@ -313,29 +326,48 @@ const BookingPage: FC = () => {
                 },
             };
 
-            // Create the walk-in booking (payment already processed)
+            // Add payment data if payment was collected
+            if (choice.type !== 'skip' && choice.amount && choice.amount > 0 && choice.paymentMethod) {
+                const totalAmount = calculateTotalPrice();
+                bookingData.paymentData = {
+                    amount: choice.amount,
+                    paymentMethod: choice.paymentMethod,
+                    notes: choice.type === 'partial' 
+                        ? `Partial ${choice.paymentMethod} payment at booking (${choice.amount} of ${totalAmount})` 
+                        : `Full ${choice.paymentMethod} payment at booking`,
+                };
+            }
+
+            // Create the walk-in booking
             const response = await createBooking(bookingData);
 
             if (response.success && response.data) {
-                // Walk-in booking created successfully after payment
                 const customerName = pendingBookingData.customerName;
-                const successMessage = customerName
+                let successMessage = customerName
                     ? `Walk-in booking created successfully for ${customerName}!`
                     : "Walk-in booking created successfully!";
+                
+                if (choice.type === 'skip') {
+                    successMessage += " Customer can pay anytime before checkout.";
+                } else if (choice.type === 'partial') {
+                    const remaining = calculateTotalPrice() - (choice.amount || 0);
+                    successMessage += ` ${choice.paymentMethod === 'card' ? 'Card' : 'Cash'} payment of LKR ${choice.amount?.toLocaleString()} received. Remaining balance: LKR ${remaining.toLocaleString()}.`;
+                } else if (choice.type === 'full') {
+                    successMessage += ` Full ${choice.paymentMethod === 'card' ? 'card' : 'cash'} payment received. No balance due at checkout.`;
+                }
 
-                toast.success(`${paymentMethod === "card" ? "Card" : "Cash"} payment confirmed. ${successMessage}`);
+                toast.success(successMessage);
 
                 // Clear temporary data
                 setPendingBookingData(null);
 
                 router.push("/dashboard");
             } else {
-                // Booking creation failed
-                toast.error(response.message || "Failed to create walk-in booking. Please contact support as payment was processed.");
+                toast.error(response.message || "Failed to create walk-in booking.");
             }
         } catch (err) {
-            console.error("Error creating walk-in booking after payment:", err);
-            toast.error("Failed to create booking. Please contact support as payment was processed.");
+            console.error("Error creating walk-in booking:", err);
+            toast.error("Failed to create booking. Please try again.");
         } finally {
             setSubmitting(false);
         }
@@ -758,14 +790,14 @@ const BookingPage: FC = () => {
                 </div>
             </div>
 
-            {/* Payment Dialog - Only for guest users */}
+            {/* Flexible Payment Dialog - Only for guest users */}
             {!isReceptionistOrAdmin && (
-                <PaymentDialog
-                    open={showPaymentDialog}
-                    onOpenChange={setShowPaymentDialog}
+                <FlexiblePaymentDialog
+                    open={showFlexiblePaymentDialog}
+                    onOpenChange={setShowFlexiblePaymentDialog}
                     totalAmount={calculateTotalPrice()}
-                    onPaymentSuccess={handlePaymentSuccess}
-                    onPaymentCancel={handlePaymentCancel}
+                    onPaymentChoice={handlePaymentChoice}
+                    onCancel={handleFlexiblePaymentCancel}
                 />
             )}
 

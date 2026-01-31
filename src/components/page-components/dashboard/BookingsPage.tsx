@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHotel } from "@/contexts/HotelContext";
-import { getAllBookings, getMyBookings, cancelBooking, confirmBooking, checkInBooking, checkOutBooking } from "@/services/bookingService";
+import { getAllBookings, getMyBookings, cancelBooking, confirmBooking } from "@/services/bookingService";
 import { getBookingsReport } from "@/services/reportService";
 import { getActiveHotels } from "@/services/hotelService";
 import DataTable from "@/components/common/DataTable";
@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/tooltip";
 
 const BookingsPage = () => {
-    const { role, loading: authLoading } = useAuth();
+    const { role, loading: authLoading, user } = useAuth();
     const { selectedHotel } = useHotel();
 
     const [allBookings, setAllBookings] = useState<IBooking[]>([]);
@@ -54,8 +54,6 @@ const BookingsPage = () => {
     const [selectedBooking, setSelectedBooking] = useState<IBooking | null>(null);
     const [cancelLoading, setCancelLoading] = useState(false);
     const [confirmLoading, setConfirmLoading] = useState(false);
-    const [checkInLoading, setCheckInLoading] = useState(false);
-    const [checkOutLoading, setCheckOutLoading] = useState(false);
 
     // Penalty states
     const [penaltyAmount, setPenaltyAmount] = useState(0);
@@ -350,22 +348,34 @@ const BookingsPage = () => {
 
     // Get guest/customer name
     const getCustomerName = (booking: IBooking): string => {
+        // Check if guest is populated as an object
         if (booking.guest && typeof booking.guest === "object") {
             return booking.guest.name;
         }
+        // Check customer details (for walk-in bookings)
         if (booking.customerDetails) {
             return booking.customerDetails.name;
+        }
+        // Fallback: If guest is viewing their own booking, use authenticated user's name
+        if (role === "guest" && user && booking.guest) {
+            return user.name;
         }
         return "N/A";
     };
 
-    // Get guest/customer phone
+    // Get guest/customer contact (email or phone)
     const getCustomerPhone = (booking: IBooking): string => {
+        // Check if guest is populated as an object
         if (booking.guest && typeof booking.guest === "object") {
             return booking.guest.email;
         }
+        // Check customer details (for walk-in bookings)
         if (booking.customerDetails) {
             return booking.customerDetails.phone;
+        }
+        // Fallback: If guest is viewing their own booking, use authenticated user's email
+        if (role === "guest" && user && booking.guest) {
+            return user.email;
         }
         return "N/A";
     };
@@ -397,6 +407,47 @@ const BookingsPage = () => {
             return booking.room.roomType;
         }
         return "N/A";
+    };
+
+    // Get hotel name
+    const getHotelName = (booking: IBooking): string => {
+        if (booking.hotelId && typeof booking.hotelId === "object") {
+            return booking.hotelId.name;
+        }
+        return "N/A";
+    };
+
+    // Get hotel location
+    const getHotelLocation = (booking: IBooking): string => {
+        if (booking.hotelId && typeof booking.hotelId === "object") {
+            const hotel = booking.hotelId;
+            return `${hotel.city}, ${hotel.country}`;
+        }
+        return "N/A";
+    };
+
+    // Get hotel address
+    const getHotelAddress = (booking: IBooking): string => {
+        if (booking.hotelId && typeof booking.hotelId === "object") {
+            return booking.hotelId.address;
+        }
+        return "N/A";
+    };
+
+    // Get room price per night
+    const getRoomPrice = (booking: IBooking): number => {
+        if (booking.room && typeof booking.room === "object") {
+            return booking.room.pricePerNight || 0;
+        }
+        return 0;
+    };
+
+    // Calculate number of nights
+    const calculateNights = (booking: IBooking): number => {
+        const checkIn = new Date(booking.checkInDate);
+        const checkOut = new Date(booking.checkOutDate);
+        const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+        return nights > 0 ? nights : 0;
     };
 
     // Status badge
@@ -519,7 +570,7 @@ const BookingsPage = () => {
                                             className="h-8 px-2 bg-blue-600 hover:bg-blue-700 border-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                             title="Check In"
                                         >
-                                            <CheckCircle2 className="h-4 w-4" />
+                                            <CheckCircle2 className="h-4 w-4 text-white" />
                                         </Button>
                                     </span>
                                 </TooltipTrigger>
@@ -815,78 +866,166 @@ const BookingsPage = () => {
                     open={viewDialogOpen}
                     onOpenChange={setViewDialogOpen}
                     title="Booking Details"
-                    widthClass="max-w-2xl"
+                    widthClass="max-w-3xl"
                 >
                     {selectedBooking && (
-                        <div className="space-y-4 py-4">
-                            <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-5 py-4">
+                            {/* Header Section - Booking ID and Status */}
+                            <div className="flex justify-between items-start pb-3 border-b border-gray-700">
                                 <div>
-                                    <p className="text-sm text-gray-400">Booking ID</p>
-                                    <p className="text-sm font-medium">{selectedBooking._id}</p>
+                                    <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Booking Reference</p>
+                                    <p className="text-base font-mono font-semibold text-white">{selectedBooking._id}</p>
                                 </div>
-                                <div>
-                                    <p className="text-sm text-gray-400">Status</p>
+                                <div className="text-right">
+                                    <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Status</p>
                                     <StatusBadge status={selectedBooking.status} />
                                 </div>
                             </div>
-                            <div className="border-t border-gray-700 pt-4">
-                                <h3 className="text-sm font-semibold mb-3">Customer Information</h3>
+
+                            {/* Hotel Information Section */}
+                            <div className="bg-primary-900/10 border border-white/10 rounded-lg p-4">
+                                <h3 className="text-sm font-semibold mb-3 text-primary-400 uppercase tracking-wider">Hotel Information</h3>
+                                <div className="space-y-3">
+                                    <div>
+                                        <p className="text-xs text-gray-400 mb-1">Hotel Name</p>
+                                        <p className="text-base font-semibold text-white">{getHotelName(selectedBooking)}</p>
+                                    </div>
+                                    <div className={`grid ${role === "guest" ? "grid-cols-1" : "grid-cols-2"} gap-4`}>
+                                        <div>
+                                            <p className="text-xs text-gray-400 mb-1">Location</p>
+                                            <p className="text-sm text-white">{getHotelLocation(selectedBooking)}</p>
+                                        </div>
+                                        {/* Show full address only for staff */}
+                                        {(role === "receptionist" || role === "admin") && (
+                                            <div>
+                                                <p className="text-xs text-gray-400 mb-1">Address</p>
+                                                <p className="text-sm text-white">{getHotelAddress(selectedBooking)}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Guest Information Section */}
+                            <div>
+                                <h3 className="text-sm font-semibold mb-3 text-gray-300">Guest Information</h3>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <p className="text-sm text-gray-400">Name</p>
-                                        <p className="text-sm font-medium">{getCustomerName(selectedBooking)}</p>
+                                        <p className="text-xs text-gray-400 mb-1">Name</p>
+                                        <p className="text-sm font-medium text-white">{getCustomerName(selectedBooking)}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-400">Contact</p>
-                                        <p className="text-sm font-medium">{getCustomerPhone(selectedBooking)}</p>
+                                        <p className="text-xs text-gray-400 mb-1">Contact</p>
+                                        <p className="text-sm font-medium text-white">{getCustomerPhone(selectedBooking)}</p>
                                     </div>
-                                    <div>
-                                        <p className="text-sm text-gray-400">Booking Type</p>
-                                        <p className="text-sm font-medium">{getBookingType(selectedBooking)}</p>
-                                    </div>
+                                    {/* Show Booking Type only for staff */}
                                     {(role === "receptionist" || role === "admin") && (
                                         <div>
-                                            <p className="text-sm text-gray-400">Created By</p>
-                                            <p className="text-sm font-medium">{getCreatedByName(selectedBooking)}</p>
+                                            <p className="text-xs text-gray-400 mb-1">Booking Type</p>
+                                            <p className="text-sm font-medium text-white">{getBookingType(selectedBooking)}</p>
+                                        </div>
+                                    )}
+                                    {/* Show Created By only for staff */}
+                                    {(role === "receptionist" || role === "admin") && (
+                                        <div>
+                                            <p className="text-xs text-gray-400 mb-1">Created By</p>
+                                            <p className="text-sm font-medium text-white">{getCreatedByName(selectedBooking)}</p>
                                         </div>
                                     )}
                                 </div>
                             </div>
-                            <div className="border-t border-gray-700 pt-4">
-                                <h3 className="text-sm font-semibold mb-3">Room Information</h3>
+
+                            {/* Room & Stay Information Section */}
+                            <div>
+                                <h3 className="text-sm font-semibold mb-3 text-gray-300">Room & Stay Details</h3>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <p className="text-sm text-gray-400">Room Number</p>
-                                        <p className="text-sm font-medium">{getRoomNumber(selectedBooking)}</p>
+                                        <p className="text-xs text-gray-400 mb-1">Room Number</p>
+                                        <p className="text-sm font-medium text-white">{getRoomNumber(selectedBooking)}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-400">Room Type</p>
-                                        <p className="text-sm font-medium">{getRoomType(selectedBooking)}</p>
+                                        <p className="text-xs text-gray-400 mb-1">Room Type</p>
+                                        <p className="text-sm font-medium text-white">{getRoomType(selectedBooking)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-400 mb-1">Check-in Date</p>
+                                        <p className="text-sm font-medium text-white">{formatDateTime(selectedBooking.checkInDate)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-400 mb-1">Check-out Date</p>
+                                        <p className="text-sm font-medium text-white">{formatDateTime(selectedBooking.checkOutDate)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-400 mb-1">Number of Nights</p>
+                                        <p className="text-sm font-medium text-white">{calculateNights(selectedBooking)} night{calculateNights(selectedBooking) !== 1 ? 's' : ''}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-400 mb-1">Rate per Night</p>
+                                        <p className="text-sm font-medium text-white">LKR {getRoomPrice(selectedBooking).toLocaleString()}</p>
                                     </div>
                                 </div>
                             </div>
-                            <div className="border-t border-gray-700 pt-4">
-                                <h3 className="text-sm font-semibold mb-3">Booking Dates</h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p className="text-sm text-gray-400">Check-in Date</p>
-                                        <p className="text-sm font-medium">{formatDateTime(selectedBooking.checkInDate)}</p>
+
+                            {/* Payment Information Section */}
+                            <div className="bg-green-900/10 border border-green-500/20 rounded-lg p-4">
+                                <h3 className="text-sm font-semibold mb-3 text-green-400 uppercase tracking-wider">Payment Information</h3>
+                                <div className="space-y-3">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p className="text-xs text-gray-400 mb-1">Room Charges</p>
+                                            <p className="text-sm font-medium text-white">
+                                                LKR {(selectedBooking.roomCharges || (getRoomPrice(selectedBooking) * calculateNights(selectedBooking))).toLocaleString()}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-400 mb-1">Service Charges</p>
+                                            <p className="text-sm font-medium text-white">LKR {(selectedBooking.serviceCharges || 0).toLocaleString()}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-400 mb-1">Total Amount</p>
+                                            <p className="text-base font-semibold text-white">LKR {(selectedBooking.totalAmount || 0).toLocaleString()}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-400 mb-1">Amount Paid</p>
+                                            <p className="text-base font-semibold text-green-400">LKR {(selectedBooking.totalPaid || 0).toLocaleString()}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-sm text-gray-400">Check-out Date</p>
-                                        <p className="text-sm font-medium">{formatDateTime(selectedBooking.checkOutDate)}</p>
-                                    </div>
+                                    {selectedBooking.totalAmount && selectedBooking.totalPaid !== undefined && (
+                                        <div className="pt-3 border-t border-green-500/20">
+                                            <div className="flex justify-between items-center">
+                                                <p className="text-xs text-gray-400">Outstanding Balance</p>
+                                                <p className={`text-base font-bold ${(selectedBooking.totalAmount - selectedBooking.totalPaid) > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
+                                                    LKR {(selectedBooking.totalAmount - selectedBooking.totalPaid).toLocaleString()}
+                                                </p>
+                                            </div>
+                                            <div className="flex justify-between items-center mt-2">
+                                                <p className="text-xs text-gray-400">Payment Status</p>
+                                                <span className={`px-2 py-1 rounded text-xs font-medium ${selectedBooking.paymentStatus === 'paid'
+                                                        ? 'bg-green-500/20 text-green-400 border border-green-500/50'
+                                                        : selectedBooking.paymentStatus === 'partially_paid'
+                                                            ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50'
+                                                            : 'bg-red-500/20 text-red-400 border border-red-500/50'
+                                                    }`}>
+                                                    {selectedBooking.paymentStatus === 'paid' ? 'Fully Paid' :
+                                                        selectedBooking.paymentStatus === 'partially_paid' ? 'Partially Paid' : 'Unpaid'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                            <div className="border-t border-gray-700 pt-4">
+
+                            {/* Booking Timeline Section */}
+                            <div className="pt-3 border-t border-gray-700">
+                                <h3 className="text-sm font-semibold mb-3 text-gray-300">Booking Timeline</h3>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <p className="text-sm text-gray-400">Created At</p>
-                                        <p className="text-sm font-medium">{formatDateTime(selectedBooking.createdAt)}</p>
+                                        <p className="text-xs text-gray-400 mb-1">Booked On</p>
+                                        <p className="text-sm font-medium text-white">{formatDateTime(selectedBooking.createdAt)}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-400">Last Updated</p>
-                                        <p className="text-sm font-medium">{formatDateTime(selectedBooking.updatedAt)}</p>
+                                        <p className="text-xs text-gray-400 mb-1">Last Updated</p>
+                                        <p className="text-sm font-medium text-white">{formatDateTime(selectedBooking.updatedAt)}</p>
                                     </div>
                                 </div>
                             </div>

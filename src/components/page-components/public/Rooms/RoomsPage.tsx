@@ -12,7 +12,7 @@ import DialogBox from "@/components/common/DialogBox";
 import ViewRoomDetails from "@/components/common/ViewRoomDetails";
 import { UserRole } from "@/components/common/RoomCard";
 import { getRooms, GetRoomsParams } from "@/services/roomService";
-import { getActiveHotels } from "@/services/hotelService";
+import { getPublicActiveHotels } from "@/services/hotelService";
 import {
     Pagination,
     PaginationContent,
@@ -66,11 +66,11 @@ const RoomsPage: FC<RoomsPageProps> = ({ userRole = "public" }) => {
     // Check if client-side filters are active (guest capacity or multiple room types)
     const hasClientSideFilters = (guests !== null && guests > 0) || (clientRoomTypes && clientRoomTypes.length > 0);
 
-    // Fetch hotels based on location parameter
+    // Fetch hotels based on location parameter (public endpoint - no auth required)
     useEffect(() => {
         const fetchHotelsByLocation = async () => {
             try {
-                const response = await getActiveHotels();
+                const response = await getPublicActiveHotels();
                 if (response.success && response.data) {
                     let hotelsToShow = response.data;
 

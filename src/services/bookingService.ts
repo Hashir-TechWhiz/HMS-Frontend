@@ -12,6 +12,16 @@ export interface AvailabilityCheckResult {
 }
 
 /**
+ * Payment data for booking creation
+ */
+export interface BookingPaymentData {
+    amount: number;
+    paymentMethod: 'card' | 'cash';
+    transactionId?: string;
+    notes?: string;
+}
+
+/**
  * Booking creation data interface
  * Based on backend API specification in README.md
  * 
@@ -23,6 +33,7 @@ export interface AvailabilityCheckResult {
  * Optional fields:
  * - guestId: Guest ID (only for receptionist/admin booking for existing guest, ignored for guests)
  * - customerDetails: Customer details for walk-in bookings (only for receptionist/admin)
+ * - paymentData: Payment data for optional/partial payment at booking
  */
 export interface CreateBookingData {
     roomId: string;
@@ -34,6 +45,7 @@ export interface CreateBookingData {
         phone: string;
         email?: string; // Optional
     };
+    paymentData?: BookingPaymentData; // Optional payment data
 }
 
 /**

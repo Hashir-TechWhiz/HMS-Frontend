@@ -175,6 +175,28 @@ declare global {
         checkInDate: string;
         checkOutDate: string;
         status: BookingStatus;
+        // Payment and charges fields
+        roomCharges?: number;
+        serviceCharges?: number;
+        totalAmount?: number;
+        totalPaid?: number;
+        paymentStatus?: 'unpaid' | 'partially_paid' | 'paid';
+        // Check-in/Check-out fields
+        isCheckedIn?: boolean;
+        isCheckedOut?: boolean;
+        checkInDetails?: {
+            checkedInAt: string;
+            checkedInBy: string | IUser;
+            nicPassport?: string;
+            nationality?: string;
+            phoneNumber?: string;
+            country?: string;
+            visaDetails?: string;
+        };
+        checkOutDetails?: {
+            checkedOutAt: string;
+            checkedOutBy: string | IUser;
+        };
         createdAt: string;
         updatedAt: string;
         // Cancellation penalty fields (for staff-managed cancellations)

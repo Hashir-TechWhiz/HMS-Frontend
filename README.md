@@ -7,12 +7,13 @@ A modern, role-based hotel management system frontend built with Next.js 16, Typ
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Technology Stack](#technology-stack)
-3. [User Roles & Features](#user-roles--features)
-4. [Key Frontend Features](#key-frontend-features)
-5. [Getting Started](#getting-started)
-6. [Project Structure](#project-structure)
-7. [Environment Configuration](#environment-configuration)
+2. [Features](#features)
+3. [Technology Stack](#technology-stack)
+4. [User Roles & Features](#user-roles--features)
+5. [Key Frontend Features](#key-frontend-features)
+6. [Getting Started](#getting-started)
+7. [Project Structure](#project-structure)
+8. [Environment Configuration](#environment-configuration)
 
 ---
 
@@ -27,6 +28,143 @@ The Smart Hotel Management System frontend provides a comprehensive user interfa
 - **Modern UX**: Clean, intuitive interface using shadcn/ui components
 - **Type Safety**: Full TypeScript implementation for reliability
 - **Performance**: Optimized with Next.js 16 features (server components, caching)
+
+---
+
+## Features
+
+### Currently Implemented
+
+The frontend application currently supports the following features:
+
+#### Authentication & Account Management
+- Secure login with email and password
+- Guest self-registration
+- Password reset via OTP email verification
+- JWT token-based session management
+- Role-based route protection and redirects
+- Profile management (name, password updates)
+
+#### Multi-Hotel/Branch Support
+- Hotel selection and switching (for admins)
+- Hotel management interface (create, update, view, delete hotels)
+- Hotel-specific data filtering and operations
+
+#### Room Management (Admin)
+- Browse and search rooms
+- Create rooms with details (number, type, price, capacity, amenities)
+- Upload multiple room images (1-4 images per room)
+- Update room information and status
+- Delete rooms (with validation for active bookings)
+- Room status management (available, unavailable, maintenance)
+- Public room browsing with filters (type, price range, availability)
+
+#### Booking Management
+- Guest booking creation with date selection
+- Walk-in customer booking (for staff)
+- Booking for existing guests (for staff)
+- View bookings with pagination and filters
+- Booking status tracking (pending, confirmed, checkedin, completed, cancelled)
+- Booking cancellation with role-based restrictions
+- Booking history and search
+- Email notifications for confirmations and cancellations
+
+#### Operations Hub (Receptionist/Admin)
+- Kanban-style operational view with columns:
+  - Arrivals today
+  - In-house guests
+  - Departures today
+  - Completed bookings
+- Staff-assisted check-in with ID verification
+- Staff-managed checkout with invoice generation
+- Real-time booking status updates
+- Hotel-based filtering (multi-hotel operations)
+- Today's operational KPIs
+
+#### Service Requests
+- Guest service request creation (multiple service types)
+- Service types: housekeeping, room service, maintenance, laundry, spa, gym access, massage, yoga, transport, etc.
+- Service catalog with hotel-specific pricing
+- Request status tracking (pending, in_progress, completed)
+- Housekeeping staff workflow (view, accept, complete requests)
+- Assignment-based request visibility
+- Duplicate request prevention
+- Date-based request restrictions (only during active stay)
+- Service catalog management (admin)
+
+#### Invoice Management
+- Automatic invoice generation at checkout
+- Invoice viewing and details
+- PDF invoice download
+- Invoice email delivery
+- Room charges and service charges breakdown
+- Tax calculation and payment tracking
+- Invoice search by booking or invoice number
+
+#### Staff Roster Management
+- Staff shift viewing (my roster page for staff)
+- Admin roster management (create, update, delete shifts)
+- Shift types: morning, afternoon, evening, night
+- Date-based roster filtering
+- Staff workload visibility
+
+#### User Management (Admin)
+- View all users with pagination
+- Filter by role and status
+- Create new users (all roles: guest, receptionist, housekeeping, admin)
+- Update user details (name, role)
+- Activate/deactivate user accounts
+- User statistics dashboard
+
+#### Guest Management
+- View guest list (admin and receptionist)
+- Guest details and booking history
+- Search and filter guests
+- Read-only access for receptionists
+
+#### Dashboards & Reports
+- Role-specific dashboards with relevant KPIs
+- Guest Dashboard: bookings summary, active service requests
+- Receptionist Dashboard: check-ins/check-outs, pending bookings, room availability, charts
+- Housekeeping Dashboard: assigned tasks, pending requests, completed tasks
+- Admin Dashboard: comprehensive system overview, user stats, occupancy metrics, trends
+- Interactive charts (pie charts, bar charts)
+- Real-time data updates
+- Date range filtering
+
+#### UI/UX Features
+- Responsive design (mobile-first)
+- Dark theme with modern aesthetics
+- Toast notifications
+- Loading states and skeletons
+- Form validation
+- Confirmation dialogs
+- Image upload with preview
+- Data tables with sorting and pagination
+
+### Features Not Yet Implemented
+
+The following core modules are planned for future development but are not currently implemented in the frontend:
+
+#### Shared Facilities Management
+The system does not yet provide user interfaces for managing shared hotel facilities such as:
+- Banquet halls and event spaces
+- Conference and meeting rooms
+- Swimming pool
+- Gym and fitness center
+- Restaurant and dining areas
+- Spa and wellness facilities
+
+#### Facility Booking & Allocation
+The system does not provide interfaces for:
+- Browsing and viewing available facilities
+- Booking shared facilities (by guests or event organizers)
+- Facility calendar and availability checking
+- Facility reservation management
+- Facility-specific pricing and packages
+- Capacity management for events and group bookings
+
+**Note**: The current system includes service request functionality where guests can request services like "gym access" or "spa services". These are individual service requests handled by staff. This is different from a dedicated facility management module where facilities would be treated as bookable resources with their own schedules, capacity limits, and allocation systems.
 
 ---
 

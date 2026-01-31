@@ -4,5 +4,9 @@ export { HousekeepingDashboard } from "./HousekeepingDashboard";
 export { GuestDashboard } from "./GuestDashboard";
 export { default as PaymentDialog } from "./PaymentDialog";
 export { default as WalkInPaymentDialog } from "./WalkInPaymentDialog";
+export { default as FlexiblePaymentDialog } from "./FlexiblePaymentDialog";
+export { default as CheckoutPaymentDialog } from "./CheckoutPaymentDialog";
 export { default as CancellationPenaltyDialog } from "./CancellationPenaltyDialog";
-
+export { default as MyPaymentsPage } from "./MyPaymentsPage";
+export { default as InvoicesPage } from "./InvoicesPage";
+export { default as InvoicePreviewContent } from "./InvoicePreviewContent";
